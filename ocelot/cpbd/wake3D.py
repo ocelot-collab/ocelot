@@ -234,6 +234,57 @@ class WakeTable:
         return (T, H)
 
 
+class WakeTable3(WakeTable):
+    """
+    WakeTable3(wake_file) - load and prepare wake table with 3rd order coefficents, to be used by Wake3()
+    wake_file - path to the wake table
+    """
+
+    def __init__(self, wake_file=None):
+        if wake_file is not None:
+            self.TH = self.load_table(wake_file)
+
+    def process_wake_table(self, wake_table):
+        """
+        :param wake_file: file name
+        :return: (T, H): T- table of wakes coefs, H - matrix of the coefs place in T
+        """
+        W = wake_table
+        # head format %Nt 0 %N0 N1 %R L %C nmk
+        H = np.zeros([5, 5, 5])
+        Nt = int(W[0, 0])
+        T = []
+        ind = 0
+        for i in range(Nt):
+            ind = ind + 1
+            N0 = int(W[ind, 0])
+            N1 = int(W[ind, 1])
+            R = W[ind + 1, 0]
+            L = W[ind + 1, 1]
+            Cinv = W[ind + 2, 0]
+            nmk = int(W[ind + 2, 1])
+            n = int(np.floor(nmk / 100))
+            nmk = nmk - 100 * n
+            m = int(np.floor(nmk / 10))
+            k = int(nmk - 10 * m)
+            H[n, m, k] = i
+            ind = ind + 2
+            if N0 > 0:
+                W0 = np.zeros([N0, 2])
+                W0[0:N0, :] = W[ind + 1:ind + N0 + 1, :]
+                ind = ind + N0
+            else:
+                W0 = 0
+            if N1 > 0:
+                W1 = np.zeros([N1, 2])
+                W1[0:N1, :] = W[ind + 1:ind + N1 + 1, :]
+                ind = ind + N1
+            else:
+                W1 = 0
+            T = T + [(R, L, Cinv, nmk, W0, N0, W1, N1)]
+        return (T, H)
+
+
 class WakeTableDechirperOffAxis(WakeTable):
     """
     WakeTableDechirperOffAxis() - creates two wake tables for horizontal and vertical corrugated plates.
@@ -391,6 +442,588 @@ class WakeTableDechirperOffAxis(WakeTable):
         out13 = np.append([[N, 0], [0, 0], [0, 13]], np.vstack((s, h24)).T, axis=0)
         out24 = np.append([[N, 0], [0, 0], [0, 24]], np.vstack((s, h13)).T, axis=0)
         wake_vert = np.vstack(([[7, 0]], out00, out01, out03, out11, out13, out24, out33))
+        return wake_horz, wake_vert
+
+
+class WakeTableParallelPlate_origin(WakeTable):
+    """
+    WakeTableParallelPlate_origin() - create wake tables for parallel plate corrugated 
+    strcutres based on 0th order analytical results. Here 0th order assumes contant longitudinal 
+    wake and constant slope for transverse wakes.
+    """
+    def __init__(self, b=500e-6, a=500e-6, t=250e-6, p=500e-6, length=1, sigma=30e-6, orient="horz"):
+        WakeTable.__init__(self)
+        wake_horz, wake_vert = self.calculate_wake_table(b, a, t, p, length, sigma)
+        if orient == "horz":
+            self.TH = self.process_wake_table(wake_horz)
+        else:
+            self.TH = self.process_wake_table(wake_vert)
+       
+    def calculate_wake_table(self, b, a, t, p, length, sigma):
+        """
+        :param b: distance from the +y/+x plates [m], offset of beam from center = a - b
+        :param a: half gap between plates [m],   0 < b < 2a
+        :param t: longitudinal gap of corrugations [m]
+        :param p: period of corrugations [m]
+        :param length: length of the strucutre [m]
+        :param sigma: longitudinal beam size in [m], to calculate s window length
+        :param orient: structure orientation: "horz" kick in y, or "vert" kick in x
+        :return: hor_wake_table, vert_wake_table
+        """
+        offset = a - b
+        if np.abs(offset) >= a:
+            raise ValueError("distance to +y/+x plate must be smaller than 2a")
+        c = speed_of_light
+        Z0 = 3.767303134695850e+02
+        s = np.arange(0, 50 + 0.01, 0.01) * sigma
+        ns = len(s)
+        
+        t2p = t / p
+        alpha = 1 - 0.465 * np.sqrt(t2p) - 0.07 * t2p
+        s0r = a * a * t / (2 * np.pi * alpha * alpha * p * p )   # Bane s0r      
+        
+        # convert coefficient from cgs unit to mks unit, scale by length 
+        mks = Z0 * c / (4 * np.pi) *length
+
+        # initialize
+        h00 = np.zeros(ns)
+        h01 = np.zeros(ns)
+        h02 = np.zeros(ns)
+        h03 = np.zeros(ns)
+        h04 = np.zeros(ns)
+        h11 = np.zeros(ns)
+        h12 = np.zeros(ns)
+        h13 = np.zeros(ns)
+        h14 = np.zeros(ns)
+        h23 = np.zeros(ns)
+        h24 = np.zeros(ns)
+        h33 = np.zeros(ns)
+        h34 = np.zeros(ns)
+        
+        # trig function
+        csc = lambda x : 1 / np.sin(x)
+        sec = lambda x : 1 / np.cos(x)
+        cot = lambda x : 1 / np.tan(x)
+        
+        
+        # scale factors, hab
+        Y = pi * offset / (2 * a)
+        
+        if Y == 0:
+            sl = 9/4 * s0r
+            sd = (15/14)**2 * s0r
+            sq = (15/16)**2 * s0r
+            
+            h00 = mks * np.pi**2 / (4 * a**2)  * np.ones(s.shape)
+            h11 = mks * (-1) * np.pi**4 / (64 * a**4)  * np.ones(s.shape)
+            h13 = -h11
+            h24 = mks * np.pi**4 / (64 * a**4)  * np.ones(s.shape)
+            h33 = h11
+        else:            
+            sl = 4 * s0r * (1 + np.cos(Y)**2 / 3 + Y*np.tan(Y)) ** (-2) 
+            sm = 4 * s0r * (1.5 - Y*cot(2*Y) + Y*csc(Y)*sec(Y) ) ** (-2)
+            sd = 4 * s0r * ( (64 + np.cos(2*Y))/30 + 2*Y*np.tan(Y) + (0.3 - Y*np.sin(2*Y))/(np.cos(2*Y) - 2) ) ** (-2)
+            sq = 4 * s0r * ( (56 - np.cos(2*Y))/30 + 2*Y*np.tan(Y) - (0.3 + Y*np.sin(2*Y))/(np.cos(2*Y) - 2) ) ** (-2)
+            
+            h00 = mks * np.pi**2 / (4 * a**2) * sec(Y)**2 *np.ones(s.shape)
+            h02 = mks * np.pi**3 / (16 * a**3) * np.sin(2*Y) * sec(Y)**4  * np.ones(s.shape)
+            h04 = h02
+            h11 = mks * np.pi**4 / (64 * a**4) * ( np.cos(2*Y) - 2 ) * sec(Y)**4  * np.ones(s.shape)
+            h13 = -h11
+            h24 = mks * np.pi**4 / (64 * a**4) * ( 2 - np.cos(2*Y) ) * sec(Y)**4  * np.ones(s.shape)
+            h33 = h11
+        
+        N = len(s)
+        # coefficients, horizontal, kick is in y 
+        out00 = np.append([[N, 0], [0, 0], [0, 0]], np.vstack((s, h00)).T, axis=0)
+        out02 = np.append([[N, 0], [0, 0], [0, 2]], np.vstack((s, h02)).T, axis=0)
+        out04 = np.append([[N, 0], [0, 0], [0, 4]], np.vstack((s, h04)).T, axis=0)
+        out11 = np.append([[N, 0], [0, 0], [0, 11]], np.vstack((s, h11)).T, axis=0)
+        out13 = np.append([[N, 0], [0, 0], [0, 13]], np.vstack((s, h13)).T, axis=0)
+        out24 = np.append([[N, 0], [0, 0], [0, 24]], np.vstack((s, h24)).T, axis=0)
+        out33 = np.append([[N, 0], [0, 0], [0, 33]], np.vstack((s, h33)).T, axis=0)
+        wake_horz = np.vstack(([[7, 0]], out00, out02,  out04, out11, out13, out24, out33))
+        
+        # coefficients, vertical, swap x -> y, x0 -> y0, i.e., 1 -> 2, 3 -> 4, keep 0
+        # note h22 = -h11, h44 = -h33
+        out00 = np.append([[N, 0], [0, 0], [0, 0]], np.vstack((s, h00)).T, axis=0)
+        out01 = np.append([[N, 0], [0, 0], [0, 1]], np.vstack((s, h02)).T, axis=0)
+        out03 = np.append([[N, 0], [0, 0], [0, 3]], np.vstack((s, h04)).T, axis=0)
+        out11 = np.append([[N, 0], [0, 0], [0, 11]], np.vstack((s, -h11)).T, axis=0)
+        out13 = np.append([[N, 0], [0, 0], [0, 13]], np.vstack((s, h24)).T, axis=0)
+        out24 = np.append([[N, 0], [0, 0], [0, 24]], np.vstack((s, h13)).T, axis=0)
+        out33 = np.append([[N, 0], [0, 0], [0, 33]], np.vstack((s, -h33)).T, axis=0)
+        wake_vert = np.vstack(([[7, 0]], out00, out01, out03, out11, out13, out24, out33))
+        return wake_horz, wake_vert
+
+class WakeTableParallelPlate(WakeTable):
+    """
+    WakeTableParallelPlate() - create wake tables for parallel plate corrugated 
+    strcutres based on 1st order analytical results. Here 1st order adds an exponential decay term
+    to the 0th order results.
+    """
+    def __init__(self, b=500e-6, a=500e-6, t=250e-6, p=500e-6, length=1, sigma=30e-6, orient="horz"):
+        WakeTable.__init__(self)
+        wake_horz, wake_vert = self.calculate_wake_table(b, a, t, p, length, sigma)
+        if orient == "horz":
+            self.TH = self.process_wake_table(wake_horz)
+        else:
+            self.TH = self.process_wake_table(wake_vert)
+       
+    def calculate_wake_table(self, b, a, t, p, length, sigma):
+        """
+        :param b: distance from the +y/+x plates [m], offset of beam from center = a - b
+        :param a: half gap between plates [m],   0<b < 2a
+        :param t: longitudinal gap of corrugations [m]
+        :param p: period of corrugations [m]
+        :param length: length of the strucutre [m]
+        :param sigma: longitudinal beam size in [m], to calculate s window length
+        :param orient: structure orientation: "horz" kick in y, or "vert" kick in x
+        :return: hor_wake_table, vert_wake_table
+        """
+        offset = a - b
+        if np.abs(offset) >= a:
+            raise ValueError("distance to +y/+x plate must be smaller than 2a")
+        c = speed_of_light
+        Z0 = 3.767303134695850e+02
+        s = np.arange(0, 50 + 0.01, 0.01) * sigma
+        ns = len(s)
+        
+        t2p = t / p
+        alpha = 1 - 0.465 * np.sqrt(t2p) - 0.07 * t2p
+        s0r = a * a * t / (2 * np.pi * alpha * alpha * p * p )   # Bane s0r      
+        
+        # convert coefficient from cgs unit to mks unit, scale by length 
+        mks = Z0 * c / (4 * np.pi) *length
+
+        # initialize
+        h00 = np.zeros(ns)
+        h01 = np.zeros(ns)
+        h02 = np.zeros(ns)
+        h03 = np.zeros(ns)
+        h04 = np.zeros(ns)
+        h11 = np.zeros(ns)
+        h12 = np.zeros(ns)
+        h13 = np.zeros(ns)
+        h14 = np.zeros(ns)
+        h23 = np.zeros(ns)
+        h24 = np.zeros(ns)
+        h33 = np.zeros(ns)
+        h34 = np.zeros(ns)
+        
+        # trig function
+        csc = lambda x : 1 / np.sin(x)
+        sec = lambda x : 1 / np.cos(x)
+        cot = lambda x : 1 / np.tan(x)
+        
+        
+        # scale factors, hab
+        Y = pi * offset / (2 * a)
+        
+        if Y == 0:
+            sl = 9/4 * s0r
+            sd = (15/14)**2 * s0r
+            sq = (15/16)**2 * s0r
+            
+            h00 = mks * np.pi**2 / (4 * a**2) *  np.exp( - np.sqrt(s/sl) )
+            h11 = mks * (-1) * np.pi**4 / (64 * a**4) * np.exp( - np.sqrt(s/sq) )
+            h13 = -h11
+            h24 = mks * np.pi**4 / (64 * a**4) * np.exp( - np.sqrt(s/sd) )
+            h33 = h11
+        else:            
+            sl = 4 * s0r * (1 + np.cos(Y)**2 / 3 + Y*np.tan(Y)) ** (-2)
+            sm = 4 * s0r * (1.5 - Y*cot(2*Y) + Y*csc(Y)*sec(Y) ) ** (-2)
+            sd = 4 * s0r * ( (64 + np.cos(2*Y))/30 + 2*Y*np.tan(Y) + (0.3 - Y*np.sin(2*Y))/(np.cos(2*Y) - 2) ) ** (-2)
+            sq = 4 * s0r * ( (56 - np.cos(2*Y))/30 + 2*Y*np.tan(Y) - (0.3 + Y*np.sin(2*Y))/(np.cos(2*Y) - 2) ) ** (-2)
+            
+            h00 = mks * np.pi**2 / (4 * a**2) * sec(Y)**2 * np.exp( - np.sqrt(s/sl) )
+            h02 = mks * np.pi**3 / (16 * a**3) * np.sin(2*Y) * sec(Y)**4 * np.exp( - np.sqrt(s/sm) )
+            h04 = h02
+            h11 = mks * np.pi**4 / (64 * a**4) * ( np.cos(2*Y) - 2 ) * sec(Y)**4 * np.exp( - np.sqrt(s/sq) )
+            h13 = -h11
+            h24 = mks * np.pi**4 / (64 * a**4) * ( 2 - np.cos(2*Y) ) * sec(Y)**4 * np.exp( - np.sqrt(s/sd) )
+            h33 = h11
+        
+        
+        N = len(s)
+        # coefficients, horizontal, kick is in y 
+        out00 = np.append([[N, 0], [0, 0], [0, 0]], np.vstack((s, h00)).T, axis=0)
+        out02 = np.append([[N, 0], [0, 0], [0, 2]], np.vstack((s, h02)).T, axis=0)
+        out04 = np.append([[N, 0], [0, 0], [0, 4]], np.vstack((s, h04)).T, axis=0)
+        out11 = np.append([[N, 0], [0, 0], [0, 11]], np.vstack((s, h11)).T, axis=0)
+        out13 = np.append([[N, 0], [0, 0], [0, 13]], np.vstack((s, h13)).T, axis=0)
+        out24 = np.append([[N, 0], [0, 0], [0, 24]], np.vstack((s, h24)).T, axis=0)
+        out33 = np.append([[N, 0], [0, 0], [0, 33]], np.vstack((s, h33)).T, axis=0)
+        wake_horz = np.vstack(([[7, 0]], out00, out02,  out04, out11, out13, out24, out33))
+        
+        # coefficients, vertical, swap x -> y, x0 -> y0, i.e., 1 -> 2, 3 -> 4, keep 0
+        # note h22 = -h11, h44 = -h33
+        out00 = np.append([[N, 0], [0, 0], [0, 0]], np.vstack((s, h00)).T, axis=0)
+        out01 = np.append([[N, 0], [0, 0], [0, 1]], np.vstack((s, h02)).T, axis=0)
+        out03 = np.append([[N, 0], [0, 0], [0, 3]], np.vstack((s, h04)).T, axis=0)
+        out11 = np.append([[N, 0], [0, 0], [0, 11]], np.vstack((s, -h11)).T, axis=0)
+        out13 = np.append([[N, 0], [0, 0], [0, 13]], np.vstack((s, h24)).T, axis=0)
+        out24 = np.append([[N, 0], [0, 0], [0, 24]], np.vstack((s, h13)).T, axis=0)
+        out33 = np.append([[N, 0], [0, 0], [0, 33]], np.vstack((s, -h33)).T, axis=0)
+        wake_vert = np.vstack(([[7, 0]], out00, out01, out03, out11, out13, out24, out33))
+        return wake_horz, wake_vert
+    
+class WakeTableParallelPlate3_origin(WakeTable3):
+    """
+    WakeTableParallelPlate() - create 3rd order wake tables for parallel plate corrugated 
+    strcutres based on 0th order analytical results. Here 0th order assumes contant longitudinal 
+    wake and constant slope for transverse wakes. This class should be used with Wake3().
+    """
+    def __init__(self, b=500e-6, a=500e-6, t=250e-6, p=500e-6, length=1, sigma=30e-6, orient="horz"):
+        WakeTable3.__init__(self)
+        wake_horz, wake_vert = self.calculate_wake_table(b, a, t, p, length, sigma)
+        if orient == "horz":
+            self.TH = self.process_wake_table(wake_horz)
+        else:
+            self.TH = self.process_wake_table(wake_vert)
+       
+    def calculate_wake_table(self, b, a, t, p, length, sigma):
+        """
+        :param b: distance from the +y/+x plates [m], offset of beam from center = a - b
+        :param a: half gap between plates [m],   0<b < 2a
+        :param t: longitudinal gap of corrugations [m]
+        :param p: period of corrugations [m]
+        :param length: length of the strucutre [m]
+        :param sigma: longitudinal beam size in [m], to calculate s window length
+        :param orient: structure orientation: "horz" kick in y, or "vert" kick in x
+        :return: hor_wake_table, vert_wake_table
+        """
+        offset = a - b
+        if np.abs(offset) >= a:
+            raise ValueError("distance to +y/+x plate must be smaller than 2a")
+        c = speed_of_light
+        Z0 = 3.767303134695850e+02
+        s = np.arange(0, 50 + 0.01, 0.01) * sigma
+        ns = len(s)
+        
+        t2p = t / p
+        alpha = 1 - 0.465 * np.sqrt(t2p) - 0.07 * t2p
+        s0r = a * a * t / (2 * np.pi * alpha * alpha * p * p )   # Bane s0r      
+        
+        # convert coefficient from cgs unit to mks unit, scale by length 
+        mks = Z0 * c / (4 * np.pi) *length
+
+        # initialize
+        h000 = np.zeros(ns)
+        h001 = np.zeros(ns)
+        h002 = np.zeros(ns)
+        h003 = np.zeros(ns)
+        h004 = np.zeros(ns)
+        h011 = np.zeros(ns)
+        h012 = np.zeros(ns)
+        h013 = np.zeros(ns)
+        h014 = np.zeros(ns)
+        h023 = np.zeros(ns)
+        h024 = np.zeros(ns)
+        h033 = np.zeros(ns)
+        h034 = np.zeros(ns)
+        
+        # higher order
+        h111 = np.zeros(ns)
+        h112 = np.zeros(ns)
+        h113 = np.zeros(ns)
+        h114 = np.zeros(ns)
+        h122 = np.zeros(ns)
+        h123 = np.zeros(ns)
+        h124 = np.zeros(ns)
+        h133 = np.zeros(ns)
+        h134 = np.zeros(ns)
+        h144 = np.zeros(ns)
+        h222 = np.zeros(ns)
+        h223 = np.zeros(ns)
+        h224 = np.zeros(ns)
+        h233 = np.zeros(ns)
+        h234 = np.zeros(ns)
+        h244 = np.zeros(ns)
+        h333 = np.zeros(ns)
+        h334 = np.zeros(ns)
+        h344 = np.zeros(ns)
+        h444 = np.zeros(ns)
+        
+        # trig function
+        csc = lambda x : 1 / np.sin(x)
+        sec = lambda x : 1 / np.cos(x)
+        cot = lambda x : 1 / np.tan(x)
+        
+        
+        # scale factors, hab
+        Y = pi * offset / (2 * a)
+        
+        if Y == 0:
+            sl = 9/4 * s0r
+            sd = (15/14)**2 * s0r
+            sq = (15/16)**2 * s0r
+            
+            h000 = mks * np.pi**2 / (4 * a**2) * np.ones(s.shape)
+            h011 = mks * (-1) * np.pi**4 / (64 * a**4) *  np.ones(s.shape)
+            h013 = -h011
+            h024 = mks * np.pi**4 / (64 * a**4) * np.ones(s.shape)
+            h033 = h011
+        else:            
+            sl = 4 * s0r * (1 + np.cos(Y)**2 / 3 + Y*np.tan(Y)) ** (-2)
+            sm = 4 * s0r * (1.5 - Y*cot(2*Y) + Y*csc(Y)*sec(Y) ) ** (-2)
+            sd = 4 * s0r * ( (64 + np.cos(2*Y))/30 + 2*Y*np.tan(Y) + (0.3 - Y*np.sin(2*Y))/(np.cos(2*Y) - 2) ) ** (-2)
+            sq = 4 * s0r * ( (56 - np.cos(2*Y))/30 + 2*Y*np.tan(Y) - (0.3 + Y*np.sin(2*Y))/(np.cos(2*Y) - 2) ) ** (-2)
+            
+            h000 = mks * np.pi**2 / (4 * a**2) * sec(Y)**2 *  np.ones(s.shape)
+            h002 = mks * np.pi**3 / (16 * a**3) * np.sin(2*Y) * sec(Y)**4 * np.ones(s.shape)
+            h004 = h002
+            h011 = mks * np.pi**4 / (64 * a**4) * ( np.cos(2*Y) - 2 ) * sec(Y)**4 * np.ones(s.shape)
+            h013 = -h011
+            h024 = mks * np.pi**4 / (64 * a**4) * ( 2 - np.cos(2*Y) ) * sec(Y)**4 * np.ones(s.shape)
+            h033 = h011
+        
+            # higher order
+            st = 16 * s0r * ( 5*Y*np.tan(Y) + Y*cot(Y) + ( 2*Y*np.sin(2*Y) )/(5-np.cos(2*Y)) + 5 ) ** (-2)
+            h112 = mks * np.pi**5 / (768 * a**5) * sec(Y)**5 * ( np.sin(3*Y) - 11*np.sin(Y) ) * np.ones(s.shape)
+            h114 = h112
+            h233 = h112
+            h334 = h112
+            h123 = -h112
+            h134 = -h112
+            h222 = -h112
+            h224 = -h112
+            h244 = -h112
+            h444 = -h112
+
+        
+        N = len(s)
+        # full coefficients, horizontal, kick is in y 
+        out000 = np.append([[N, 0], [0, 0], [0, 0]], np.vstack((s, h000)).T, axis=0)
+        out002 = np.append([[N, 0], [0, 0], [0, 2]], np.vstack((s, h002)).T, axis=0)
+        out004 = np.append([[N, 0], [0, 0], [0, 4]], np.vstack((s, h004)).T, axis=0)
+        out011 = np.append([[N, 0], [0, 0], [0, 11]], np.vstack((s, h011)).T, axis=0)
+        out013 = np.append([[N, 0], [0, 0], [0, 13]], np.vstack((s, h013)).T, axis=0)
+        out024 = np.append([[N, 0], [0, 0], [0, 24]], np.vstack((s, h024)).T, axis=0)
+        out033 = np.append([[N, 0], [0, 0], [0, 33]], np.vstack((s, h033)).T, axis=0)
+        
+        out112 = np.append([[N, 0], [0, 0], [0, 112]], np.vstack((s, h112)).T, axis=0)
+        out114 = np.append([[N, 0], [0, 0], [0, 114]], np.vstack((s, h114)).T, axis=0)
+        out233 = np.append([[N, 0], [0, 0], [0, 233]], np.vstack((s, h233)).T, axis=0)
+        out334 = np.append([[N, 0], [0, 0], [0, 334]], np.vstack((s, h334)).T, axis=0)
+        
+        out123 = np.append([[N, 0], [0, 0], [0, 123]], np.vstack((s, h123)).T, axis=0)
+        out134 = np.append([[N, 0], [0, 0], [0, 134]], np.vstack((s, h134)).T, axis=0)
+        out222 = np.append([[N, 0], [0, 0], [0, 222]], np.vstack((s, h222)).T, axis=0)
+        out224 = np.append([[N, 0], [0, 0], [0, 224]], np.vstack((s, h224)).T, axis=0)
+        out244 = np.append([[N, 0], [0, 0], [0, 244]], np.vstack((s, h244)).T, axis=0)
+        out444 = np.append([[N, 0], [0, 0], [0, 444]], np.vstack((s, h444)).T, axis=0)
+        
+
+        wake_horz = np.vstack(([[17, 0]], out000,  out002,  out004, out011,  out013, out024, out033,
+                               out112, out114, out233, out334, out123, out134, out222, out224, out244, out444
+                               ))
+        # full coefficients, vertical, swap x -> y, x0 -> y0, i.e., 1 -> 2, 3 -> 4, keep 0
+        # note h22 = -h11, h44 = -h33
+        out000 = np.append([[N, 0], [0, 0], [0, 0]], np.vstack((s, h000)).T, axis=0)
+        out001 = np.append([[N, 0], [0, 0], [0, 1]], np.vstack((s, h002)).T, axis=0)
+        out003 = np.append([[N, 0], [0, 0], [0, 3]], np.vstack((s, h004)).T, axis=0)
+        out011 = np.append([[N, 0], [0, 0], [0, 11]], np.vstack((s, -h011)).T, axis=0)
+        out024 = np.append([[N, 0], [0, 0], [0, 24]], np.vstack((s, h013)).T, axis=0)
+        out013 = np.append([[N, 0], [0, 0], [0, 13]], np.vstack((s, h024)).T, axis=0)
+        out033 = np.append([[N, 0], [0, 0], [0, 33]], np.vstack((s, -h033)).T, axis=0)
+        
+        out122 = np.append([[N, 0], [0, 0], [0, 122]], np.vstack((s, h112)).T, axis=0)
+        out223 = np.append([[N, 0], [0, 0], [0, 223]], np.vstack((s, h114)).T, axis=0)
+        out144 = np.append([[N, 0], [0, 0], [0, 144]], np.vstack((s, h233)).T, axis=0)
+        out344 = np.append([[N, 0], [0, 0], [0, 344]], np.vstack((s, h334)).T, axis=0)
+        
+        out124 = np.append([[N, 0], [0, 0], [0, 124]], np.vstack((s, h123)).T, axis=0)
+        out234 = np.append([[N, 0], [0, 0], [0, 234]], np.vstack((s, h134)).T, axis=0)
+        out111 = np.append([[N, 0], [0, 0], [0, 111]], np.vstack((s, h222)).T, axis=0)
+        out113 = np.append([[N, 0], [0, 0], [0, 113]], np.vstack((s, h224)).T, axis=0)
+        out133 = np.append([[N, 0], [0, 0], [0, 133]], np.vstack((s, h244)).T, axis=0)
+        out333 = np.append([[N, 0], [0, 0], [0, 333]], np.vstack((s, h444)).T, axis=0)
+        
+
+        wake_vert = np.vstack(([[17, 0]], out000,  out001,  out003, out011,  out013, out024, out033,
+                               out122, out223, out144, out344, out124, out234, out111, out113, out133, out333
+                               ))
+        
+        return wake_horz, wake_vert
+    
+    
+class WakeTableParallelPlate3(WakeTable3):
+    """
+    WakeTableParallelPlate() - create 3rd order wake tables for parallel plate corrugated 
+    strcutres based on 1st order analytical results. Here 1st order adds an exponential decay term
+    to the 0th order results. This calss should be used with Wake3().
+    """
+    def __init__(self, b=500e-6, a=500e-6, t=250e-6, p=500e-6, length=1, sigma=30e-6, orient="horz"):
+        WakeTable3.__init__(self)
+        wake_horz, wake_vert = self.calculate_wake_table(b, a, t, p, length, sigma)
+        if orient == "horz":
+            self.TH = self.process_wake_table(wake_horz)
+        else:
+            self.TH = self.process_wake_table(wake_vert)
+       
+    def calculate_wake_table(self, b, a, t, p, length, sigma):
+        """
+        :param b: distance from the +y/+x plates [m], offset of beam from center = a - b
+        :param a: half gap between plates [m],   0<b < 2a
+        :param t: longitudinal gap of corrugations [m]
+        :param p: period of corrugations [m]
+        :param length: length of the strucutre [m]
+        :param sigma: longitudinal beam size in [m], to calculate s window length
+        :param orient: structure orientation: "horz" kick in y, or "vert" kick in x
+        :return: hor_wake_table, vert_wake_table
+        """
+        offset = a - b
+        if np.abs(offset) >= a:
+            raise ValueError("distance to +y/+x plate must be smaller than 2a")
+        c = speed_of_light
+        Z0 = 3.767303134695850e+02
+        s = np.arange(0, 50 + 0.01, 0.01) * sigma
+        ns = len(s)
+        
+        t2p = t / p
+        alpha = 1 - 0.465 * np.sqrt(t2p) - 0.07 * t2p
+        s0r = a * a * t / (2 * np.pi * alpha * alpha * p * p )   # Bane s0r      
+        
+        # convert coefficient from cgs unit to mks unit, scale by length 
+        mks = Z0 * c / (4 * np.pi) *length
+
+        # initialize
+        h000 = np.zeros(ns)
+        h001 = np.zeros(ns)
+        h002 = np.zeros(ns)
+        h003 = np.zeros(ns)
+        h004 = np.zeros(ns)
+        h011 = np.zeros(ns)
+        h012 = np.zeros(ns)
+        h013 = np.zeros(ns)
+        h014 = np.zeros(ns)
+        h023 = np.zeros(ns)
+        h024 = np.zeros(ns)
+        h033 = np.zeros(ns)
+        h034 = np.zeros(ns)
+        
+        # higher order
+        h111 = np.zeros(ns)
+        h112 = np.zeros(ns)
+        h113 = np.zeros(ns)
+        h114 = np.zeros(ns)
+        h122 = np.zeros(ns)
+        h123 = np.zeros(ns)
+        h124 = np.zeros(ns)
+        h133 = np.zeros(ns)
+        h134 = np.zeros(ns)
+        h144 = np.zeros(ns)
+        h222 = np.zeros(ns)
+        h223 = np.zeros(ns)
+        h224 = np.zeros(ns)
+        h233 = np.zeros(ns)
+        h234 = np.zeros(ns)
+        h244 = np.zeros(ns)
+        h333 = np.zeros(ns)
+        h334 = np.zeros(ns)
+        h344 = np.zeros(ns)
+        h444 = np.zeros(ns)
+        
+        # trig function
+        csc = lambda x : 1 / np.sin(x)
+        sec = lambda x : 1 / np.cos(x)
+        cot = lambda x : 1 / np.tan(x)
+        
+        
+        # scale factors, hab
+        Y = pi * offset / (2 * a)
+        
+        if Y == 0:
+            sl = 9/4 * s0r
+            sd = (15/14)**2 * s0r
+            sq = (15/16)**2 * s0r
+            
+            h000 = mks * np.pi**2 / (4 * a**2) *  np.exp( - np.sqrt(s/sl) )
+            h011 = mks * (-1) * np.pi**4 / (64 * a**4) * np.exp( - np.sqrt(s/sq) )
+            h013 = -h011
+            h024 = mks * np.pi**4 / (64 * a**4) * np.exp( - np.sqrt(s/sd) )
+            h033 = h011
+        else:            
+            sl = 4 * s0r * (1 + np.cos(Y)**2 / 3 + Y*np.tan(Y)) ** (-2)
+            sm = 4 * s0r * (1.5 - Y*cot(2*Y) + Y*csc(Y)*sec(Y) ) ** (-2)
+            sd = 4 * s0r * ( (64 + np.cos(2*Y))/30 + 2*Y*np.tan(Y) + (0.3 - Y*np.sin(2*Y))/(np.cos(2*Y) - 2) ) ** (-2)
+            sq = 4 * s0r * ( (56 - np.cos(2*Y))/30 + 2*Y*np.tan(Y) - (0.3 + Y*np.sin(2*Y))/(np.cos(2*Y) - 2) ) ** (-2)
+            
+            h000 = mks * np.pi**2 / (4 * a**2) * sec(Y)**2 * np.exp( - np.sqrt(s/sl) )
+            h002 = mks * np.pi**3 / (16 * a**3) * np.sin(2*Y) * sec(Y)**4 * np.exp( - np.sqrt(s/sm) )
+            h004 = h002
+            h011 = mks * np.pi**4 / (64 * a**4) * ( np.cos(2*Y) - 2 ) * sec(Y)**4 * np.exp( - np.sqrt(s/sq) )
+            h013 = -h011
+            h024 = mks * np.pi**4 / (64 * a**4) * ( 2 - np.cos(2*Y) ) * sec(Y)**4 * np.exp( - np.sqrt(s/sd) )
+            h033 = h011
+        
+            # higher order
+            st = 16 * s0r * ( 5*Y*np.tan(Y) + Y*cot(Y) + ( 2*Y*np.sin(2*Y) )/(5-np.cos(2*Y)) + 5 ) ** (-2)
+            h112 = mks * np.pi**5 / (768 * a**5) * sec(Y)**5 * ( np.sin(3*Y) - 11*np.sin(Y) ) *  np.exp( - np.sqrt(s/st) )
+            h114 = h112
+            h233 = h112
+            h334 = h112
+            h123 = -h112
+            h134 = -h112
+            h222 = -h112
+            h224 = -h112
+            h244 = -h112
+            h444 = -h112
+        
+        N = len(s)
+        # full coefficients, horizontal, kick is in y 
+        out000 = np.append([[N, 0], [0, 0], [0, 0]], np.vstack((s, h000)).T, axis=0)
+        out002 = np.append([[N, 0], [0, 0], [0, 2]], np.vstack((s, h002)).T, axis=0)
+        out004 = np.append([[N, 0], [0, 0], [0, 4]], np.vstack((s, h004)).T, axis=0)
+        out011 = np.append([[N, 0], [0, 0], [0, 11]], np.vstack((s, h011)).T, axis=0)
+        out013 = np.append([[N, 0], [0, 0], [0, 13]], np.vstack((s, h013)).T, axis=0)
+        out024 = np.append([[N, 0], [0, 0], [0, 24]], np.vstack((s, h024)).T, axis=0)
+        out033 = np.append([[N, 0], [0, 0], [0, 33]], np.vstack((s, h033)).T, axis=0)
+        
+        out112 = np.append([[N, 0], [0, 0], [0, 112]], np.vstack((s, h112)).T, axis=0)
+        out114 = np.append([[N, 0], [0, 0], [0, 114]], np.vstack((s, h114)).T, axis=0)
+        out233 = np.append([[N, 0], [0, 0], [0, 233]], np.vstack((s, h233)).T, axis=0)
+        out334 = np.append([[N, 0], [0, 0], [0, 334]], np.vstack((s, h334)).T, axis=0)
+        
+        out123 = np.append([[N, 0], [0, 0], [0, 123]], np.vstack((s, h123)).T, axis=0)
+        out134 = np.append([[N, 0], [0, 0], [0, 134]], np.vstack((s, h134)).T, axis=0)
+        out222 = np.append([[N, 0], [0, 0], [0, 222]], np.vstack((s, h222)).T, axis=0)
+        out224 = np.append([[N, 0], [0, 0], [0, 224]], np.vstack((s, h224)).T, axis=0)
+        out244 = np.append([[N, 0], [0, 0], [0, 244]], np.vstack((s, h244)).T, axis=0)
+        out444 = np.append([[N, 0], [0, 0], [0, 444]], np.vstack((s, h444)).T, axis=0)
+        
+
+        wake_horz = np.vstack(([[17, 0]], out000,  out002,  out004, out011,  out013, out024, out033,
+                               out112, out114, out233, out334, out123, out134, out222, out224, out244, out444
+                               ))
+        # full coefficients, vertical, swap x -> y, x0 -> y0, i.e., 1 -> 2, 3 -> 4, keep 0
+        # note h22 = -h11, h44 = -h33
+        out000 = np.append([[N, 0], [0, 0], [0, 0]], np.vstack((s, h000)).T, axis=0)
+        out001 = np.append([[N, 0], [0, 0], [0, 1]], np.vstack((s, h002)).T, axis=0)
+        out003 = np.append([[N, 0], [0, 0], [0, 3]], np.vstack((s, h004)).T, axis=0)
+        out011 = np.append([[N, 0], [0, 0], [0, 11]], np.vstack((s, -h011)).T, axis=0)
+        out024 = np.append([[N, 0], [0, 0], [0, 24]], np.vstack((s, h013)).T, axis=0)
+        out013 = np.append([[N, 0], [0, 0], [0, 13]], np.vstack((s, h024)).T, axis=0)
+        out033 = np.append([[N, 0], [0, 0], [0, 33]], np.vstack((s, -h033)).T, axis=0)
+        
+        out122 = np.append([[N, 0], [0, 0], [0, 122]], np.vstack((s, h112)).T, axis=0)
+        out223 = np.append([[N, 0], [0, 0], [0, 223]], np.vstack((s, h114)).T, axis=0)
+        out144 = np.append([[N, 0], [0, 0], [0, 144]], np.vstack((s, h233)).T, axis=0)
+        out344 = np.append([[N, 0], [0, 0], [0, 344]], np.vstack((s, h334)).T, axis=0)
+        
+        out124 = np.append([[N, 0], [0, 0], [0, 124]], np.vstack((s, h123)).T, axis=0)
+        out234 = np.append([[N, 0], [0, 0], [0, 234]], np.vstack((s, h134)).T, axis=0)
+        out111 = np.append([[N, 0], [0, 0], [0, 111]], np.vstack((s, h222)).T, axis=0)
+        out113 = np.append([[N, 0], [0, 0], [0, 113]], np.vstack((s, h224)).T, axis=0)
+        out133 = np.append([[N, 0], [0, 0], [0, 133]], np.vstack((s, h244)).T, axis=0)
+        out333 = np.append([[N, 0], [0, 0], [0, 333]], np.vstack((s, h444)).T, axis=0)
+        
+
+        wake_vert = np.vstack(([[17, 0]], out000,  out001,  out003, out011,  out013, out024, out033,
+                               out122, out223, out144, out344, out124, out234, out111, out113, out133, out333
+                               ))
+        
         return wake_horz, wake_vert
 
 
@@ -569,7 +1202,7 @@ class Wake(PhysProc):
         return x, Wz * self.factor
 
     def apply(self, p_array, dz):
-        _logger.debug(" Wake: apply: dz = " + str(dz))
+        _logger.debug(" Wake: apply fraction: dz = " + str(dz))
 
         ps = p_array.rparticles
         Px, Py, Pz, I00 = self.add_total_wake(ps[0], ps[2], ps[4], p_array.q_array, self.TH,
@@ -593,6 +1226,285 @@ class Wake(PhysProc):
         step = self.step
         wakefile = self.wake_table.wake_file
         return f"<{cname}: {w_sampling=}, {filter_order=}, {factor=}, {step=}, {wakefile=}>"
+
+
+class Wake3(Wake):
+    """
+    The wake field impact on the beam is included as series of kicks.
+    In order to take into account the impact of the wake field on the beam the longitudinal wake function
+    of point charge through the third order Taylor expansion is used.
+    In general case it uses 13 + 20 one-dimensional functions to represent the  longitudinal component of the wake
+    function for arbitrary sets of the source and the wittness particles near to the reference axis.
+
+    parameters:
+    -----------
+    w_sampling = 500 -  defines the number of the equidistant sampling points for the one-dimensional
+                        wake coefficients in the Taylor expansion of the 3D wake function.
+    filter_order = 20 - smoothing filter order
+    wake_table = None - wake table [WakeTable3()]
+    factor = 1. - scaling coefficient
+    TH - list from WakeTable, (T, H): T- table of wakes coefs, H - matrix of the coefs place in T
+    """
+
+    def __init__(self, step=1):
+        PhysProc.__init__(self)
+        self.w_sampling = 500  # wake sampling
+        self.filter_order = 20  # smoothing filter order
+        # self.wake_file = ""
+        self.wake_table = None
+        self.factor = 1.
+        self.step = step
+        self.TH = None
+
+    def add_total_wake(self, X, Y, Z, q, TH, Ns, NF):
+        T, H = TH
+        c = speed_of_light
+        Np = X.shape[0]
+        X2 = X ** 2
+        Y2 = Y ** 2
+        XY = X * Y
+        X3 = X ** 3
+        Y3 = Y ** 3
+        X2Y = X**2 * Y
+        XY2 = X * Y**2
+        # generalized currents;
+        I00 = s2current(Z, q, Ns, NF, c)
+        Nw = I00.shape[0]
+        if (H[0, 0, 2] > 0) or (H[0, 2, 3] > 0) or (H[0, 2, 4] > 0) or (H[2, 3, 3] > 0) or (H[2, 3, 4] > 0) or (H[2, 4, 4] > 0):
+            qn = q * Y
+            I01 = s2current(Z, qn, Ns, NF, c)
+        if (H[0, 0, 1] > 0) or (H[0, 1, 3] > 0) or (H[0, 1, 4] > 0) or (H[1, 3, 3] > 0) or (H[1, 3, 4] > 0) or (H[1, 4, 4] > 0):
+            qn = q * X
+            I10 = s2current(Z, qn, Ns, NF, c)
+        if (H[0, 1, 2] > 0) or (H[1, 2, 3] > 0) or (H[1, 2, 4] > 0):
+            qn = q * XY
+            I11 = s2current(Z, qn, Ns, NF, c)
+        if H[0, 1, 1] > 0:
+            qn = q * (X2 - Y2)
+            I20_02 = s2current(Z, qn, Ns, NF, c)
+        if (H[1, 1, 3] > 0) or (H[1, 1, 4] > 0):
+            qn = q * X2
+            I20 = s2current(Z, qn, Ns, NF, c)
+        if (H[2, 2, 3] > 0) or (H[2, 2, 4] > 0):
+            qn = q * Y2
+            I02 = s2current(Z, qn, Ns, NF, c)
+        if H[1, 1, 1] > 0:
+            qn = q * X3
+            I30 = s2current(Z, qn, Ns, NF, c)
+        if H[1, 1, 2] > 0:
+            qn = q * X2Y
+            I21 = s2current(Z, qn, Ns, NF, c)           
+        if H[1, 2, 2] > 0:
+            qn = q * XY2
+            I12 = s2current(Z, qn, Ns, NF, c)
+        if H[2, 2, 2] > 0:
+            qn = q * Y3
+            I03 = s2current(Z, qn, Ns, NF, c)
+            
+        # longitudinal wake
+        # mn=0
+        x, Wz = self.add_wake(I00, T[int(H[0, 0, 0])])
+        if H[0, 0, 1] > 0:
+            x, w = self.add_wake(I10, T[int(H[0, 0, 1])])
+            Wz = Wz + w
+        if H[0, 0, 2] > 0:
+            x, w = self.add_wake(I01, T[int(H[0, 0, 2])])
+            Wz = Wz + w
+        if H[0, 1, 1] > 0:
+            x, w = self.add_wake(I20_02, T[int(H[0, 1, 1])])
+            Wz = Wz + w
+        if H[0, 1, 2] > 0:
+            x, w = self.add_wake(I11, T[int(H[0, 1, 2])])
+            Wz = Wz + 2 * w
+        if H[1, 1, 1] > 0:
+            x, w = self.add_wake(I30, T[int(H[1, 1, 1])])
+            Wz = Wz + w
+        if H[1, 1, 2] > 0:
+            x, w = self.add_wake(I21, T[int(H[1, 1, 2])])
+            Wz = Wz + 3 * w
+        if H[1, 2, 2] > 0:
+            x, w = self.add_wake(I12, T[int(H[1, 2, 2])])
+            Wz = Wz + 3 * w
+        if H[2, 2, 2] > 0:
+            x, w = self.add_wake(I03, T[int(H[2, 2, 2])])
+            Wz = Wz + w     
+        Pz = np.interp(Z, x, Wz, 0, 0)
+        Py = np.zeros(Np)
+        Px = np.zeros(Np)
+        # mn=01
+        Wz[0:Nw] = 0
+        Wy = np.zeros(Nw)
+        if H[0, 0, 4] > 0:
+            x, w = self.add_wake(I00, T[int(H[0, 0, 4])])
+            Wz = Wz + w
+            Wy = Wy + w
+        if H[0, 1, 4] > 0:
+            x, w = self.add_wake(I10, T[int(H[0, 1, 4])])
+            Wz = Wz + 2 * w
+            Wy = Wy + 2 * w
+        if H[0, 2, 4] > 0:
+            x, w = self.add_wake(I01, T[int(H[0, 2, 4])])
+            Wz = Wz + 2 * w
+            Wy = Wy + 2 * w
+        if H[1, 1, 4] > 0:
+            x, w = self.add_wake(I20, T[int(H[1, 1, 4])])
+            Wz = Wz + 3 * w
+            Wy = Wy + 3 * w
+        if H[1, 2, 4] > 0:
+            x, w = self.add_wake(I11, T[int(H[1, 2, 4])])
+            Wz = Wz + 6 * w
+            Wy = Wy + 6 * w            
+        if H[2, 2, 4] > 0:
+            x, w = self.add_wake(I02, T[int(H[2, 2, 4])])
+            Wz = Wz + 3 * w
+            Wy = Wy + 3 * w            
+        Pz = Pz + np.interp(Z, x, Wz, 0, 0) * Y
+        h = x[1] - x[0]
+        Wy = -Int1h(h, Wy)
+        Py = Py + np.interp(Z, x, Wy, 0, 0)
+        # mn=10
+        Wz[0:Nw] = 0
+        Wx = np.zeros(Nw)
+        if H[0, 0, 3] > 0:
+            x, w = self.add_wake(I00, T[int(H[0, 0, 3])])
+            Wz = Wz + w
+            Wx = Wx + w
+        if H[0, 1, 3] > 0:
+            x, w = self.add_wake(I10, T[int(H[0, 1, 3])])
+            Wz = Wz + 2 * w
+            Wx = Wx + 2 * w
+        if H[0, 2, 3] > 0:
+            x, w = self.add_wake(I01, T[int(H[0, 2, 3])])
+            Wz = Wz + 2 * w
+            Wx = Wx + 2 * w
+        if H[1, 1, 3] > 0:
+            x, w = self.add_wake(I20, T[int(H[1, 1, 3])])
+            Wz = Wz + 3 * w
+            Wx = Wx + 3 * w            
+        if H[1, 2, 3] > 0:
+            x, w = self.add_wake(I11, T[int(H[1, 2, 3])])
+            Wz = Wz + 6 * w
+            Wx = Wx + 6 * w                     
+        if H[2, 2, 3] > 0:
+            x, w = self.add_wake(I02, T[int(H[2, 2, 3])])
+            Wz = Wz + 3 * w
+            Wx = Wx + 3 * w     
+        Wx = -Int1h(h, Wx)
+        Pz = Pz + np.interp(Z, x, Wz, 0, 0) * X
+        Px = Px + np.interp(Z, x, Wx, 0, 0)
+        # mn=11
+        Wz[0:Nw] = 0
+        Wx[0:Nw] = 0
+        Wy[0:Nw] = 0
+        if H[0, 3, 4] > 0:
+            x, w = self.add_wake(I00, T[int(H[0, 3, 4])])
+            Wz = Wz + 2 * w
+            Wx = Wx + 2 * w
+            Wy = Wy + 2 * w
+        if H[1, 3, 4] > 0:
+            x, w = self.add_wake(I10, T[int(H[1, 3, 4])])
+            Wz = Wz + 6 * w
+            Wx = Wx + 6 * w
+            Wy = Wy + 6 * w
+        if H[2, 3, 4] > 0:
+            x, w = self.add_wake(I01, T[int(H[2, 3, 4])])
+            Wz = Wz + 6 * w
+            Wx = Wx + 6 * w
+            Wy = Wy + 6 * w            
+        Wx = -Int1h(h, Wx)
+        Wy = -Int1h(h, Wy)
+        Px = Px + np.interp(Z, x, Wx, 0, 0) * Y
+        Py = Py + np.interp(Z, x, Wy, 0, 0) * X
+        Pz = Pz + np.interp(Z, x, Wz, 0, 0) * XY
+        # mn=02,20
+        if H[0, 3, 3] > 0:
+            x, w = self.add_wake(I00, T[int(H[0, 3, 3])])
+            Pz = Pz + np.interp(Z, x, w, 0, 0) * (X2 - Y2)
+            Wx = -2 * Int1h(h, w)
+            p = np.interp(Z, x, Wx, 0, 0)
+            Px = Px + p * X
+            Py = Py - p * Y
+        # other terms for 02
+        Wz[0:Nw] = 0
+        Wy[0:Nw] = 0
+        if H[1, 4, 4] > 0:
+            x, w = self.add_wake(I10, T[int(H[1, 4, 4])])
+            Wz = Wz + 3 * w
+            Wy = Wy + 6 * w
+        if H[2, 4, 4] > 0:
+            x, w = self.add_wake(I01, T[int(H[2, 4, 4])])
+            Wz = Wz + 3 * w
+            Wy = Wy + 6 * w
+        Wy = -Int1h(h, Wy)
+        Py = Py + np.interp(Z, x, Wy, 0, 0) * Y
+        Pz = Pz + np.interp(Z, x, Wz, 0, 0) * Y2
+        # other terms for 20
+        Wz[0:Nw] = 0
+        Wx[0:Nw] = 0
+        if H[1, 3, 3] > 0:
+            x, w = self.add_wake(I10, T[int(H[1, 3, 3])])
+            Wz = Wz + 3 * w
+            Wx = Wx + 6 * w
+        if H[2, 3, 3] > 0:
+            x, w = self.add_wake(I01, T[int(H[2, 3, 3])])
+            Wz = Wz + 3 * w
+            Wx = Wx + 6 * w
+        Wx = -Int1h(h, Wx)
+        Px = Px + np.interp(Z, x, Wx, 0, 0) * X
+        Pz = Pz + np.interp(Z, x, Wz, 0, 0) * X2        
+        # mn=12
+        if H[3, 4, 4] > 0:
+            x, w = self.add_wake(I00, T[int(H[3, 4, 4])])
+            Wz = 3 * w
+            Wx = 3 * w
+            Wy = 6 * w            
+            Wx = -Int1h(h, Wx)
+            Wy = -Int1h(h, Wy)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * Y2
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * XY
+            Pz = Pz + np.interp(Z, x, Wz, 0, 0) * XY2
+        # mn=21
+        if H[3, 3, 4] > 0:
+            x, w = self.add_wake(I00, T[int(H[3, 3, 4])])
+            Wz = 3 * w
+            Wx = 6 * w
+            Wy = 3 * w            
+            Wx = -Int1h(h, Wx)
+            Wy = -Int1h(h, Wy)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * XY
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * X2
+            Pz = Pz + np.interp(Z, x, Wz, 0, 0) * X2Y        
+        # mn=30
+        if H[3, 3, 3] > 0:
+            x, w = self.add_wake(I00, T[int(H[3, 3, 3])])
+            Wz = w
+            Wx = 3 * w         
+            Wx = -Int1h(h, Wx)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * X2
+            Pz = Pz + np.interp(Z, x, Wz, 0, 0) * X3
+        # mn=03
+        if H[4, 4, 4] > 0:
+            x, w = self.add_wake(I00, T[int(H[4, 4, 4])])
+            Wz =  w
+            Wy = 3 * w            
+            Wy = -Int1h(h, Wy)
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * Y2
+            Pz = Pz + np.interp(Z, x, Wz, 0, 0) * Y3        
+
+        I00[:, 0] = - I00[:, 0]
+        # Z=-Z
+        return Px, Py, Pz, I00
+
+    def get_long_wake(self, current_profile):
+        """
+        method to extract a longitudinal wake from the Table for specific current profile
+
+        :param current_profile: 2D array with shape (n, 2) where first column is position and second is a beam current
+        :return: wake
+        """
+        T, H = self.TH
+        x, Wz = self.add_wake(current_profile, T[int(H[0, 0, 0])])
+        return x, Wz * self.factor
 
 
 class WakeKick(Wake):

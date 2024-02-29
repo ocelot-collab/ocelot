@@ -903,6 +903,11 @@ def gen4_lat_elem2str(element, element_num):
         s = '{:}: PHASESHIFTER = {{l = {:}, phi = {:}}};'.format(element_name, element.l, element.phi)
 
     else:
+        # Unknown element type, replace by drift to get cell length right (while ignoring l=0 elements)
+        if element.l==0:
+            _logger.warning('Unknown element {} with length {}'.format(str(element), element.l))
+            return (None,None) # signal to caller that no line is to be written to lattice file
+        #
         _logger.warning('Unknown element {} with length {}\n replacing with drift'.format(str(element), element.l))
         element_name = element_num + 'UNKNOWN'
         s = '{:}: DRIFT = {{l={:}}};'.format(element_name, element.l)
@@ -920,6 +925,8 @@ def gen4_lat_str(lat, line_name='LINE', zstop=np.inf, cb_latline=None):
     beamline = []
     location = 0
 
+    # Loop over elements in specified lattice sequence
+    # and collect GENESIS lattice representation
     for element in lat.sequence:
         if location >= zstop:
             break
@@ -933,15 +940,20 @@ def gen4_lat_str(lat, line_name='LINE', zstop=np.inf, cb_latline=None):
 
         got_info = False
         if (cb_latline is not None) and callable(cb_latline):
-            qqq = cb_latline(lat, element, len(beamline), element_prefix)
-            if qqq!=(None,None):
-                (element_name,s) = qqq
+            ele_repr = cb_latline(lat, element, len(beamline), element_prefix)
+            if ele_repr!=(None,None):
+                (element_name,s) = ele_repr
                 got_info = True
 
         if not got_info:
-			# either callback function not defined, or callback function does not override default behavior
-            (element_name,s) = gen4_lat_elem2str(element, element_prefix)
-            got_info = True
+            # either callback function not defined, or callback function does not override default behavior
+            ele_repr = gen4_lat_elem2str(element, element_prefix)
+            if ele_repr!=(None,None):
+                (element_name,s) = ele_repr
+                got_info = True
+
+        if not got_info:
+            continue # no lattice element to be written to file
 
         beamline.append(element_name)
         lat_str.append(s)

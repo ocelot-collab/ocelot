@@ -230,10 +230,10 @@ def create_fel_lattice(und_N = 35,
                     phs_L = 0.0,
                     quad_start = 'd',
                     **kwargs):
-    if quad_L > inters_L:
-        _logger.warning('Quarrupole cannot be longer than intersection')
-
     hcor_l = und_l
+    if (quad_L+2*hcor_l) > inters_L:
+        _logger.warning('Quadrupole and correctors have to fit into intersection')
+
     # und_n = np.floor(und_L/und_l).astype(int)
     und_n = und_L/und_l
 
@@ -261,7 +261,7 @@ def create_fel_lattice(und_N = 35,
         cell_N_last = 0
     else:
         cell_N = np.floor((und_N - 1)/2).astype(int)
-        cell_N_last = int((und_N - 1)/2%1)
+        cell_N_last = int((und_N - 1)/2%2)
 
     if quad_start == 'd':
         cell = (und, cx, cy, d1, qf, phs, d2, und, cx, cy, d1, qd, phs, d2) 
@@ -328,9 +328,15 @@ def create_fel_lattice_tmp(und_N = 34,
     return (MagneticLattice(lat), None, cell)
 
 
-def create_fel_beamline(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
+def create_fel_beamline(beamline = 'sase1', inters_phi=0, inters_K = "K_und", *, override_und_N=None):
+    '''
+    If provided, parameter override_und_N allows to adjust the number of undulator cells in the generated beamline.
+    '''
     if beamline in ['sase1', 1, 'sase2', 2, 'EuXFEL_SASE1', 'EuXFEL_SASE2']:
-        return create_fel_lattice(und_N = 37,
+        und_N = 37 # default value
+        if override_und_N is not None:
+            und_N=override_und_N
+        return create_fel_lattice(und_N = und_N,
                         und_L = 5-0.04,
                         und_l = 0.04,
                         und_Kx = 0,
@@ -345,7 +351,10 @@ def create_fel_beamline(beamline = 'sase1', inters_phi=0, inters_K = "K_und"):
                         beamline_name = beamline
                             )
     elif beamline in ['sase3', 3, 'EuXFEL_SASE3']:
-        return create_fel_lattice(und_N = 21,
+        und_N = 21 # default value
+        if override_und_N is not None:
+            und_N=override_und_N
+        return create_fel_lattice(und_N = und_N,
                         und_L = 5.032,#5
                         und_l = 0.068,
                         und_Kx = 0,

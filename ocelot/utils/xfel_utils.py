@@ -272,7 +272,6 @@ def create_fel_lattice(und_N = 35,
     and is therefore the default (it prevents matching for Nund=2).
     If True, all undulator half-cells are identical.
     '''
-    print(kwargs)
     # False is default value, not changing behavior before March-2024 unless requested by user
     final_halfcell_complete=kwargs.get('final_halfcell_complete', False)
 

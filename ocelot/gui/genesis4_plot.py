@@ -956,35 +956,59 @@ def subfig_evo_el_pos(ax_size_tpos, out, legend, which='both'):
 
 @if_plottable
 def subfig_evo_el_energy(ax_energy, out, legend):
+    # Plot debugging data? May require specific GENESIS input file parameters to generate needed data.
+    do_plot_dbg=False
     number_ticks = 6
 
-    el_energy = out.h5['Beam/energy'][:] * m_e_MeV
-    el_energy_av = int(np.nanmean(el_energy))
-    z = out.h5['Lattice/zplot'][:]
-    el_energy_spread = out.h5['Beam/energyspread'][:]
+    ### Prepare weight matrix/vector ###
+    # Organisation of current (if computed at every int. step,
+    # which is controlled by exclude_current_output=False in &setup
+    # block of G4 infile) is identical to that of /Beam/energy (and others):
+    # First index=int step, second index=slice id
+    # FIXME: Note that as of Dec-2023, out.I is 1-D obj. nevertheless.
+    el_current = out.h5['Beam/current'][()]
+    s_el_current = np.sum(el_current,axis=1) # w/o beam losses, this should not change
+    w_el = (el_current.T/s_el_current).T # transpose operation to make broadcasting work
 
-    mean_energy = np.nanmean(el_energy - el_energy_av, axis=1)
-    ax_energy.plot(z, mean_energy, 'b-', linewidth=1.5)
-    ax_energy.set_ylabel('<E> + ' + str(el_energy_av) + '[MeV]')
+    # Note CL, 28.12.2023: this code works also for simulation output not containing the current data for every integration step
+
+    # Obtain raw data from GENESIS .out.h5 file
+    el_energy = out.h5['Beam/energy'][()]
+    z = out.h5['Lattice/zplot'][()]
+    el_energy_spread = out.h5['Beam/energyspread'][()]
+
+    # prepare data for the plot    
+    Menergy = w_el*el_energy
+    Menergy_spread = w_el*el_energy_spread
+    mean_energy = np.sum(Menergy,axis=1) * m_e_MeV # sums over all slices
+    mean_spread = np.nansum(Menergy_spread, axis=1) * m_e_MeV
+    max_spread = np.nanmax(el_energy_spread, axis=1)* m_e_MeV
+    
+    # vertical energy offset now with rounding (used to be just 'int', which resulted in floor operation)
+    y_energy_offset = int(np.round(mean_energy[0]))
+
+    ax_energy.plot(z, mean_energy-y_energy_offset,'b-', linewidth=1.5)
+    ax_energy.set_ylabel('<E> + ' + str(y_energy_offset) + '[MeV]')
     ax_energy.ticklabel_format(axis='y', style='sci', scilimits=(-3, 3), useOffset=False)
     ax_energy.grid(True)
-
-    #notnan_idx = np.isnan(el_energy_spread) == False
-    
-    I_weight = out.I / np.sum(out.I)
-    
-    
-    #mean_spread = np.average(el_energy_spread[notnan_idx], weights=out.I, axis=1)
-    
-    mean_spread = np.nansum(el_energy_spread * I_weight[np.newaxis, :], axis=1) * m_e_MeV
-    max_spread = np.nanmax(el_energy_spread, axis=1)* m_e_MeV
     
     ax_spread = ax_energy.twinx()
     ax_spread.plot(z, mean_spread, 'm--', 
-                z, max_spread, 'r--', linewidth=1.5)
+                   z, max_spread,  'r--', linewidth=1.5)
     ax_spread.set_ylabel(r'$\sigma_E$ [MeV]')
     ax_spread.grid(False)
     ax_spread.set_ylim(ymin=0)
+    
+    # For testing: 2023 versions of GENESIS4 can compute evolution of
+    # mean energy internally (switch beam_global_stat in &setup)
+    # Remark related to energy spread plotting:
+    # It CANNOT be expected that /Beam/Global/energyspread (computed over all particles in all slices)
+    # is identical to the values prepared from /Beam/energyspread
+    # (these are computed on a per-slice basis)
+    if do_plot_dbg:
+        ax_energy.plot(z, m_e_MeV*(out.h5['Beam/Global/energy'][()])-y_energy_offset,'r+',label='/Beam/Global/energy')
+        ax_spread.plot(z, m_e_MeV*(out.h5['Beam/Global/energyspread'][()]),'k--',label='Beam/Global/energyspread')
+
 
     ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_spread.yaxis.major.locator.set_params(nbins=number_ticks)

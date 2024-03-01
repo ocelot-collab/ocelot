@@ -260,8 +260,10 @@ def create_fel_lattice(und_N = 35,
         cell_N = 0
         cell_N_last = 0
     else:
-        cell_N = np.floor((und_N - 1)/2).astype(int)
-        cell_N_last = int((und_N - 1)/2%2)
+        cell_N = np.floor((und_N-1)/2).astype(int)
+        cell_N_last = int((und_N-1)%2)
+
+    # print(f'und_N={und_N}: cell_N={cell_N}, cell_N_last={cell_N_last}')
 
     if quad_start == 'd':
         cell = (und, cx, cy, d1, qf, phs, d2, und, cx, cy, d1, qd, phs, d2) 

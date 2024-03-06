@@ -247,6 +247,12 @@ class SpaceCharge(PhysProc):
         xp[3:6] = np.dot(xp[3:6].T, T).T
         xp_2_xxstg_mad(xp, p_array.rparticles, gamref)
 
+    def __repr__(self) -> str:
+        cname = type(self).__name__
+        step = self.step
+        nmesh_xyz = self.nmesh_xyz
+        random_mesh = self.random_mesh
+        return f"<{cname}: {step=}, {nmesh_xyz=}, {random_mesh=}>"
 
 class LSC(PhysProc):
     """

@@ -78,7 +78,7 @@ def test_track_chicane_und_wo_csr(lattice, p_array, parameter, update_ref_values
             else:
                 elem.Kx = 1.36 * 1.414213
 
-    lattice.update_transfer_maps()
+    #lattice.update_transfer_maps()
 
     navi = Navigator(lattice)
     navi.unit_step = 0.05
@@ -121,7 +121,7 @@ def test_track_chicane_und_csr(lattice, p_array, parameter, update_ref_values=Fa
             else:
                 elem.Kx = 1.36 * 1.414213
 
-    lattice.update_transfer_maps()
+    #lattice.update_transfer_maps()
 
     navi = Navigator(lattice)
     navi.unit_step = 0.05
@@ -164,8 +164,6 @@ def test_track_with_laser_heater(lattice, p_array, parameter, update_ref_values=
                 elem.Kx = 0
             else:
                 elem.Kx = 1.36 * 1.414213
-
-    lattice.update_transfer_maps()
 
     navi = Navigator(lattice)
     navi.unit_step = 0.05

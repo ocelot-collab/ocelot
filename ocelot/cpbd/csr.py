@@ -8,7 +8,6 @@ import importlib
 import logging
 
 import numpy as np
-from scipy import interpolate
 from scipy.integrate import cumtrapz
 
 from ocelot.common.globals import pi, speed_of_light, m_e_eV, m_e_GeV
@@ -24,12 +23,11 @@ from ocelot.cpbd.elements.sbend import SBend
 from ocelot.cpbd.elements.xyquadruple import XYQuadrupole
 
 from ocelot.cpbd.physics_proc import PhysProc
-
-# matplotlib may or may not be on the HPC nodes at DESY.  
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    pass
+# matplotlib may or may not be on the HPC nodes at DESY.
+#try:
+#    import matplotlib.pyplot as plt
+#except ImportError:
+#    pass
 
 # Try to import numba, pyfftw and numexpr for improved performance
 logger = logging.getLogger(__name__)
@@ -111,7 +109,7 @@ class Smoothing:
         self.print_log = False
         if nb_flag:
             logger.debug("Smoothing: NUMBA")
-            self.q_per_step_ip2 = nb.jit()(self.q_per_step_ip2_py)
+            self.q_per_step_ip2 = nb.jit(nopython=True)(self.q_per_step_ip2_py)
         else:
             logger.debug("Smoothing: Python")
             self.q_per_step_ip2 = self.q_per_step_ip2_py
@@ -265,6 +263,78 @@ class Smoothing:
                     charge_per_step[k-1] += w * qps
         return z1, z2, Nz, charge_per_step
 
+    def Q2EQUI_modified(self, BS_params, SBINB):
+        """
+        input
+        BIN = bin boundaries BIN(N_BIN, 2), in time or space
+        Q_BIN = charges per bin Q_BIN(N_BIN)
+        BS_params = binning and smoothing parameters
+        binning.......................
+        X_QBIN = length or charge binning
+        0... 1 = length...charge
+        N_BIN = number of bins
+        M_BIN = multiple binning(with shifted bins)
+        smoothing.....................
+        IP_method = 0 / 1 / 2 for rectangular / triangular / gauss
+        SP = ? parameter for gauss
+        sigma_min = minimal sigma, if IP_method == 2
+        step_unit = if positive --> step=integer * step_unit
+        output
+        z1, z2, Nz = equidistant mesh(Nz meshlines)
+        bins might overlap!
+        """
+
+        N_BIN = BS_params[1]
+        M_BIN = BS_params[2]
+        K_BIN = N_BIN * M_BIN  # number of sub - bins
+        I_BIN = K_BIN - (M_BIN - 1)  # number of bin intervalls
+        # put charges to sub - bins
+
+        BIN = [SBINB[0:I_BIN], SBINB[M_BIN + np.arange(I_BIN)]]
+
+        # interpolation parameters
+        IP_method = BS_params[3]
+        SP = BS_params[4]
+        if SP <= 0:
+            SP = 0.5
+
+        sigma_min = max(0, BS_params[5])
+        if len(BS_params) < 7:
+            step_unit = 0
+        else:
+            step_unit = max(0, BS_params[6])
+
+        # define mesh
+        N_BIN = len(BIN[0])
+
+        if IP_method == 1:
+            z1 = np.min(2 * BIN[0][:] - BIN[1][:])
+            z2 = np.max(2 * BIN[1][:] - BIN[0][:])
+            step = 0.5 * min(BIN[1][:] - BIN[:][0])
+        elif IP_method == 2:
+            NSIG = 5
+            MITTE = 0.5 * (BIN[0] + BIN[1])
+            RMS = SP * (BIN[1] - BIN[0])
+            for nb in range(N_BIN):
+                RMS[nb] = max(RMS[nb], sigma_min)
+            z1 = np.min(MITTE - NSIG * RMS)
+            z2 = np.max(MITTE + NSIG * RMS)
+            step = 0.25 * min(RMS)
+        else:
+            z1 = np.min(BIN[0][:])
+            z2 = np.max(BIN[1][:])
+            step = 0.5 * min(BIN[1][:] - BIN[0][:])
+
+        if step_unit > 0:
+            step = step_unit * max(1, np.round(step / step_unit))
+            z1 = step * np.floor(z1 / step)
+            z2 = step * np.ceil(z2 / step)
+            Nz = np.round((z2 - z1) / step)
+        else:
+            Nz = np.round((z2 - z1) / step)
+
+        return z1, z2, Nz
+
 
 class SubBinning:
     def __init__(self, x_qbin, n_bin, m_bin):
@@ -275,11 +345,11 @@ class SubBinning:
         if nb_flag:
             logger.debug("SubBinning: NUMBA")
             self.p_per_subbins = nb.jit(
-                nb.double[:](nb.double[:], nb.double[:], nb.int64))(
+                nb.double[:](nb.double[:], nb.double[:], nb.int64), nopython=True)(
                     self.p_per_subbins_py)
         else:
             logger.debug("SubBinning: Python")
-            self.p_per_subbins = self.p_per_subbins_py
+            self.p_per_subbins = self.p_per_subbins_np
 
     @staticmethod
     def p_per_subbins_py(s, SBINB, K_BIN):
@@ -290,6 +360,12 @@ class SubBinning:
             while s[n] >= SBINB[ib + 1] and ib < K_BIN - 1:
                 ib = ib + 1
             NBIN[ib] = NBIN[ib] + 1
+        return NBIN
+
+    @staticmethod
+    def p_per_subbins_np(s, SBINB, K_BIN):
+        ib = np.searchsorted(SBINB, s, side='right') - 1
+        NBIN, _ = np.histogram(ib, bins=np.arange(K_BIN + 1))
         return NBIN
 
     def subbin_bound(self, q, s, x_qbin, n_bin, m_bin):
@@ -363,8 +439,8 @@ class K0_fin_anf:
         self.print_log = False
         if nb_flag:
             logger.debug("K0_fin_anf: NUMBA")
-            self.K0_1 = nb.jit()(self.K0_1_jit)
-            self.K0_0 = nb.jit()(self.K0_0_jit)
+            self.K0_1 = nb.jit(nopython=True)(self.K0_1_jit)
+            self.K0_0 = nb.jit(nopython=True)(self.K0_0_jit)
             self.eval = self.K0_fin_anf_opt
         elif ne_flag:
             logger.debug("K0_fin_anf: NumExpr")
@@ -818,7 +894,6 @@ class CSR(PhysProc):
             L_fin = False
 
         w_range = np.arange(-NdW[0]-1, 0)*NdW[1]
-
         if L_fin:
             w, KS = self.k0_fin_anf.eval(i, traj, w_range[0], gamma)
         else:
@@ -869,10 +944,6 @@ class CSR(PhysProc):
             self.napply = 0
             self.total_wake = 0
 
-        if self.energy is None and self.rk_traj:
-            raise CSRConfigurationError(
-                "RK trajectory calc set but CSR.energy left unset."
-            )
 
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
         p = Particle()
@@ -881,6 +952,12 @@ class CSR(PhysProc):
         if Undulator in [elem.__class__ for elem in lat.sequence[self.indx0:self.indx1+1]] and not self.rk_traj:
             self.rk_traj = True
             logger.warning("CSR: Undulator element is in CSR section --> rk_traj = True")
+
+        if self.energy is None and self.rk_traj:
+            raise CSRConfigurationError(
+                "RK trajectory calc set but CSR.energy left unset."
+            )
+
         for elem in lat.sequence[self.indx0:self.indx1+1]:
 
             if elem.l == 0:
@@ -915,6 +992,7 @@ class CSR(PhysProc):
                     def mag_field(x, y, z): return (Bx, By, 0)
 
                 elif elem.__class__ == Undulator:
+                    print("ENERGY = ",self.energy)
                     gamma = self.energy/m_e_GeV
                     ku = 2 * np.pi / elem.lperiod
                     delta_z = elem.lperiod * elem.nperiods
@@ -929,7 +1007,7 @@ class CSR(PhysProc):
 
                     # ending poles 1/4, -3/4, 1, -1, ... (or -1/4, 3/4, -1, 1)
                     if self.end_poles:
-                        def mag_field(x, y, z): return und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=elem.nperiods)
+                        def mag_field(x, y, z): return und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=elem.nperiods, end_poles='3/4')
 
                 else:
                     delta_z = delta_s * np.sin(elem.angle) / elem.angle if elem.angle != 0 else delta_s
@@ -1012,6 +1090,7 @@ class CSR(PhysProc):
             return
         s_cur = self.z0 - self.z_csr_start
         z = -p_array.tau()
+
         ind_z_sort = np.argsort(z)
         #SBINB, NBIN = subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
         #B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
@@ -1022,7 +1101,9 @@ class CSR(PhysProc):
         st = (s2 - s1) / Ns
         sa = s1 + st / 2.
         Ndw = [Ns - 1, st]
-
+        #print(Ndw, z[ind_z_sort][-1] - z[ind_z_sort][0], len(lam_ds), z[ind_z_sort].max() - z[ind_z_sort].min(), s1, s2)
+        #plt.plot(lam_ds)
+        #plt.show()
         s_array = self.csr_traj[0, :]
         indx = (np.abs(s_array - s_cur)).argmin()
         indx_prev = (np.abs(s_array - (s_cur - delta_s))).argmin()
@@ -1034,6 +1115,13 @@ class CSR(PhysProc):
         K1 = 0
         for it in itr_ra:
             K1 += self.CSR_K1(it, self.csr_traj, Ndw, gamma=gamma)
+        #x = np.arange(Ndw[0] + 1) * Ndw[1]
+        #xp = np.arange(self.kernel_Ndw[0] + 1) * self.kernel_Ndw[1]
+        #for it in itr_ra:
+        #    fp = self.kernels[it]
+        #    #print(len(fp), len(xp), self.kernel_Ndw)
+        #    K1 = np.interp(x, xp, fp)
+        #    K1 += K1 #self.CSR_K1(it, self.csr_traj, Ndw, gamma=gamma)
         K1 /= len(itr_ra)
 
         lam_K1 = csr_convolution(lam_ds, K1[::-1]) / st * delta_s
@@ -1057,6 +1145,24 @@ class CSR(PhysProc):
         # if self.pict_debug:
         #     data = np.array([ np.array(self.total_wake)])
         #     np.savetxt("total_wake_test.txt", data)
+
+    def calcualte_csr_wakes(self):
+        #B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
+        #s1, s2, Ns = self.bin_smoth.Q2EQUI_modified(B_params, SBINB)
+        #st = (s2 - s1) / Ns
+        #Ndw = [Ns - 1, st]
+        gamma = 14 / m_e_GeV
+        s_array = self.csr_traj[0, :]
+        self.kernel_Ndw = [500, 25e-6]
+        self.kernels = {}
+        self.kern_indx = []
+        for it in range(len(s_array))[1:]:
+            kern = self.CSR_K1(it, self.csr_traj, self.kernel_Ndw, gamma=gamma)
+            #print(len(kern))
+            self.kernels[it] = kern
+            self.kern_indx.append(it)
+
+        return self.kernels
 
     def plot_wake(self, p_array, lam_K1, itr_ra, s1, st):
         """
@@ -1107,6 +1213,14 @@ class CSR(PhysProc):
         name = "0" * (4 - len(dig)) + dig
         self.plt.savefig( name + '.png')
 
+    def __repr__(self) -> str:
+        cname = type(self).__name__
+        sigma_min = self.sigma_min
+        traj_step = self.traj_step
+        apply_step = self.apply_step
+        n_bin = self.n_bin
+        step = self.step
+        return f"<{cname}: {sigma_min=}, {traj_step=}, {apply_step=}, {n_bin=}, {step=}>"
 
 
 class SaferCSR(CSR):

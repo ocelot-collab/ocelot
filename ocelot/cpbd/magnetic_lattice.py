@@ -1,3 +1,4 @@
+from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.elements.element import Element
 from ocelot.cpbd.elements.marker import Marker
 from ocelot.cpbd.elements.drift import Drift
@@ -10,13 +11,15 @@ from ocelot.cpbd.elements.sbend import SBend
 from ocelot.cpbd.elements.rbend import RBend
 from ocelot.cpbd.latticeIO import LatticeIO
 from ocelot.cpbd.transformations.transfer_map import TransferMap
-from ocelot.cpbd.optics import lattice_transfer_map
+from ocelot.cpbd.optics import lattice_transfer_map, periodic_twiss
 from ocelot.cpbd.tm_utils import transfer_maps_mult
+from ocelot.common.globals import m_e_GeV
+from ocelot.cpbd.beam import Twiss
 
 import logging
 import re
 from collections import defaultdict
-from typing import Mapping, Sequence, Tuple, Callable, Any, Generator, Iterator
+from typing import Mapping, Sequence, Tuple, Callable, Any, Generator, Iterator, Type, TypeVar, List
 import numpy as np
 
 _logger = logging.getLogger(__name__)
@@ -24,6 +27,9 @@ _logger = logging.getLogger(__name__)
 # Returned by insert_marker_by_type, insert_markers_by_name,
 # insert_markers_by_predicate
 MarkersInsertionReturnType = Mapping[Element, Sequence[Tuple[Marker, Marker]]]
+
+# to solve typing issue in PyCharm
+E = TypeVar('E', bound=OpticElement)
 
 
 def lattice_format_converter(elements):
@@ -150,7 +156,7 @@ def flatten(iterable: Iterator[Any]) -> Generator[Any, None, None]:
     try:
         yield from _flatten(iterable)
     except RecursionError:
-        raise RecursionError("Maximum recusion reached.  Possibly trying"
+        raise RecursionError("Maximum recursion reached.  Possibly trying"
                              " to flatten an infinitely nested iterable.")
 
 
@@ -164,11 +170,17 @@ class MagneticLattice:
     Notes: If the elements doesn't support the defined transfer map, the default transfer map will be used, which is
     defined in the specific element class.
     For example:
-        {"global": SecondTM, "Undulator": UndulatorTestTM }
-        Sets for all elements SecondTM as transfer map, expect for the Undulator elements.
+        '''
+        from ocelot import *
+
+        method = {"global": SecondTM, Octupole: KickTM, Undulator:RungeKuttaTM }
+        lat  = MagneticLattice(cell, method=method)
+        '''
+    Sets for all elements SecondTM as transfer map, expect for the Octupole and Undulator elements.
+    see more at Section 7 https://nbviewer.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/small_useful_features.ipynb
     """
 
-    def __init__(self, sequence, start=None, stop=None, method=None):
+    def __init__(self, sequence, start: E = None, stop: E = None, method=None):
         if method is None:
             method = {'global': TransferMap}
         if isinstance(method, dict):
@@ -188,7 +200,7 @@ class MagneticLattice:
         for e in self.sequence:
             self.__hash__[e] = e
 
-    def get_sequence_part(self, start, stop):
+    def get_sequence_part(self, start: E, stop: E):
         try:
             if start is not None:
                 id1 = self.sequence.index(start)
@@ -257,8 +269,16 @@ class MagneticLattice:
         return line
 
     def find_indices(self, element):
-        indx_elem = np.where([i.__class__ == element for i in self.sequence])[0]
-        return indx_elem
+        """Find index by class type: argument should be a class"""
+
+        return self.find_indices_by_predicate(lambda elem: isinstance(elem, element))
+
+    def find_indices_by_predicate(self, predicate: Callable[Element, bool]) -> List[int]:
+        """Get indices using some callable function.  Function should
+        take one argument, an element of the sequence, and return
+        either True or False.
+        """
+        return [index for (index, element) in enumerate(self.sequence) if predicate(element)]
 
     def find_drifts(self):
         drift_lengs = []
@@ -293,29 +313,89 @@ class MagneticLattice:
         LatticeIO.save_lattice(self, tws0=tws0, file_name=file_name, remove_rep_drifts=remove_rep_drifts,
                                power_supply=power_supply)
 
-    def transfer_maps(self, energy, output_at_each_step: bool = False):
+    def transfer_maps(self, energy, output_at_each_step: bool = False, start: E = None,
+                      stop: E = None):
         """
         Function calculates transfer maps, the first and second orders (R, T), for the whole lattice.
 
+        :param start:
+        :param stop:
         :param energy: the initial electron beam energy [GeV]
-        :param output_at_each_step: return three list of matrices [Bs], [Rs], [Ts] after each element in the line
-        :return: B, R, T - matrices
+        :param output_at_each_step: [Bs], [Rs], [Ts], [S] return three list of matrices [Bs], [Rs], [Ts] after each element in the line
+                                    and [S] position at the end of each transfer map.
+        :return: B, R, T - matrices OR [Bs], [Rs], [Ts], [S] if output_at_each_step = True
         """
+        sequence = self.get_sequence_part(start, stop)
         Ra = np.eye(6)
         Ta = np.zeros((6, 6, 6))
         Ba = np.zeros((6, 1))
-        Bs, Rs, Ts = [], [], []
+        Bs, Rs, Ts, S = [], [], [], []
+        s_pos = 0.
         E = energy
-        for elem in self.sequence:
+        for elem in sequence:
             for Rb, Bb, Tb, tm in zip(elem.R(E), elem.B(E), elem.T(E), elem.tms):
                 Ba, Ra, Ta = transfer_maps_mult(Ba, Ra, Ta, Bb, Rb, Tb)
                 E += tm.get_delta_e()
                 Bs.append(Ba)
                 Rs.append(Ra)
                 Ts.append(Ta)
+                s_pos += tm.length
+                S.append(s_pos)
         if output_at_each_step:
-            return Bs, Rs, Ts
+            return Bs, Rs, Ts, S
         return Ba, Ra, Ta
+
+    def survey(self, x0=0, y0=0, z0=0, ang_x=0.0, ang_y=0.0):
+        """
+        Function calculates coordinates in rectangular coordinates system at the beginning of each element in lattice
+        :param x0: 0, initial offset in x direction
+        :param y0: 0, initial offset in y direction
+        :param z0: 0, initial offset in z direction
+        :param ang_x: 0, initial angel in horizontal plane
+        :param ang_y: 0, initial angel in vertical plane
+        :return: x, y, z, a_x, a_y - lists of coordinates
+        """
+        x = [x0]
+        y = [y0]
+        z = [z0]
+        a_x = [ang_x]
+        a_y = [ang_y]
+        for e in self.sequence:
+            if e.__class__ in [Bend, SBend, RBend] and e.angle != 0.:
+                ang_x += e.angle * 0.5 * np.cos(e.tilt)
+                ang_y += e.angle * 0.5 * np.sin(e.tilt)
+                s = 2 * e.l * np.sin(e.angle * 0.5) / e.angle
+                x0 += s * np.sin(ang_x)
+                y0 += s * np.sin(ang_y)
+                z0 += s * np.cos(np.sqrt(ang_x ** 2 + ang_y ** 2))
+                ang_x += e.angle * 0.5 * np.cos(e.tilt)
+                ang_y += e.angle * 0.5 * np.sin(e.tilt)
+            else:
+                x0 += e.l * np.sin(ang_x)
+                y0 += e.l * np.sin(ang_y)
+                z0 += e.l * np.cos(np.sqrt(ang_x ** 2 + ang_y ** 2))
+            x.append(x0)
+            y.append(y0)
+            z.append(z0)
+            a_x.append(ang_x)
+            a_y.append(ang_y)
+        return x, y, z, a_x, a_y
+
+    def print_sequence(self, start: E = None, stop: E = None):
+        sequence = self.get_sequence_part(start, stop)
+        lines = ["{:<17} {:<15} {:<10} {:<10}".format('id', 'length', 'start', 'end') ]
+        s = 0.
+        for elem in sequence:
+            line = "{:<17} {:<15} {:<10} {:<10}".format(elem.id, np.round(elem.l, 4), np.round(s, 4), np.round(s + elem.l, 4))
+            s += elem.l
+            lines.append(line)
+        return lines
+
+    def periodic_twiss(self, tws=None):
+        tws = Twiss(tws)
+        R = self.transfer_maps(energy=tws.E)[1]
+        tw_periodic = periodic_twiss(tws, R)
+        return tw_periodic
 
 
 class EndElements:
@@ -432,7 +512,10 @@ def insert_markers_by_type(sequence, magnet_type: Element, before=True, after=Tr
 
 
 def insert_markers_by_predicate(sequence, predicate: Callable[[Element], bool],
-                                before=True, after=True
+                                before=True, after=True,
+                                before_suffix="_before",
+                                after_suffix="_after",
+                                matched_slice=None
                                 ) -> MarkersInsertionReturnType:
     """Insert markers either side of elements in the magnetic lattice, selected
     based on the the provided predicate function.
@@ -452,11 +535,11 @@ def insert_markers_by_predicate(sequence, predicate: Callable[[Element], bool],
         marker_before = None
         marker_after = None
         if after:
-            marker_id_after = f"{ele.id}_after"
+            marker_id_after = f"{ele.id}{after_suffix}"
             marker_after = Marker(marker_id_after)
             sequence.insert(i + 1, marker_after)
         if before:
-            marker_id_before = f"{ele.id}_before"
+            marker_id_before = f"{ele.id}{before_suffix}"
             marker_before = Marker(marker_id_before)
             sequence.insert(i, marker_before)
 

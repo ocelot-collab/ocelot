@@ -1,4 +1,5 @@
 from ocelot.cpbd.elements.magnet import Magnet
+from ocelot.cpbd.tm_params.runge_kutta_params import RungeKuttaParams
 
 
 class DriftAtom(Magnet):
@@ -16,3 +17,6 @@ class DriftAtom(Magnet):
         s += 'l=%7.5f, ' % self.l if self.l != 0. else ""
         s += 'eid="' + str(self.id) + '")' if self.id is not None else ")"
         return s
+
+    def create_runge_kutta_main_params(self, energy):
+        return RungeKuttaParams(mag_field=lambda x, y, z: (0., 0., 0,))

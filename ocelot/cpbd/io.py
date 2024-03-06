@@ -30,10 +30,11 @@ try:
 except ImportError:
     pass
 
+HAS_H5PY = True
 try:
     import h5py
 except ImportError:
-    pass
+    HAS_H5PY = False
 
 _logger = logging.getLogger(__name__)
 
@@ -42,13 +43,14 @@ def is_an_mpi_process():
     return "OMPI_COMM_WORLD_SIZE" in os.environ
 
 
-class HDF5FileWithMaybeMPI(h5py.File):
-    def __init__ (self, *args, **kwargs):
-        if is_an_mpi_process():
-            _logger.debug("Opening h5py with mpi enabled")
-            kwargs.update({"driver": "mpio", "comm": MPI.COMM_WORLD})
-        # self.f = h5py.File(*args, **kwargs)
-        super().__init__(*args, **kwargs)
+if HAS_H5PY:
+    class HDF5FileWithMaybeMPI(h5py.File):
+        def __init__ (self, *args, **kwargs):
+            if is_an_mpi_process():
+                _logger.debug("Opening h5py with mpi enabled")
+                kwargs.update({"driver": "mpio", "comm": MPI.COMM_WORLD})
+            # self.f = h5py.File(*args, **kwargs)
+            super().__init__(*args, **kwargs)
 
 
 class ParameterScanFile:

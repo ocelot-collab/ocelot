@@ -14,7 +14,7 @@ from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 class OpticElement:
     """[summary]
-    Facade between old interface an new interface.
+    Facade between old interface and new interface.
     """
 
     __is_init = False  # needed to disable __getattr__ and __setattr__ until __init__ is executed

@@ -45,8 +45,8 @@ class RadiationField:
     """
 
     def __init__(self, shape=(0, 0, 0)):
-        # self.fld=np.array([]) #(z,y,x)
-        self.fld = np.zeros(shape, dtype=complex128)  # (z,y,x)
+        self.fld = np.zeros(shape, dtype=complex128) # (z,y,x)
+        self.fld_stat = []
         self.dx = []
         self.dy = []
         self.dz = []
@@ -54,10 +54,48 @@ class RadiationField:
         self.domain_z = 't'  # longitudinal domain (t - time, f - frequency)
         self.domain_xy = 's'  # transverse domain (s - space, k - inverse space)
         self.filePath = ''
-
+        
     def fileName(self):
         return filename_from_path(self.filePath)
-
+    
+    # @property
+    # def fld(self):
+        # return self.fld_stat[0]
+    
+    # @fld.setter
+    # def fld(self,value):
+        # if len(self.fld_stat) == 0:
+            # self.fld_stat = [value]
+        # else:
+            # self.fld_stat[0] = value
+    
+    def slices2stat(self):
+        #temporary functions
+        if self.Nz() == 1:
+            _logger.warning('Number of slices is one, fld_stat of size {} has been replaced'.format(self.Nstat()))
+        self.fld_stat = [dfl[np.newaxis,:,:] for dfl in self.fld]
+        self.fld = np.zeros_like(self.fld_stat[0])
+        
+        
+    def stat2slices(self):
+        #temporary functions
+        if self.Nz() > 1:
+            raise ValueError('Number of Nz slices should be zero, but is {}'.format(self.Nz()))
+        if self.Nstat() == 0:
+            _logger.warning('statistics is empty')
+        fld = np.array(self.fld_stat)
+        self.fld = np.squeeze(fld)
+        self.fld_stat = []
+        
+    def event(self, eventn=0):
+        if eventn+1 > self.Nstat():
+            raise ValueError('Event number {} larger than number of events, len(self.fld_stat)={}'.format(eventn, self.Nstat()))
+        else:
+            dfl_event = RadiationField()
+            dfl_event.copy_param(self, version=2)
+            dfl_event.fld = self.fld_stat[eventn]
+            return dfl_event
+    
     def copy_param(self, dfl1, version=1):
         if version == 1:
             self.dx = dfl1.dx
@@ -72,7 +110,7 @@ class RadiationField:
             for attr in attr_list:
                 if attr.startswith('__') or callable(getattr(self, attr)):
                     continue
-                if attr == 'fld':
+                if attr in ['fld_stat']:
                     continue
                 setattr(self, attr, getattr(dfl1, attr))
 
@@ -129,6 +167,12 @@ class RadiationField:
         number of points in x
         '''
         return self.fld.shape[2]
+    
+    def Nstat(self):
+        '''
+        number of stat points
+        '''
+        return len(self.fld_stat)
 
     def intensity(self):
         '''
@@ -235,6 +279,12 @@ class RadiationField:
             return 2 * pi / self.scale_kz()
         else:
             raise AttributeError('Wrong domain_z attribute')
+    
+    def phen(self):
+        if self.domain_z == 'f':
+            return lambda2eV(self.scale_z())
+        else:
+            return None
 
     def ph_sp_dens(self):
         if self.domain_z == 't':
@@ -627,11 +677,14 @@ class RadiationField:
         '''
         calculates mutual coherence function
         see Goodman Statistical optics EQs 5.2-7, 5.2-11
+        (for instance 1985 edition, in 2nd ed. from 2005 equation numbers are different)
         returns matrix [y,x,y',x']
         consider downsampling the field first
         '''
+        # use just-in-time compiler (numba)?
         if jit:
             J = np.zeros([self.Ny(), self.Nx(), self.Ny(), self.Nx()]).astype(np.complex128)
+            # function mut_coh_func is in ocelot/common/math_op.py
             mut_coh_func(J, self.fld, norm=norm)
         else:
             I = self.int_xy() / self.Nz()
@@ -1398,7 +1451,7 @@ class WignerDistribution():
     @field.setter
     def field(self,value):
         if len(self.field_stat) == 0:
-            self.field_stat[0] = [value]
+            self.field_stat = [value]
         else:
             self.field_stat[0] = value
         
@@ -1409,12 +1462,18 @@ class WignerDistribution():
     @wig.setter
     def wig(self,value):
         if len(self.wig_stat) == 0:
-            self.wig_stat[0] = [value]
+            self.wig_stat = [value]
         else:
             self.wig_stat[0] = value
     
     def __getitem__(self, i):
         return self.wig_stat[i]
+        
+    def append_wig(self, wig):
+        self.wig_stat.append(wig.wig)
+        
+    def append_field(self, field):
+        self.field_stat.append(field)
     
     def proj_s(self):
         # real space projection
@@ -1464,11 +1523,11 @@ class WignerDistribution():
     def eval(self, method='mp'):
         n_events = len(self.field_stat)
         _logger.info('evaluating wigner distribution from {:} event(s)'.format(n_events))
-        # from ocelot.utils.xfel_utils import calc_wigner
+        # from ocelot.utils.xfel_utils import field2wigner
         ds = self.s[1] - self.s[0]
-        # self.wig = calc_wigner(self.field, method=method, debug=1)
+        # self.wig = field2wigner(self.field, method=method, debug=1)
         # if self.field_stat != []:
-        self.wig_stat = [calc_wigner(field, method=method, debug=1) for field in self.field_stat]
+        self.wig_stat = [field2wigner(field, method=method, debug=1) for field in self.field_stat]
         if self.domain in ['s', 'x', 'y']:
             self.k = np.linspace(-np.pi / ds, np.pi / ds, len(self.s))
         elif self.domain in ['t', 'z']:
@@ -3398,14 +3457,14 @@ def save_trf(trf, attr, flePath):
     f.close()
 
 
-def calc_wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1):
+def field2wigner(field, method='mp', nthread=multiprocessing.cpu_count(), debug=1):
     """
     calculation of the Wigner distribution
     input should be an amplitude and phase of the radiation as list of complex numbers with length N
     output is a real value of wigner distribution
     """
 
-    _logger.debug('calc_wigner start')
+    _logger.debug('field2wigner start')
 
     N0 = len(field)
 
@@ -3541,8 +3600,10 @@ def wigner_out(out, z=inf, method='mp', pad=1, debug=1, on_axis=1):
 
     return wig
 
+def wigner_dfl(*args,**kwargs):
+    return dfl2wig(*args,**kwargs)
 
-def wigner_dfl(dfl, method='mp', pad=1, **kwargs):
+def dfl2wig(dfl, method='mp', pad=1, domain='t', **kwargs):
     """
     returns on-axis WignerDistribution from dfl file
     """
@@ -3552,7 +3613,7 @@ def wigner_dfl(dfl, method='mp', pad=1, **kwargs):
 
     _logger.info('calculating Wigner distribution from dfl (on-axis fillament)')
     start_time = time.time()
-    domain = kwargs.get('domain', 't')
+    # domain = kwargs.get('domain', 't')
     
     #TODO: change dfl slice according to domain
     if domain == 't':
@@ -3573,7 +3634,7 @@ def wigner_dfl(dfl, method='mp', pad=1, **kwargs):
 
     if pad > 1:
         wig = wigner_pad(wig, pad)
-    #wig.domain = domain
+    wig.domain = domain
     wig.eval(method)  # calculate wigner parameters based on its attributes
 
     _logger.debug(ind_str + 'done in %.2f seconds' % (time.time() - start_time))
@@ -3636,7 +3697,7 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, on_axi
         field = np.sqrt(power[zi, :, i]) * np.exp(1j * out_stat.phi_mid[zi, :, i])
         if pad > 1:
             field = np.concatenate([np.zeros(n_add_l), field, np.zeros(n_add_r)])
-        WW[i, :, :] = calc_wigner(field, method=method, debug=debug, **kwargs)
+        WW[i, :, :] = field2wigner(field, method=method, debug=debug, **kwargs)
     wig = WignerDistribution()
     wig.wig = np.mean(WW, axis=0)
     wig.wig_stat = WW

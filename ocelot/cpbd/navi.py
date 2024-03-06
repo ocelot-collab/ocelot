@@ -63,6 +63,8 @@ class Navigator:
     def __init__(self, lattice, unit_step=1):
 
         self.lat = lattice
+        if len(self.lat.sequence) < 2:
+            _logger_navi.warning("The lattice contains only one element. Adding a physics process might not work.")
         self.process_table = ProcessTable(self.lat)
         self.ref_process_table = deepcopy(self.process_table)
 

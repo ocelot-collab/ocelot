@@ -8,7 +8,7 @@ from ocelot.cpbd.transformations.transfer_map import TransferMap, TMTypes
 
 class UndulatorTestTM(TransferMap):
     """[summary]
-    Implementation of a Undulator Test Transforamtion.
+    Implementation of a Undulator Test Transformation.
     The concrete element atom have to implement: 
     create_undulator_test_tm_main_params(self) -> UndulatorTestParams
     """

@@ -29,6 +29,62 @@ def test_original_lattice_transfer_map(lattice, tws0, method, parameter=None, up
     assert check_result(result)
 
 
+def test_lattice_transfer_map_part(lattice, tws0, method, parameter=None, update_ref_values=False):
+    """R maxtrix calculation test"""
+
+    _, r_matrix, _ = lattice.transfer_maps(energy=0.13, start=CIY_51_I1, stop=CIX_83_I1)
+
+    if update_ref_values:
+        return numpy2json(r_matrix)
+
+    r_matrix_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
+
+    result = check_matrix(r_matrix, r_matrix_ref, TOL, assert_info=' r_matrix - ')
+    assert check_result(result)
+
+
+def test_magnetic_lattice_transfer_maps_each_step(lattice, tws0, method, parameter=None, update_ref_values=False):
+    d = Drift(l=0.5)
+    q = Quadrupole(l=0.3, k1=3, k2=3.3, eid="quad")
+    b = Bend(l=1.2, angle=0.02, k1=-1, k2=.9, eid="bend")
+    s = Sextupole(l=0.23, k2=22, eid="sext")
+    c = Cavity(l=2, v=0.02, freq=1.3e9, phi=10, eid="cav")
+    cor = Hcor(l=0.1, eid="cor")
+    sol = Solenoid(l=0.12, k=0.002)
+    tds = TDCavity(l=0.5, freq=1.2e6, phi=90, v=0.02, tilt=0.0, eid="tds")
+    m = Monitor(eid="mon")
+    mat = Matrix(l=0.5, r11=1.1, r22=1, r33=1, r44=1, r55=1, r66=1, r12=0.1, t111=0.8)
+    b2 = RBend(l=1.2, angle=0.01, k1=-1, k2=-.9, eid="bend")
+    b3 = SBend(l=1.2, angle=0.02, k1=1, k2=.5, eid="bend")
+
+    cell = (d, q, b, s, c, cor, sol, tds, m, mat, b2, b3)
+    lat = MagneticLattice(cell, method={"global": SecondTM})
+    Bs, Rs, Ts, S = lat.transfer_maps(energy=1, output_at_each_step=True)
+    b = [b[0,0] for b in Bs]
+    r = [r[4,5] for r in Rs]
+    t = [t[4,5,5] for t in Ts]
+    brts = np.vstack([b, r, t, S])
+    if update_ref_values:
+        return numpy2json(brts)
+
+    brts_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
+
+    result = check_matrix(brts, brts_ref, TOL, assert_info=' B0 R56 T566 S - ')
+    assert check_result(result)
+
+def test_lattice_survey(lattice, tws0, method, parameter=None, update_ref_values=False):
+    """R maxtrix calculation test"""
+
+    x, y, z, _, _ = lattice.survey()
+    xyz = np.vstack([x,y,z])
+    if update_ref_values:
+        return numpy2json(xyz)
+
+    xyz_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
+
+    result = check_matrix(xyz, xyz_ref, TOL, assert_info=' r_matrix - ')
+    assert check_result(result)
+
 def test_lattice_save_as_py_file(lattice, tws0, method, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""
 
@@ -495,6 +551,9 @@ def test_update_ref_values(lattice, tws0, method, cmdopt):
     
     update_functions = []
     update_functions.append('test_original_lattice_transfer_map')
+    update_functions.append('test_lattice_transfer_map_part')
+    update_functions.append('test_magnetic_lattice_transfer_maps_each_step')
+    update_functions.append("test_lattice_survey")
     update_functions.append('test_original_twiss')
     update_functions.append("test_lattice_transfer_maps_check")
     

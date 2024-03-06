@@ -286,7 +286,7 @@ def plot_estimator_power_z(fel, z=None, fig=None, und_duty_factor=1, fs=False):
     return fig
     
     #fig.savefig(exp_dir + 'power_sat.png', format = 'png')
-    return fig
+    # return fig
 
 @if_plottable
 @save_show

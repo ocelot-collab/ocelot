@@ -111,6 +111,42 @@ def test_quad_match(lattice, lattice_inj=None, update_ref_values=False):
     result = check_dict(tws, tws_ref, TOL, 'absotute', assert_info=' tws after matching - ')
     assert check_result(result)
 
+def test_drift_match(lattice, lattice_inj=None, update_ref_values=False):
+    """After matching R maxtrix calculcation test"""
+    d = Drift(l=1)
+    d2 = Drift(l=0.1)
+    qf = Quadrupole(l=0.3, k1=1)
+    qd = Quadrupole(l=0.3, k1=-1)
+    m = Marker()
+    cell = (d2, qf, d2, qd, d, qf, d2, qd, d2, m)
+    lat = MagneticLattice(cell)
+
+    constr = {"periodic": True, m: {"beta_x": 10}}
+    tws_0 = Twiss(beta_x=10, beta_y=10)
+    res = match(lat=lat, constr=constr, vars=[d], tw=tws_0, verbose=True, max_iter=1000, method='simplex')
+    print(res)
+
+    #result = check_dict(tws, tws_ref, TOL, 'absotute', assert_info=' tws after matching - ')
+    assert np.isclose(res,[2.26878662])
+
+def test_totLen_after_drift_match(lattice, lattice_inj=None, update_ref_values=False):
+    """After matching R maxtrix calculcation test"""
+    d = Drift(l=1)
+    d2 = Drift(l=0.1)
+    qf = Quadrupole(l=0.3, k1=1)
+    qd = Quadrupole(l=0.3, k1=-1)
+    m = Marker()
+    cell = (d2, qf, d2, qd, d, qf, d2, qd, d2, m)
+    lat = MagneticLattice(cell)
+
+    constr = {"periodic": True, m: {"beta_x": 10}}
+    tws_0 = Twiss(beta_x=10, beta_y=10)
+    res = match(lat=lat, constr=constr, vars=[d], tw=tws_0, verbose=True, max_iter=1000, method='simplex')
+    print(res)
+
+    #result = check_dict(tws, tws_ref, TOL, 'absotute', assert_info=' tws after matching - ')
+    assert np.isclose(lat.totalLen, np.sum([e.l for e in lat.sequence]) )
+
 
 def test_bend_k_match(lattice, lattice_inj=None, update_ref_values=False):
     """After matching R maxtrix calculcation test"""

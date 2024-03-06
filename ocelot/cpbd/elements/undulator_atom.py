@@ -21,7 +21,52 @@ except:
     nb_flag = False
 
 
-def und_field_py(x, y, z, lperiod, Kx, nperiods=None):
+def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
+    """
+    Parameters
+    ----------
+    x : 
+        particle coordinate in x.
+    y : 
+        particle coordinate in y.
+    z : 
+        particle coordinate in z.
+    lperiod : 
+        undulator period length.
+    Kx : 
+        undulator K parameter in x direction.
+    nperiods : 
+        Number of undulator periods. The default is None.
+    phase : optional
+        Phase from which the magnetic field is stated. The default is 0, which is cos().
+    end_poles : optional
+        Correction poles to close magnetic field integrals. 
+        Might be: 
+            '0' - magnetic field starts from 0 value or sin()-like
+            '1' - magnetic field starts from maximum value or cos()-like
+            '3/4' - magnetic field starts with 0, 1/4, -3/4, +1, -1  (or 0, -1/4, +3/4, -1, +1) poles sequence and finishes with it (fraction is from maximum value of the field)
+            '1/2' - magnetic field starts with 1/2 and finishes with -1/2 poles
+        The default is '1'.
+
+    Raises
+    ------
+    ValueError
+        'end_poles' must be either '1', '0', '3/4' or '1/2'. 
+        if '0' the field starts from 0, 
+        if '1' the field starts from its maximum value,
+        if 3/4' the following end poles sequence is added 0, 1/4, -3/4, +1, -1,
+        if 1/2 the following end poles sequence is added 0, 1/2, -1, +1".
+
+    Returns
+    -------
+    Bx : 
+        Magnetic field in x direction.
+    By : 
+        Magnetic field in y direction.
+    Bz : 
+        Magnetic field in z direction.
+
+    """
     kx = 0.
     kz = 2 * pi / lperiod
     ky = np.sqrt(kz * kz + kx * kx)
@@ -33,18 +78,45 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None):
 
     kx_x = kx * x
     ky_y = ky * y
-    kz_z = kz * z
+    kz_z = kz * z + phase
 
     cosz = np.cos(kz_z)
 
     if nperiods is not None:
+
         ph_shift = np.pi / 2.
-        def heaviside(x): return 0.5 * (np.sign(x) + 1)
-        z_coef = (0.25 * heaviside(z) + 0.5 * heaviside(z - lperiod / 2.) + 0.25 * heaviside(z - lperiod)
-                  - 0.25 * heaviside(z - (nperiods - 1) * lperiod) - 0.5 * heaviside(
-            z - (nperiods - 0.5) * lperiod)
-            - 0.25 * heaviside(z - nperiods * lperiod))
-        cosz = np.cos(kz_z + ph_shift) * z_coef
+
+        def heaviside(x):
+            return 0.5 * (np.sign(x) + 1)
+
+        if end_poles == '0':
+            z_coef = 1
+            cosz = np.cos(kz_z + ph_shift) * z_coef
+
+        elif end_poles == '1':
+            z_coef = 1
+            cosz = np.cos(kz_z) * z_coef
+
+        elif end_poles == '3/4':
+            z_coef = (0.25 * heaviside(z) + 0.5 * heaviside(z - lperiod / 2.) + 0.25 * heaviside(z - lperiod)
+                      - 0.25 * heaviside(z - (nperiods - 1) * lperiod) - 0.5 * heaviside(z - (nperiods - 0.5) * lperiod)
+                      - 0.25 * heaviside(z - nperiods * lperiod))
+
+            cosz = np.cos(kz_z + ph_shift) * z_coef
+
+        elif end_poles == '1/2':
+            z_coef = (-0.5 * heaviside(z - lperiod * 0.5) - 0.5 * heaviside(z + lperiod)
+                      + 0.5 * heaviside(z - (nperiods - 0.5) * lperiod)
+                      + 0.5 * heaviside(z - nperiods * lperiod))
+
+            cosz = np.cos(kz_z + ph_shift) * z_coef
+
+        else:
+            raise ValueError("'end_poles' must be either '1', '0', '3/4' or '1/2';" +
+                             "if '1' the field starts from max value;" +
+                             "if '0' the field starts from 0;" +
+                             "if 3/4' the following end poles sequence is added 1/4, -3/4, +1, -1 instead of existing +1, -1, +1, -1" +
+                             "if 1/2 the following end poles sequence is added 1/2, -1, +1 instead of existing +1, -1, +1.")
 
     cosx = np.cos(kx_x)
     sinhy = np.sinh(ky_y)
@@ -55,7 +127,7 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None):
     return (Bx, By, Bz)
 
 
-und_field = und_field_py if not nb_flag else nb.jit(forceobj=False)(und_field_py)
+und_field = und_field_py if not nb_flag else nb.jit(forceobj=False, nopython=True)(und_field_py)
 
 
 class UndulatorAtom(Element):
@@ -64,13 +136,22 @@ class UndulatorAtom(Element):
     lperiod - undulator period in [m];\n
     nperiod - number of periods;\n
     Kx - undulator paramenter for vertical field; \n
-    Ky - undulator parameter for horizantal field;\n
+    Ky - undulator parameter for horizontal field;\n
     field_file - absolute path to magnetic field data;\n
     mag_field - None by default, the magnetic field map function - (Bx, By, Bz) = f(x, y, z)
+    end_poles = "1"
+                '0' - magnetic field starts from 0 value or sin()-like
+                '1' - magnetic field starts from maximum value or cos()-like
+                '3/4' - magnetic field starts with 0, 1/4, -3/4, +1, -1  (or 0, -1/4, +3/4, -1, +1) poles sequence
+                        and finishes with it (fraction is from maximum value of the field)
+                '1/2' - magnetic field starts with 1/2 and finishes with -1/2 poles
+                The default is '1'
+    phase : optional
+            Phase from which the magnetic field is stated. The default is 0, which is cos().
     eid - id of undulator.
     """
 
-    def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., field_file=None, eid=None):
+    def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., phase=0, end_poles='1', field_file=None, eid=None):
         Element.__init__(self, eid)
         self.lperiod = lperiod
         self.nperiods = nperiods
@@ -78,7 +159,8 @@ class UndulatorAtom(Element):
         self.Kx = Kx
         self.Ky = Ky
         self.solver = "linear"  # can be "lin" is linear matrix,  "sym" - symplectic method and "rk" is Runge-Kutta
-        self.phase = 0.  # phase between Bx and By + pi/4 (spiral undulator)
+        self.phase = phase  # phase between Bx and By + pi/4 (spiral undulator)
+        self.end_poles = end_poles
 
         self.ax = -1  # width of undulator, when ax is negative undulator width is infinite
         # I need this for analytic description of undulator
@@ -110,20 +192,44 @@ class UndulatorAtom(Element):
             gamma = energy / m_e_GeV
             r = np.eye(6)
             r[0, 1] = z
-            if gamma != 0 and lperiod != 0 and Kx != 0:
-                beta = 1 / np.sqrt(1.0 - 1.0 / (gamma * gamma))
+            r[2, 3] = z
 
-                omega_x = np.sqrt(2.0) * np.pi * Kx / (lperiod * gamma * beta)
-                omega_y = np.sqrt(2.0) * np.pi * Ky / (lperiod * gamma * beta)
-                r[2, 2] = np.cos(omega_x * z)
-                r[2, 3] = np.sin(omega_x * z) / omega_x
-                r[3, 2] = -np.sin(omega_x * z) * omega_x
-                r[3, 3] = np.cos(omega_x * z)
+            if gamma != 0 and lperiod != 0:
+                beta = np.sqrt(1.0 - 1.0 / (gamma * gamma))
+                r[4, 5] = - z / (gamma * beta) ** 2 * (1 + 0.5 * (np.sqrt(Kx * Kx + Ky * Ky).real * beta) ** 2)
 
-                r[4, 5] = - z / (gamma * beta) ** 2 * (1 + 0.5 * (Kx * beta) ** 2)
+                if Kx.real > 0 and Kx.imag == 0:
+                    omega_x = np.sqrt(2.0) * np.pi * Kx / (lperiod * gamma * beta)
+                    r[2, 2] = np.cos(omega_x * z)
+                    r[2, 3] = np.sin(omega_x * z) / omega_x
+                    r[3, 2] = -np.sin(omega_x * z) * omega_x
+                    r[3, 3] = np.cos(omega_x * z)
 
-            else:
-                r[2, 3] = z
+                elif Kx.real == 0 and Kx.imag != 0:
+                    omega_x = np.sqrt(2.0) * np.pi * Kx / (lperiod * gamma * beta)
+                    r[2, 2] = np.real(np.cosh(omega_x * z))
+                    r[2, 3] = np.real(np.sinh(omega_x * z) / omega_x)
+                    r[3, 2] = np.real(-np.sinh(omega_x * z) * omega_x)
+                    r[3, 3] = np.real(np.cosh(omega_x * z))
+                else:
+                    r[2, 3] = z
+
+                if Ky.real > 0 and Ky.imag == 0:
+                    omega_y = np.sqrt(2.0) * np.pi * Ky / (lperiod * gamma * beta)
+                    r[0, 0] = np.cos(omega_y * z)
+                    r[0, 1] = np.sin(omega_y * z) / omega_y
+                    r[1, 0] = -np.sin(omega_y * z) * omega_y
+                    r[1, 1] = np.cos(omega_y * z)
+
+                elif Ky.real == 0 and Ky.imag != 0:
+                    omega_y = np.sqrt(2.0) * np.pi * Ky / (lperiod * gamma * beta)
+                    r[0, 0] = np.real(np.cosh(omega_y * z))
+                    r[0, 1] = np.real(np.sinh(omega_y * z) / omega_y)
+                    r[1, 0] = np.real(-np.sinh(omega_y * z) * omega_y)
+                    r[1, 1] = np.real(np.cosh(omega_y * z))
+                else:
+                    r[0, 1] = z
+
             return r
 
         R = undulator_r_z(length, lperiod=self.lperiod, Kx=self.Kx, Ky=self.Ky, energy=energy)
@@ -134,7 +240,7 @@ class UndulatorAtom(Element):
         B = self._default_B(R)
         return FirstOrderParams(R, B, self.tilt)
 
-    def create_runge_kutta_main_params(self):
+    def create_runge_kutta_main_params(self, energy):
         return RungeKuttaParams(mag_field=lambda x, y, z: und_field(x, y, z, self.lperiod, self.Kx))
 
     def und_field(self):

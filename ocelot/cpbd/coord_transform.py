@@ -60,9 +60,7 @@ def xxstg_2_xp_mad(xxstg, xp, gamref):
     #pref = m_e_eV * np.sqrt(gamref ** 2 - 1)
     betaref = np.sqrt(1 - gamref ** -2)
     if ne_flag:
-        xxstg1 = xxstg[1]
-        xxstg3 = xxstg[3]
-        xxstg5 = xxstg[5]
+        xxstg1, xxstg3, xxstg5 = xxstg[1], xxstg[3], xxstg[5]
         gamma = ne.evaluate('(betaref * xxstg5 + 1) * gamref')
         beta = ne.evaluate('sqrt(1 - gamma ** -2)')
         pz2pref = ne.evaluate('sqrt(((gamma * beta) / (gamref * betaref)) ** 2 - xxstg1 ** 2 - xxstg3 ** 2)')
@@ -81,9 +79,7 @@ def xxstg_2_xp_mad(xxstg, xp, gamref):
     u1 = u[:, 1]
     u2 = u[:, 2]
     if ne_flag:
-        xxstg0 = xxstg[0]
-        xxstg2 = xxstg[2]
-        xxstg4 = xxstg[4]
+        xxstg0, xxstg2, xxstg4 = xxstg[0], xxstg[2], xxstg[4]
         xp[0] = ne.evaluate('xxstg0 - u0 * beta * xxstg4')
         xp[1] = ne.evaluate('xxstg2 - u1 * beta * xxstg4')
         xp[2] = ne.evaluate('-u2 * beta * xxstg4')

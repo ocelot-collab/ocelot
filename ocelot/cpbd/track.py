@@ -19,9 +19,9 @@ from ocelot.cpbd.optics import *
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.errors import *
 from ocelot.cpbd.elements import *
-from ocelot.cpbd.physics_proc import PhysProc
 from ocelot.cpbd.io import is_an_mpi_process, ParameterScanFile
 from ocelot.cpbd.physics_proc import CopyBeam
+from ocelot.cpbd.navi import Navigator
 
 _logger = logging.getLogger(__name__)
 
@@ -288,7 +288,7 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True, prin
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator(lat)
 
-    t_maps = get_map(lat, lat.totalLen, navi)
+    t_maps = navi.get_map(lat.totalLen)
     track_list_const = copy.copy(track_list)
     p_array = ParticleArray()
     p_list = [p.particle for p in track_list]
@@ -409,10 +409,14 @@ def tracking_step(lat, particle_list, dz, navi):
     :param navi: Navigator
     :return: None
     """
-    if navi.z0 + dz > lat.totalLen:
-        dz = lat.totalLen - navi.z0
+    if lat is not navi.lat:
+        _logger.error("MagneticLattice in the Navigator and tracking_step() is not the same")
+        raise Exception("MagneticLattice in the Navigator and tracking_step() is not the same")
 
-    t_maps = get_map(lat, dz, navi)
+    if navi.z0 + dz > navi.lat.totalLen:
+        dz = navi.lat.totalLen - navi.z0
+
+    t_maps = navi.get_map(dz)
     for tm in t_maps:
         start = time()
         tm.apply(particle_list)
@@ -496,14 +500,17 @@ def track(
     return tws_track, p_array
 
 
-
 def lattice_track(lat, p):
+    """
+    Function tracks Particle through lattice and save Particles after each element
+
+    :param lat: MagneticLattice
+    :param p: Particle
+    :return: list of Particles along the lattice
+    """
     plist = [copy.copy(p)]
     for elem in lat.sequence:
         for tm in elem.tms:
-            # TODO: Question: Why we have to split it like this?
-            if tm.tm_type == TMTypes.EXIT:
-                plist.append(copy.copy(p))
             tm.apply([p])
         plist.append(copy.copy(p))
     return plist

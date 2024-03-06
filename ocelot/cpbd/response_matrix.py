@@ -1,4 +1,6 @@
-from ocelot.cpbd.optics import *
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.optics import twiss
+from ocelot.cpbd.beam import Twiss
 from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.track import tracking_step
 from ocelot.cpbd.elements import *
@@ -12,6 +14,7 @@ import time
 import pandas as pd
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -43,7 +46,7 @@ class MeasureResponseMatrix:
         navi = Navigator(self.lat)
         L = 0.
         for bpm in self.bpms:
-            #print("energy = ", p.E)
+            # print("energy = ", p.E)
             dz = bpm.s - L
             tracking_step(self.lat, [p], dz, navi)
             if write2bpms:
@@ -56,13 +59,13 @@ class MeasureResponseMatrix:
             Y.append(p.y)
 
             particles.append(copy.copy(p))
-        #print("energy = ", p.E)
+        # print("energy = ", p.E)
         return np.array(X), np.array(Y),
 
     def read_virtual_dispersion(self, E0):
         X0, Y0 = self.read_virtual_orbit(p_init=Particle(p=0.000, E=E0))
         X1, Y1 = self.read_virtual_orbit(p_init=Particle(p=0.01, E=E0), write2bpms=False)
-        #p = np.array([bpm.p for bpm in self.bpms])
+        # p = np.array([bpm.p for bpm in self.bpms])
         Dx0 = (X1 - X0) / 0.01
         Dy0 = (Y1 - Y0) / 0.01
         for i, bpm in enumerate(self.bpms):
@@ -186,32 +189,31 @@ class LinacOpticalRM(MeasureResponseMatrix):
         v_resp = np.zeros((m, ny))
 
         for i, bpm in enumerate(self.bpms):
-            kx = np.sqrt(bpm.beta_x)#/(2.*sin_pnu_x)
-            ky = np.sqrt(bpm.beta_y)#/(2.*sin_pnu_y)
+            kx = np.sqrt(bpm.beta_x)  # /(2.*sin_pnu_x)
+            ky = np.sqrt(bpm.beta_y)  # /(2.*sin_pnu_y)
             for j, hcor in enumerate(self.hcors):
                 if hcor.s < bpm.s:
                     mu_x = (bpm.phi_x - hcor.phi_x)
-                    h_resp[i, j] = kx*np.sqrt(hcor.beta_x)*np.sin(mu_x)*np.sqrt(hcor.E/bpm.E)
-
+                    h_resp[i, j] = kx * np.sqrt(hcor.beta_x) * np.sin(mu_x) * np.sqrt(hcor.E / bpm.E)
 
             for n, vcor in enumerate(self.vcors):
                 if vcor.s < bpm.s:
                     mu_y = (bpm.phi_y - vcor.phi_y)
-                    v_resp[i, n] = ky*np.sqrt(vcor.beta_y)*np.sin(mu_y)*np.sqrt(vcor.E/bpm.E)
+                    v_resp[i, n] = ky * np.sqrt(vcor.beta_y) * np.sin(mu_y) * np.sqrt(vcor.E / bpm.E)
 
         m = len(self.bpms)
         kx = len(self.hcors)
         ky = len(self.vcors)
 
-        self.resp = np.zeros((2*m, kx + ky))
-        self.resp[:m,:kx] = h_resp[:, :]
-        self.resp[m:,kx:] = v_resp[:, :]
+        self.resp = np.zeros((2 * m, kx + ky))
+        self.resp[:m, :kx] = h_resp[:, :]
+        self.resp[m:, kx:] = v_resp[:, :]
 
-        #rmatrix = ResponseMatrix()
-        #rmatrix.bpm_names = [b.id for b in self.bpms]
-        #rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
-        #rmatrix.matrix = self.resp
-        #rmatrix.mode = "radian"
+        # rmatrix = ResponseMatrix()
+        # rmatrix.bpm_names = [b.id for b in self.bpms]
+        # rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
+        # rmatrix.matrix = self.resp
+        # rmatrix.mode = "radian"
         return self.resp
 
 
@@ -228,7 +230,7 @@ class LinacSimRM(MeasureResponseMatrix):
         :param tw_init: if tw_init == None, function tries to find periodical solution
         :return: orbit.resp
         """
-        #self.optical_func_params(tw_init=tw_init)
+        # self.optical_func_params(tw_init=tw_init)
         match_ic = False  # for future, fitting the initial conditions
         m = len(self.bpms)
         nx = len(self.hcors)
@@ -239,36 +241,36 @@ class LinacSimRM(MeasureResponseMatrix):
             add_i = 4
         self.resp = np.zeros((2 * m, nx + ny + add_i))
         s = [bpm.s for bpm in self.bpms]
-        X0, Y0 = self.read_virtual_orbit(p_init=Particle( E=tw_init.E))
+        X0, Y0 = self.read_virtual_orbit(p_init=Particle(E=tw_init.E))
 
         Or0 = np.append(X0, Y0)
         for j, cor in enumerate([item for sublist in [self.hcors, self.vcors] for item in sublist]):
-            print(j,"/", nx+ny, cor.id)
+            print(j, "/", nx + ny, cor.id)
             cor.angle = 0.0001
             self.lat.update_transfer_maps()
-            #start = time()
+            # start = time()
             X1, Y1 = self.read_virtual_orbit(p_init=Particle(E=tw_init.E))
-            #print(time() - start)
+            # print(time() - start)
 
             Or1 = np.append(X1, Y1)
-            self.resp[:, j] = (Or1 - Or0)/cor.angle
+            self.resp[:, j] = (Or1 - Or0) / cor.angle
             cor.angle = 0.00
         self.lat.update_transfer_maps()
         if match_ic:
             for i, par in enumerate(["x", "px", "y", "py"]):
-                #print(i)
-                p_i = Particle(E = tw_init.E)
+                # print(i)
+                p_i = Particle(E=tw_init.E)
                 p_i.__dict__[par] = 0.0001
-                #print ("measure = ", p_i.x, p_i.y, p_i.px, p_i.py, p_i.E)
+                # print ("measure = ", p_i.x, p_i.y, p_i.px, p_i.py, p_i.E)
                 X1, Y1 = self.read_virtual_orbit(p_init=p_i)
                 Or1 = np.append(X1, Y1)
-                self.resp[:, nx + ny + i] = (Or1 - Or0) /0.0001
+                self.resp[:, nx + ny + i] = (Or1 - Or0) / 0.0001
         X1, Y1 = self.read_virtual_orbit(p_init=Particle(E=tw_init.E))
-        #rmatrix = ResponseMatrix()
-        #rmatrix.bpm_names = [b.id for b in self.bpms]
-        #rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
-        #rmatrix.matrix = self.resp
-        #rmatrix.mode = "radian"
+        # rmatrix = ResponseMatrix()
+        # rmatrix.bpm_names = [b.id for b in self.bpms]
+        # rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
+        # rmatrix.matrix = self.resp
+        # rmatrix.mode = "radian"
         return self.resp
 
 
@@ -305,7 +307,7 @@ class LinacRmatrixRM(MeasureResponseMatrix):
                     for tm in elem.tms:
                         E += tm.get_delta_e()
                     continue
-                
+
                 for tm in elem.tms:
                     Rb = tm.get_params(E).get_rotated_R()
                     Ra = np.dot(Rb, Ra)
@@ -353,14 +355,14 @@ class LinacDisperseSimRM(MeasureResponseMatrix):
             cor.transfer_map = cor.create_tm()
             start = time.time()
             Dx1, Dy1 = self.read_virtual_dispersion(E0=tw_init.E)
-            #if np.max(Dx1)>1e+100 or np.max(Dy1) > 1e+100:
+            # if np.max(Dx1)>1e+100 or np.max(Dy1) > 1e+100:
             print(time.time() - start)
 
             D1 = np.append(Dx1, Dy1)
             self.resp[:, j] = (D1 - D0) / cor.angle
             cor.angle = 0.00
             cor.transfer_map = cor.create_tm()
-        #self.lat.update_transfer_maps()
+        # self.lat.update_transfer_maps()
         return self.resp
 
 
@@ -393,10 +395,10 @@ class LinacDisperseTmatrixRM(MeasureResponseMatrix):
                 if i < cor.lat_inx:
                     E += elem.transfer_map.delta_e
                     continue
-                #Tc = np.zeros((6, 6, 6))
+                # Tc = np.zeros((6, 6, 6))
                 Rb = elem.transfer_map.R(E)
                 Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
-                #Ra = dot(Rb, Ra)
+                # Ra = dot(Rb, Ra)
                 Ba = np.zeros((6, 1))
                 Bb = np.zeros((6, 1))
                 _, Ra, Ta = transfer_maps_mult(Ba, Ra, Ta, Bb, Rb, Tb)
@@ -421,7 +423,7 @@ class ResponseMatrixJSON:
         self.method = method
         self.mode = "radian"  # or "ampere"
 
-        self.tw_init = None   # for self.run()
+        self.tw_init = None  # for self.run()
         self.filename = None  # for self.run()
 
     def calculate(self, tw_init=None):
@@ -447,15 +449,15 @@ class ResponseMatrixJSON:
     def extract(self, cor_list, bpm_list):
         cor_list = np.array(cor_list)
         bpm_list = np.array(bpm_list)
-        #print("EXTRACT given: ", cor_list)
-        #print("EXTRACT given: ", bpm_list)
+        # print("EXTRACT given: ", cor_list)
+        # print("EXTRACT given: ", bpm_list)
         cors1 = np.array(self.cor_names)
         cors2 = cor_list
         bpms1 = np.array(self.bpm_names)
         bpms2 = bpm_list
         nb1 = len(bpms1)
-        #print("EXTRACT self: ", cors1)
-        #print("EXTRACT self: ", bpms1)
+        # print("EXTRACT self: ", cors1)
+        # print("EXTRACT self: ", bpms1)
         c_names = cors1[np.in1d(cors1, cors2)]
 
         c_i1 = np.where(np.in1d(cors1, cors2))[0]
@@ -465,18 +467,18 @@ class ResponseMatrixJSON:
         b_i2 = np.where(np.in1d(bpms2, b_names))[0]
 
         if not np.array_equal(c_names, cor_list):
-            print (" Origin response matrix has no correctors:")
-            print (cors2[np.in1d(cors2, c_names, invert=True)])
+            print(" Origin response matrix has no correctors:")
+            print(cors2[np.in1d(cors2, c_names, invert=True)])
         if not np.array_equal(b_names, bpm_list):
-            print (" Origin response matrix has no BPMs:")
-            print (bpm_list[b_i2[:]])
+            print(" Origin response matrix has no BPMs:")
+            print(bpm_list[b_i2[:]])
 
-        extr_matrix = np.zeros((len(b_names)*2, len(c_names)))
+        extr_matrix = np.zeros((len(b_names) * 2, len(c_names)))
         for n in range(2):
             for i, c in enumerate(c_names):
                 for j, b in enumerate(b_names):
-                    x1 = self.matrix[b_i1[j] + nb1*n, c_i1[i]]
-                    extr_matrix[j + n*len(b_names), i] = x1
+                    x1 = self.matrix[b_i1[j] + nb1 * n, c_i1[i]]
+                    extr_matrix[j + n * len(b_names), i] = x1
 
         return extr_matrix
 
@@ -491,15 +493,15 @@ class ResponseMatrixJSON:
         """
         cor_list = np.array(cor_list)
         bpm_list = np.array(bpm_list)
-        #print("EXTRACT given: ", cor_list)
-        #print("EXTRACT given: ", bpm_list)
+        # print("EXTRACT given: ", cor_list)
+        # print("EXTRACT given: ", bpm_list)
         cors1 = np.array(self.cor_names)
         cors2 = cor_list
         bpms1 = np.array(self.bpm_names)
         bpms2 = bpm_list
         nb1 = len(bpms1)
-        #print("EXTRACT self: ", cors1)
-        #print("EXTRACT self: ", bpms1)
+        # print("EXTRACT self: ", cors1)
+        # print("EXTRACT self: ", bpms1)
         c_names = cors1[np.in1d(cors1, cors2)]
 
         c_i1 = np.where(np.in1d(cors1, cors2))[0]
@@ -510,20 +512,20 @@ class ResponseMatrixJSON:
 
         if not np.array_equal(c_names, cor_list):
             logger.warning(" ResponseMatrix.inject: Origin response matrix has no correctors:")
-            print (cors2[np.in1d(cors2, c_names, invert=True)])
+            print(cors2[np.in1d(cors2, c_names, invert=True)])
         if not np.array_equal(b_names, bpm_list):
             logger.warning(" ResponseMatrix.inject: Origin response matrix has no BPMs:")
-            print (bpm_list[b_i2[:]])
+            print(bpm_list[b_i2[:]])
 
-        #extr_matrix = np.zeros((len(b_names)*2, len(c_names)))
+        # extr_matrix = np.zeros((len(b_names)*2, len(c_names)))
 
         for n in range(2):
             for i, c in enumerate(c_names):
                 for j, b in enumerate(b_names):
-                    #print("old matrix elem = ",b_i1[j] + nb1*n,  c_i1[i], self.matrix[b_i1[j] + nb1*n, c_i1[i]],
+                    # print("old matrix elem = ",b_i1[j] + nb1*n,  c_i1[i], self.matrix[b_i1[j] + nb1*n, c_i1[i]],
                     #      "inj_mat_elem =", j + n*len(b_names), i, inj_matrix[j + n*len(b_names), i])
-                    self.matrix[b_i1[j] + nb1*n, c_i1[i]] = inj_matrix[j + n*len(b_names), i]
-                    #extr_matrix[j + n*len(b_names), i] = x1
+                    self.matrix[b_i1[j] + nb1 * n, c_i1[i]] = inj_matrix[j + n * len(b_names), i]
+                    # extr_matrix[j + n*len(b_names), i] = x1
 
         return self.matrix
 
@@ -550,53 +552,54 @@ class ResponseMatrixJSON:
         self.bpm_names = dict_rmatrix["bpm_names"]
         self.method_name = dict_rmatrix["method_name"]
         r_matrix = np.array(dict_rmatrix["matrix"])
-        self.matrix = r_matrix.reshape(2*len(self.bpm_names),len(self.cor_names))
+        self.matrix = r_matrix.reshape(2 * len(self.bpm_names), len(self.cor_names))
         self.mode = dict_rmatrix["mode"]
         return 1
 
-    def compare(self, rmatrix, absolut = 0.001, relative = 0.1):
+    def compare(self, rmatrix, absolut=0.001, relative=0.1):
         cors1 = np.array(self.cor_names)
         cors2 = np.array(rmatrix.cor_names)
         bpms1 = np.array(self.bpm_names)
         bpms2 = np.array(rmatrix.bpm_names)
         nb1 = len(bpms1)
         nb2 = len(bpms2)
-        #c_names = np.intersect1d(cors1, cors2)
+        # c_names = np.intersect1d(cors1, cors2)
         c_names = cors1[np.in1d(cors1, cors2)]
         c_i1 = np.where(np.in1d(cors1, cors2))[0]
         c_i2 = np.where(np.in1d(cors2, cors1))[0]
-        #b_names = np.intersect1d(bpms1, bpms2)
+        # b_names = np.intersect1d(bpms1, bpms2)
         b_names = bpms1[np.in1d(bpms1, bpms2)]
         b_i1 = np.where(np.in1d(bpms1, bpms2))[0]
         b_i2 = np.where(np.in1d(bpms2, bpms1))[0]
         plane = ["X", "Y"]
         for n in range(2):
-            print ("****************   ", plane[n], "   ****************")
+            print("****************   ", plane[n], "   ****************")
             counter = 0
             for i, c in enumerate(c_names):
                 for j, b in enumerate(b_names):
-                    #print b_i1[j],  nb1*n, c_i1[i]
-                    x1 = self.matrix[b_i1[j] + nb1*n, c_i1[i]]
-                    x2 = rmatrix.matrix[b_i2[j] + nb2*n, c_i2[i]]
-                    if abs(x1 - x2) <absolut:
+                    # print b_i1[j],  nb1*n, c_i1[i]
+                    x1 = self.matrix[b_i1[j] + nb1 * n, c_i1[i]]
+                    x2 = rmatrix.matrix[b_i2[j] + nb2 * n, c_i2[i]]
+                    if abs(x1 - x2) < absolut:
                         continue
-                    if abs(x1 - x2)/max(np.abs([x1, x2])) < relative:
+                    if abs(x1 - x2) / max(np.abs([x1, x2])) < relative:
                         continue
                     l_x1 = len(str(x1))
-                    print (plane[n], c, " "*(10 - len(c)), b, " "*(10 - len(b)), "r1: ", x1," "*(18 - l_x1),"r2: ", x2)
+                    print(plane[n], c, " " * (10 - len(c)), b, " " * (10 - len(b)), "r1: ", x1, " " * (18 - l_x1),
+                          "r2: ", x2)
                     counter += 1
-            print("shown", counter, "elements of", len(c_names)*len(b_names))
+            print("shown", counter, "elements of", len(c_names) * len(b_names))
 
     def show(self, list_cor=None, list_bpm=None):
-        print (" "*10,)
+        print(" " * 10, )
         for bpm in self.bpm_names:
-            print (bpm,)
+            print(bpm, )
         print()
         for i in range(np.shape(self.matrix)[1]):
-            print (self.cor_names[i] + " "*(10 - len(self.cor_names[i])),)
-            #print np.array_str(self.matrix[:, i], precision=2, suppress_small=True)
+            print(self.cor_names[i] + " " * (10 - len(self.cor_names[i])), )
+            # print np.array_str(self.matrix[:, i], precision=2, suppress_small=True)
             for j in range(np.shape(self.matrix)[0]):
-                print ("%.2f" % self.matrix[j, i],)
+                print("%.2f" % self.matrix[j, i], )
             print()
 
 
@@ -608,7 +611,7 @@ class ResponseMatrix:
         self.method = method
         self.mode = "radian"  # or "ampere"
         self.df = None
-        self.tw_init = None   # for self.run()
+        self.tw_init = None  # for self.run()
         self.filename = None  # for self.run()
 
     def bpm2x_name(self, bpm_id):
@@ -652,7 +655,7 @@ class ResponseMatrix:
             self.cor_names = np.append([cor.id for cor in hcors], [cor.id for cor in vcors])
             self.bpm_names = [bpm.id for bpm in bpms]
             self.matrix = self.method.calculate(tw_init=tw_init)
-            self.df = self.data2df(matrix=self.matrix, bpm_names=self.bpm_names , cor_names=self.cor_names)
+            self.df = self.data2df(matrix=self.matrix, bpm_names=self.bpm_names, cor_names=self.cor_names)
         else:
             print("ResponseMatrix.method = None, Add the method, e.g. MeasureResponseMatrix")
 
@@ -693,9 +696,9 @@ class ResponseMatrix:
         y = df_scan.loc[:, bpm_names_xy].values
 
         reg = LinearRegression().fit(x, y)
-        #x_test = np.eye(np.shape(x)[1])
+        # x_test = np.eye(np.shape(x)[1])
         rm = reg.coef_
-        #df_rm = pd.DataFrame(rm.T, columns=self.cor_names, index=bpm_x+bpm_y)
+        # df_rm = pd.DataFrame(rm.T, columns=self.cor_names, index=bpm_x+bpm_y)
         self.df = self.data2df(matrix=rm, bpm_names=self.bpm_names, cor_names=self.cor_names)
         return self.df
 
@@ -707,7 +710,6 @@ class ResponseMatrix:
             for hcor in hcors:
                 for bpm in bpms:
                     if bpm.s < hcor.s:
-
                         self.df.loc[self.bpm2x_name(bpm.id), hcor.id] = 0
                     if not coupling:
                         self.df.loc[self.bpm2y_name(bpm.id), hcor.id] = 0
@@ -766,40 +768,41 @@ class ResponseMatrix:
         bpms2 = np.array(rmatrix.bpm_names)
         nb1 = len(bpms1)
         nb2 = len(bpms2)
-        #c_names = np.intersect1d(cors1, cors2)
+        # c_names = np.intersect1d(cors1, cors2)
         c_names = cors1[np.in1d(cors1, cors2)]
         c_i1 = np.where(np.in1d(cors1, cors2))[0]
         c_i2 = np.where(np.in1d(cors2, cors1))[0]
-        #b_names = np.intersect1d(bpms1, bpms2)
+        # b_names = np.intersect1d(bpms1, bpms2)
         b_names = bpms1[np.in1d(bpms1, bpms2)]
         b_i1 = np.where(np.in1d(bpms1, bpms2))[0]
         b_i2 = np.where(np.in1d(bpms2, bpms1))[0]
         plane = ["X", "Y"]
         for n in range(2):
-            print ("****************   ", plane[n], "   ****************")
+            print("****************   ", plane[n], "   ****************")
             counter = 0
             for i, c in enumerate(c_names):
                 for j, b in enumerate(b_names):
-                    #print b_i1[j],  nb1*n, c_i1[i]
-                    x1 = self.matrix[b_i1[j] + nb1*n, c_i1[i]]
-                    x2 = rmatrix.matrix[b_i2[j] + nb2*n, c_i2[i]]
+                    # print b_i1[j],  nb1*n, c_i1[i]
+                    x1 = self.matrix[b_i1[j] + nb1 * n, c_i1[i]]
+                    x2 = rmatrix.matrix[b_i2[j] + nb2 * n, c_i2[i]]
                     if abs(x1 - x2) < absolut:
                         continue
-                    if abs(x1 - x2)/max(np.abs([x1, x2])) < relative:
+                    if abs(x1 - x2) / max(np.abs([x1, x2])) < relative:
                         continue
                     l_x1 = len(str(x1))
-                    print (plane[n], c, " "*(10 - len(c)), b, " "*(10 - len(b)), "r1: ", x1," "*(18 - l_x1),"r2: ", x2)
+                    print(plane[n], c, " " * (10 - len(c)), b, " " * (10 - len(b)), "r1: ", x1, " " * (18 - l_x1),
+                          "r2: ", x2)
                     counter += 1
-            print("shown", counter, "elements of", len(c_names)*len(b_names))
+            print("shown", counter, "elements of", len(c_names) * len(b_names))
 
     def show(self, list_cor=None, list_bpm=None):
-        print (" "*10,)
+        print(" " * 10, )
         for bpm in self.bpm_names:
-            print (bpm,)
+            print(bpm, )
         print()
         for i in range(np.shape(self.matrix)[1]):
-            print (self.cor_names[i] + " "*(10 - len(self.cor_names[i])),)
-            #print np.array_str(self.matrix[:, i], precision=2, suppress_small=True)
+            print(self.cor_names[i] + " " * (10 - len(self.cor_names[i])), )
+            # print np.array_str(self.matrix[:, i], precision=2, suppress_small=True)
             for j in range(np.shape(self.matrix)[0]):
-                print ("%.2f" % self.matrix[j, i],)
+                print("%.2f" % self.matrix[j, i], )
             print()

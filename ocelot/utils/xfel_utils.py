@@ -79,7 +79,7 @@ def dfl_hxrss_filt(dfl, trf, s_delay, st_cpl=1, enforce_padn=None, res_per_fwhm=
     trf_m = np.abs(trf.tr) # temp array to measure fwhm
     trf_m /= np.amax(trf_m)
     trf_m = 1 - trf_m
-    idx = fwhm3(trf_m)[2]
+    idx = fwhm3(trf_m)[2]#TODO: rewrite as fwhm[1]*dk and check
     cwidth = abs(trf.k[idx[1]] - trf.k[idx[0]]) # width the crystal transfer function hole (amplitude)
     # cwidth = fwhm(trf.k, trf_m)
     if hasattr(trf,'compound'):

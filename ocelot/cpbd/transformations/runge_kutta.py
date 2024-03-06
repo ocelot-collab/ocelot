@@ -42,9 +42,9 @@ class RungeKuttaTM(TransferMap):
                           exit_tm_params_func=element.create_runge_kutta_exit_params if element.has_edge else None,
                           tm_type=tm_type, length=element.l, delta_length=delta_l, **params)
 
-    def get_params(self):
-        return self.create_tm_param_func()
+    def get_params(self, energy):
+        return self.create_tm_param_func(energy)
 
     def map_function(self, X, energy: float):
-        params = self.get_params()
+        params = self.get_params(energy)
         return rk_field(X, self.s_start, self.delta_length if self.delta_length != None else self.length, self.npoints, energy, params.mag_field, self.long_dynamics)

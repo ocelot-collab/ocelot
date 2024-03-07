@@ -18,7 +18,7 @@ from ocelot.common.globals import m_e_GeV
 
 
 def wake_t_beam_to_parray(
-    wake_t_beam: ParticleBunch,
+    wake_t_beam, #: ParticleBunch,
     gamma_ref: Optional[float] = None,
     z_ref: Optional[float] = None,
 ) -> ParticleArray:
@@ -91,7 +91,7 @@ def wake_t_beam_to_parray(
 
 def parray_to_wake_t_beam(
     p_array : ParticleArray
-) -> ParticleBunch:
+): # -> ParticleBunch:
     """
     Converts an Ocelot ParticleArray to a Wake-T ParticleBunch.
 

@@ -5,8 +5,8 @@ import pytest
 
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.transformations import SecondTM
-from ocelot.cpbd.optics import Navigator
 from ocelot.cpbd.track import ParameterScanner
+from ocelot.cpbd.navi import Navigator
 from ocelot.cpbd.io import ParameterScanFile
 from ocelot.cpbd.beam import ParticleArray
 from ocelot.cpbd.elements import Marker, SBend
@@ -16,6 +16,11 @@ PARAMETER_VALUES = [0.3, 0.2]
 PARRAY0S = [ParticleArray(10), ParticleArray(20)]
 MARKER_NAMES = ["pytest-marker-name-1", "pytest-marker-name-2"]
 FILENAME = "test.hdf5"
+
+try:
+    import h5py
+except ImportError:
+    pytest.skip(reason="No h5py installed", allow_module_level=True)
 
 def assert_parray_equality(first, second):
     np.testing.assert_equal(first.E, second.E)

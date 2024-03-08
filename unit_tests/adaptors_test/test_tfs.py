@@ -123,6 +123,7 @@ def test_MADXLatticeConverter_make_sbend(converter, ns):
     ns.TILT = 0.25
     ns.E1 = +0.1
     ns.E2 = -0.1
+    ns.K1L = 0.23
 
     sbend = converter.make_sbend(ns)
     assert sbend.id == ns.NAME
@@ -130,6 +131,8 @@ def test_MADXLatticeConverter_make_sbend(converter, ns):
     assert sbend.angle == ns.ANGLE
     assert sbend.e1 == ns.E1
     assert sbend.e2 == ns.E2
+    assert sbend.k1 == ns.K1L / ns.L
+
 
 @pytest.mark.skipif(MISSING_TFS_DEPENDENCY, reason=REASON)
 def test_MADXLatticeConverter_make_rbend(converter, ns):

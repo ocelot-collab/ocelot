@@ -10,7 +10,7 @@ from ocelot.cpbd.beam import Particle
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.beam import get_envelope
 from ocelot.cpbd.track import track
-from ocelot.cpbd.optics import lattice_transfer_map, twiss, periodic_twiss, Twiss
+from ocelot.cpbd.optics import lattice_transfer_map, twiss, Twiss
 from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.tm_utils import SecondOrderMult
 
@@ -40,9 +40,9 @@ def weights_default(val):
 
 
 def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', weights=weights_default,
-          vary_bend_angle=False, min_i5=False):
+          vary_bend_angle=False, min_i5=False, tol=1e-5):
     """
-    Function to match twiss parameters
+    Function to match twiss parameters. To find periodic solution for a lattice use MagneticLattice.periodic_twiss(tws)
 
     :param lat: MagneticLattice
     :param constr: dictionary, constrains. Example:
@@ -62,7 +62,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
             in case one needs global control on beta function, the constrains can be written following way.
                 constr = {elem1:{'alpha_x':5, 'beta_y':5}, 'global': {'beta_x': ['>', 10]}}
 
-            experimental constrain (CAN BE DISABLED or CHANGED AT ANY MOMENT)
+            Experimental constrain (CAN BE DISABLED or CHANGED AT ANY MOMENT)
                 constr = {"delta": {ELEM1: ["muy", 0],  ELEM2: ["muy", 0], "val":  3*np.pi/2, "weight": 100007}}
                         - try to satisfy: tws.muy at ELEM2 - tws.muy at ELEM1 == 'val'
                         - difference between ELEM1 and ELEM2 of twiss parameter "muy" (can be any) == "val"
@@ -84,6 +84,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                         return 0.0001
     :param vary_bend_angle: False, allow to vary "angle" of the dipoles instead of the focusing strength "k1"
     :param min_i5: minimization of the radiation integral I5. Can be useful for storage rings.
+    :param tol: tolerance default 1e-5
     :return: result
     """
 
@@ -104,8 +105,6 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                     return weights('negative_length')
 
                 vars[i].l = x[i]
-
-                vars[i].create_tm()
             if isinstance(vars[i], Quadrupole):
                 vars[i].k1 = x[i]
             if isinstance(vars[i], Solenoid):
@@ -127,7 +126,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
         err = 0.0
         if "periodic" in constr.keys():
             if constr["periodic"]:
-                tw_loc = periodic_twiss(tw_loc, lattice_transfer_map(lat, tw.E))
+                tw_loc = lat.periodic_twiss(tw_loc)
                 tw0 = deepcopy(tw_loc)
                 if tw_loc is None:
                     print("########")
@@ -210,7 +209,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                         else:
                             err = err + weights(k) * (constr[e][k] - tw_loc.__dict__[k]) ** 2
         if "total_len" in constr.keys():
-            total_len = constr["periodic"]
+            total_len = constr["total_len"]
             err = err + weights('total_len') * (tw_loc.s - total_len) ** 2
 
         if 'delta' in constr.keys():
@@ -270,11 +269,11 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
 
     print("initial value: x = ", x)
     if method == 'simplex':
-        res = fmin(errf, x, xtol=1e-5, maxiter=max_iter, maxfun=max_iter)
+        res = fmin(errf, x, xtol=tol, maxiter=max_iter, maxfun=max_iter)
     if method == 'cg':
-        res = fmin_cg(errf, x, gtol=1.e-5, epsilon=1.e-5, maxiter=max_iter)
+        res = fmin_cg(errf, x, gtol=tol, epsilon=1.e-5, maxiter=max_iter)
     if method == 'bfgs':
-        res = fmin_bfgs(errf, x, gtol=1.e-5, epsilon=1.e-5, maxiter=max_iter)
+        res = fmin_bfgs(errf, x, gtol=tol, epsilon=1.e-5, maxiter=max_iter)
 
     '''
     if initial twiss was varied set the twiss argument object to resulting value
@@ -284,6 +283,11 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
             if vars[i][0].__class__ == Twiss and vars[i][1].__class__ == str:
                 k = vars[i][1]
                 tw.__dict__[k] = res[i]
+    '''
+    update MagneticLattice total length in case a Drift length was in list of variables
+    '''
+    lat.totalLen = np.sum([e.l for e in lat.sequence])
+
     return res
 
 
@@ -314,12 +318,12 @@ def weights_default(val):
 def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, method='simplex', weights=weights_default,
                vary_bend_angle=False, min_i5=False, bounds=None):
     """
-    Function to match twiss paramters
+    Function to match twiss parameters
 
     :param lat: MagneticLattice
     :param constr: dict in format {elem1:{'beta_x':15, 'beta_y':2}, 'periodic':True} try to find periodic solution or
                 constr = {elem1:{'alpha_x':5, 'beta_y':5}, elem2:{'Dx':0 'Dyp':0, 'alpha_x':5, 'beta_y':5} and so on.
-    :param vars: lsit of elements e.g. vars = [QF, QD]
+    :param vars: list of elements e.g. vars = [QF, QD]
     :param p_array: initial ParticleArray
     :param navi: Navigator with added PhysProcess if needed
     :param verbose: allow print output of minimization procedure
@@ -341,11 +345,13 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
 
     # tw = deepcopy(tw0)
 
+    run_number = 1
     def errf(x):
         p_array0 = deepcopy(p_array)
         tws = get_envelope(p_array0, bounds=bounds)
         tw_loc = deepcopy(tws)
         tw0 = deepcopy(tws)
+        nonlocal run_number
 
         '''
         parameter to be varied is determined by variable class
@@ -377,7 +383,7 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
         err = 0.0
         if "periodic" in constr.keys():
             if constr["periodic"] is True:
-                tw_loc = periodic_twiss(tw_loc, lattice_transfer_map(lat, tw_loc.E))
+                tw_loc = lat.periodic_twiss(tw_loc)
                 tw0 = deepcopy(tw_loc)
                 if tw_loc is None:
                     print("########")
@@ -479,7 +485,7 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
         for v in vars:
             print(v.id, v.k1)
         if "total_len" in constr.keys():
-            total_len = constr["periodic"]
+            total_len = constr["total_len"]
             err = err + weights('total_len') * (tw_loc.s - total_len) ** 2
 
         if min_i5:
@@ -499,7 +505,9 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
         # err += ( c1**2 + c2**2) * 1.e-6
 
         if verbose:
-            print('iteration error:', err)
+            print(f"Run Number: {run_number}/{max_iter}, iteration error: {err}" )
+        run_number +=1
+
         return err
 
     '''
@@ -550,6 +558,12 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
     #        if vars[i][0].__class__ == Twiss and vars[i][1].__class__ == str:
     #            k = vars[i][1]
     #            tw.__dict__[k] = res[i]
+
+    '''
+    update MagneticLattice total length in case a Drift length was in list of variables
+    '''
+    lat.totalLen = np.sum([e.l for e in lat.sequence])
+
     return res
 
 
@@ -581,7 +595,7 @@ def match_matrix(lat, beam, varz, target_matrix):
     fmin(error_func, x, xtol=1e-8, maxiter=20000, maxfun=20000)
 
 
-def match_tunes(lat, tw0, quads, nu_x, nu_y, ncells=1, print_proc=0):
+def match_tunes(lat, tw0, quads, nu_x, nu_y, ncells=1, max_iter=1000, tol=1e-5, print_proc=0):
     print("matching start .... ")
     end = Monitor(eid="end")
     lat = MagneticLattice(lat.sequence + [end])
@@ -597,7 +611,7 @@ def match_tunes(lat, tw0, quads, nu_x, nu_y, ncells=1, print_proc=0):
     # print constr
     vars = quads
 
-    match(lat, constr, vars, tws[0])
+    match(lat, constr, vars, tws[0], max_iter=max_iter, tol=tol)
     for i, q in enumerate(quads):
         print(q.id, ".k1: before: ", strengths1[i], "  after: ", q.k1)
     lat = MagneticLattice(lat.sequence[:-1])

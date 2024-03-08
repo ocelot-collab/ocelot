@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - The `CSR` class now gives an explicit `logging` `error` when failing in `arcline` and
   a more useful explanation.  This error often occurs because the user has mixed CSR for
   vertical bends with horizontal bends.
+- `Navigator.add_physics_process` should now be a lot faster by doing fewer unnecessary deepcopies.
 
 ### Added
 
@@ -35,10 +36,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - New `ParameterScanner` class in `cpbd.track` for scanning arbitrary parameters
   in parallel (either using multiprocessing mpi4py). For example one might scan
   different compression schemes. Results are compiled into a single hdf5 file.
+- insert_markers_by_predicate now has optional arbitrary name suffixes for the markers
+- Twiss.from_series allows for Twiss instances to be made from pd.Series (or a dictionary for example).
+- ParticleArray slicing: `parray[10:100]` returns a ParticleArray instance with slices rparticles and q_array.
+- `remove_coupler_kick` convenience method for Cavity class
+- Integrated quad strengths for `k1` and `k2` convenience getters/setters (`k1l` and `k2l).
+- Added new method `Navigator.add_physics_processes` for adding multiple physics processes at the same time.  This will be a lot fastwe when lots of physics processes are to be added.
+- `Navigator.jump_to` method allowing a `Navigator` instance to jump
+  to arbitrary points in z along the magnetic lattice.  Useful as it
+  does not require modifying the underling beamling to achieve
+  equivalent behaviour.
+- new `__repr__` methods for some common physics processes: `CSR`, `SmoothBeam`, `SpaceCharge` and `WakeTable`.
+- modified the 'MagneticLattice.transfer_maps()' method. When using the 'output_at_each_step=True' flag,
+  the method returns (Bs, Rs, Ts, S), where 'S' is a list of coordinates after each transfer map.
+- New `WakeTable3` and `Wake3` class for third order Taylor expansion of wakefield tracking.
+- New wake table for the wakefields of parallel plate structure based on analytical results, `WakeTableParallelPlate_origin`, `WakeTableParallelPlate`, 
+  `WakeTableParallelPlate3_origin`, `WakeTableParallelPlate3`. The waketables with `origin` use point charge wake at the vicinity of the drive particle, which is the upper limit for wake. 
+  The other two waketables contain exponential decay term. The waketables with `3` provide third order Taylor expansion and should be used with `Wake3`.
+  
+  
 
 ### Fixed
 
-- None yet.
+- fixed bugs in matching function if Drift length is in list of variables. 
 
 ### Removed
 

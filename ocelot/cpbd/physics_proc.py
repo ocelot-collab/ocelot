@@ -116,9 +116,9 @@ class SmoothBeam(PhysProc):
 
     """
 
-    def __init__(self):
+    def __init__(self, mslice=1000):
         PhysProc.__init__(self)
-        self.mslice = 1000
+        self.mslice = mslice
 
     def apply(self, p_array, dz):
         """

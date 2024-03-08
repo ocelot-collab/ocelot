@@ -48,7 +48,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   does not require modifying the underling beamling to achieve
   equivalent behaviour.
 - new `__repr__` methods for some common physics processes: `CSR`, `SmoothBeam`, `SpaceCharge` and `WakeTable`.
-  
+- `SmoothBeam` mslice attribute can now be set in the `__init__`.
 
 ### Fixed
 

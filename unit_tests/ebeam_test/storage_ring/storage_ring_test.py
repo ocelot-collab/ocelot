@@ -118,7 +118,7 @@ def match_tunes_wrapper(lattice, beam):
     if not hasattr(pytest, 'sr_match_tunes'):
         quads = [Q1, Q2, Q3, Q4]
         tws = twiss(lattice, Twiss(beam), nPoints=1000)
-        match_tunes(lattice, tws[-1], quads, nu_x, nu_y, ncells=ncells, print_proc=0)
+        match_tunes(lattice, tws[-1], quads, nu_x, nu_y, ncells=ncells, print_proc=0, tol=1e-7, max_iter=2000)
         pytest.sr_match_tunes = True
     
     return nu_x, nu_y, ncells

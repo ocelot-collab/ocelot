@@ -42,8 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `remove_coupler_kick` convenience method for Cavity class
 - Integrated quad strengths for `k1` and `k2` convenience getters/setters (`k1l` and `k2l).
 - Added new method `Navigator.add_physics_processes` for adding multiple physics processes at the same time.  This will be a lot fastwe when lots of physics processes are to be added.
-
-
+- Changed `Wake` class `__init__` to provide for initialising the parameters directly.
 - `Navigator.jump_to` method allowing a `Navigator` instance to jump
   to arbitrary points in z along the magnetic lattice.  Useful as it
   does not require modifying the underling beamling to achieve

@@ -321,14 +321,16 @@ class MagneticLattice:
         :param start:
         :param stop:
         :param energy: the initial electron beam energy [GeV]
-        :param output_at_each_step: return three list of matrices [Bs], [Rs], [Ts] after each element in the line
-        :return: B, R, T - matrices
+        :param output_at_each_step: [Bs], [Rs], [Ts], [S] return three list of matrices [Bs], [Rs], [Ts] after each element in the line
+                                    and [S] position at the end of each transfer map.
+        :return: B, R, T - matrices OR [Bs], [Rs], [Ts], [S] if output_at_each_step = True
         """
         sequence = self.get_sequence_part(start, stop)
         Ra = np.eye(6)
         Ta = np.zeros((6, 6, 6))
         Ba = np.zeros((6, 1))
-        Bs, Rs, Ts = [], [], []
+        Bs, Rs, Ts, S = [], [], [], []
+        s_pos = 0.
         E = energy
         for elem in sequence:
             for Rb, Bb, Tb, tm in zip(elem.R(E), elem.B(E), elem.T(E), elem.tms):
@@ -337,8 +339,10 @@ class MagneticLattice:
                 Bs.append(Ba)
                 Rs.append(Ra)
                 Ts.append(Ta)
+                s_pos += tm.length
+                S.append(s_pos)
         if output_at_each_step:
-            return Bs, Rs, Ts
+            return Bs, Rs, Ts, S
         return Ba, Ra, Ta
 
     def survey(self, x0=0, y0=0, z0=0, ang_x=0.0, ang_y=0.0):

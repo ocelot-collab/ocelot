@@ -105,8 +105,6 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                     return weights('negative_length')
 
                 vars[i].l = x[i]
-
-                vars[i].create_tm()
             if isinstance(vars[i], Quadrupole):
                 vars[i].k1 = x[i]
             if isinstance(vars[i], Solenoid):
@@ -211,7 +209,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                         else:
                             err = err + weights(k) * (constr[e][k] - tw_loc.__dict__[k]) ** 2
         if "total_len" in constr.keys():
-            total_len = constr["periodic"]
+            total_len = constr["total_len"]
             err = err + weights('total_len') * (tw_loc.s - total_len) ** 2
 
         if 'delta' in constr.keys():
@@ -285,6 +283,11 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
             if vars[i][0].__class__ == Twiss and vars[i][1].__class__ == str:
                 k = vars[i][1]
                 tw.__dict__[k] = res[i]
+    '''
+    update MagneticLattice total length in case a Drift length was in list of variables
+    '''
+    lat.totalLen = np.sum([e.l for e in lat.sequence])
+
     return res
 
 
@@ -482,7 +485,7 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
         for v in vars:
             print(v.id, v.k1)
         if "total_len" in constr.keys():
-            total_len = constr["periodic"]
+            total_len = constr["total_len"]
             err = err + weights('total_len') * (tw_loc.s - total_len) ** 2
 
         if min_i5:
@@ -555,6 +558,12 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
     #        if vars[i][0].__class__ == Twiss and vars[i][1].__class__ == str:
     #            k = vars[i][1]
     #            tw.__dict__[k] = res[i]
+
+    '''
+    update MagneticLattice total length in case a Drift length was in list of variables
+    '''
+    lat.totalLen = np.sum([e.l for e in lat.sequence])
+
     return res
 
 

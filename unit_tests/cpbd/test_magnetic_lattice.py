@@ -2,8 +2,9 @@ import pytest
 import numpy as np
 
 from ocelot.cpbd.magnetic_lattice import MagneticLattice, insert_markers_by_predicate
-from ocelot.cpbd.elements import Drift, SBend, Marker, Quadrupole, Cavity
+from ocelot.cpbd.elements import Drift, SBend, Marker, Quadrupole, Cavity, Sextupole
 from ocelot.cpbd.beam import Twiss
+from ocelot.cpbd.transformations.second_order import SecondTM
 
 
 def test_magnetic_lattice_find_indices():
@@ -106,3 +107,5 @@ def test_magnetic_lattice_periodic_twiss():
     ref = np.array([beta_x, beta_y, alpha_x, alpha_y, gamma_x, gamma_y, E, s])
     res = np.array([tw_p.beta_x, tw_p.beta_y, tw_p.alpha_x, tw_p.alpha_y, tw_p.gamma_x, tw_p.gamma_y, tw_p.E, tw_p.s])
     assert (ref == res).all()
+
+

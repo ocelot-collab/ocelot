@@ -50,7 +50,7 @@ class Twiss:
     """
 
     def __init__(self, beam=None, **kwargs):
-      
+
         self.emit_x = kwargs.get("emit_x", 0.)
         self.emit_y = kwargs.get("emit_y", 0.)
         self.emit_xn = kwargs.get("emit_xn", 0.)
@@ -1741,7 +1741,7 @@ class SliceParameters:
             setattr(rtwiss, attr, new_value)
 
         return rtwiss
-            
+
 
 
 def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
@@ -2332,8 +2332,10 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
     beam_arr = beam.to_array(nslice, l_window)
 
     if 'chirp' in kwargs:
-        beam_arr.add_chirp(kwargs['chirp'])
-
+        if type(kwargs['chirp']) == list:
+            beam_arr.add_chirp_poly(kwargs['chirp'])
+        else:
+            beam_arr.add_chirp(kwargs['chirp'])
     return beam_arr
 
 

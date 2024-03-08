@@ -32,8 +32,10 @@ def test_calculate_radiation(lattice, screen, beam, update_ref_values=False):
 
 def test_calculate_radiation_endpoles(lattice, screen, beam, update_ref_values=False):
     """calculate_radiation fucntion test"""
+    # set for undulator end poles
+    und.end_poles = "3/4"
 
-    screen = calculate_radiation(lattice, screen, beam, end_poles=True)
+    screen = calculate_radiation(lattice, screen, beam)
 
     if update_ref_values:
         return {'Eph': screen.Eph.tolist(), 'Yph': screen.Yph.tolist(), 'Xph': screen.Xph.tolist(),

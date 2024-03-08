@@ -728,7 +728,7 @@ class RadiationField:
         J = np.mean(dfl1 * dfl2, axis=0)
         if norm:
             I = self.int_xy() / self.Nz()
-            J = J / (I[Nyh, np.newaxis :] * I[:, Nxh, np.newaxis])
+            J = J / (I[ix, np.newaxis :] * I[:, iy, np.newaxis])
         return J
     
     def coh(self, jit=0):
@@ -1482,6 +1482,14 @@ class WignerDistribution():
     def proj_k(self):
         # inverse space projection
         return np.sum(self.wig, axis=1)
+
+    def proj_s_stat(self):
+        # real space projection
+        return np.sum(self.wig_stat, axis=1)
+        
+    def proj_k_stat(self):
+        # inverse space projection
+        return np.sum(self.wig_stat, axis=2)
     
     def moment1_k(self):
         # prevailing tilt (frequency) for every coordinate (time)
@@ -1608,6 +1616,9 @@ class WignerDistributionLongitudinal(WignerDistribution):
         return self.proj_s()
     
     def spectrum(self):
+        return self.proj_k()
+    
+    def spectrum_stat(self):
         return self.proj_k()
         
     def energy(self):
@@ -2157,16 +2168,38 @@ def dfl_gen_undulator_mp(dfl, z, L_w, E_ph, N_b=1, N_e=1, sig_x=0, sig_y=0, sig_
 
     return dfl
 
-def dfl_gen_undulator_serval(dfl, L_w, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, k_support ='intensity', s_support='intensity', showfig=False, seed=None):
-    
+def dfl_gen_undulator_serval(E_ph=1042, L_w=1, shape=(51, 51, 100), dgrid=(1e-3, 1e-3, 50e-6), 
+                             sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, jitter_kx=0, jitter_ky=0,
+                             k_support ='intensity', s_support='intensity', seed=None):
+    '''
+    Creates SR radiation using SERVAL (C) algorithmn
+    '''
     _logger.info('Generating undulator field with SERVAL algorithm')
-    w_0 = 2*np.pi * speed_of_light / dfl.xlamds
     
+    w_0 = E_ph / hr_eV_s 
+    xlamds = 2 * np.pi * speed_of_light / w_0
+
+    dfl = RadiationField((shape[2], shape[1], shape[0]))
+    dfl.dx = dgrid[0] / dfl.Nx()
+    dfl.dy = dgrid[1] / dfl.Ny()
+    dfl.dz = dgrid[2] / dfl.Nz()
+    dfl.xlamds = xlamds
+    dfl.filePath = 'filePath'
+    dfl.to_domain('sf')
+    
+    
+    if seed is not None: 
+        np.random.seed(seed)
+
+    dfl.fld = np.random.randn(dfl.Nz(), dfl.Ny(), dfl.Nx()) + 1j * np.random.randn(dfl.Nz(), dfl.Ny(), dfl.Nx()) # Gaussian noise
+    
+    np.random.seed(None)
+
     if showfig:
         plot_dfl(dfl, line_off_xy = False, fig_name = '1-X_noise')
     
-    dfl.to_domain('sf')
-    
+    dfl.to_domain('sf')    
+
     x, y = np.meshgrid(dfl.scale_x(), dfl.scale_y())#, indexing='ij')
     
     mask_xy_ebeam = np.exp(- x**2 / 4 / sig_x**2 - y**2 / 4 / sig_y**2) # 4 because amplitude, not intensity
@@ -2191,25 +2224,43 @@ def dfl_gen_undulator_serval(dfl, L_w, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, k_s
     # dfl.fld *= np.sqrt(mask_xy)
     _logger.info(2*ind_str +'done')
 
-    if showfig:
-        plot_dfl(dfl, domains='s', line_off_xy = False, fig_name = '2-X_e-beam-size')
-        plot_dfl(dfl, domains='k', line_off_xy = False, fig_name = '2-X_e-beam-size')
                 
     dfl.to_domain('kf')
 
     k_x, k_y = np.meshgrid(dfl.scale_x(), dfl.scale_y())
-    mask_kxky_ebeam = np.exp(-k_y**2 / 4 / sig_yp**2 - k_x**2 / 4 / sig_xp**2 ) # 4 because amplitude, not intensity
+    
+    jitter_kx_isarray = isinstance(jitter_kx, (np.ndarray, list, tuple))
+    jitter_ky_isarray = isinstance(jitter_ky, (np.ndarray, list, tuple))
+    
+    if jitter_kx_isarray or jitter_ky_isarray: #TODO: check if reasonable
+        if jitter_kx_isarray and not jitter_ky_isarray:
+            jitter_ky = np.full_like(jitter_kx, jitter_ky)
+        elif not jitter_kx_isarray and jitter_ky_isarray:
+            jitter_kx = np.full_like(jitter_ky, jitter_kx)
+            
+        mask_kxky_ebeam = np.exp(-(k_y[np.newaxis, :, :] - jitter_ky[:, np.newaxis])**2 / 4 / sig_yp**2 - (k_x[np.newaxis, :, :] - jitter_kx[:, np.newaxis])**2 / 4 / sig_xp**2 ) # 4 because amplitude, not intensity
+        mask_kxky_radiation = np.sinc(w_0 * L_w * ((k_x[np.newaxis, :, :] - jitter_kx[:, np.newaxis])**2 + (k_y[np.newaxis, :, :] - jitter_ky[:, np.newaxis])**2) / 4 / speed_of_light / np.pi)# Geloni2018 Eq.3, domega/omega = 2dgamma/gamma, divided by pi due to np.sinc definition
+        axes=(1,2)
+    else:
+        mask_kxky_ebeam = np.exp(-(k_y - jitter_ky)**2 / 4 / sig_yp**2 - (k_x - jitter_kx)**2 / 4 / sig_xp**2 ) # 4 because amplitude, not intensity
+        mask_kxky_radiation = np.sinc(w_0 * L_w * ((k_x - jitter_kx)**2 + (k_y - jitter_ky)**2) / 4 / speed_of_light / np.pi)# Geloni2018 Eq.3, domega/omega = 2dgamma/gamma, divided by pi due to np.sinc definition
+        axes=None
+
     mask_kxky_ebeam /= np.sum(mask_kxky_ebeam)
-    mask_kxky_radiation = np.sinc(w_0 * L_w * (k_x**2 + k_y**2) / 4 / speed_of_light / np.pi)# Geloni2018 Eq.3, domega/omega = 2dgamma/gamma, divided by pi due to np.sinc definition
 
     if k_support == 'intensity':
         _logger.info(ind_str +'k_support == "intensity"')
-        mask_kxky = scipy.signal.fftconvolve(mask_kxky_ebeam**2, mask_kxky_radiation**2, mode='same')
-        mask_kxky = np.sqrt(mask_kxky[np.newaxis, :, :])
+        mask_kxky = scipy.signal.fftconvolve(mask_kxky_ebeam**2, mask_kxky_radiation**2, mode='same', axes=axes)
+
+        if jitter_kx is None:
+            mask_kxky = np.sqrt(mask_kxky[np.newaxis, :, :])
+        else:
+            mask_kxky = np.sqrt(mask_kxky)
+
         mask_kxky /= np.sum(mask_kxky)
     elif k_support == 'amplitude':
         _logger.info(ind_str +'k_support == "amplitude"')
-        mask_kxky = scipy.signal.fftconvolve(mask_kxky_ebeam, mask_kxky_radiation, mode='same')
+        mask_kxky = scipy.signal.fftconvolve(mask_kxky_ebeam, mask_kxky_radiation, mode='same', axes=axes)
         mask_kxky /= np.sum(mask_kxky)
     elif k_support == 'amplitude':
         _logger.info(ind_str +'k_support == "beam"')
@@ -2219,14 +2270,11 @@ def dfl_gen_undulator_serval(dfl, L_w, sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, k_s
     
     # dfl.fld *= mask_kxky[np.newaxis, :, :]
     _logger.info(ind_str +'Multiplying by inverse space mask')
+
     dfl.fld *= mask_kxky
     _logger.info(2*ind_str +'done')
-
-    if showfig:
-        plot_dfl(dfl, domains='s', fig_name = '3-X_radaition_size')
-        plot_dfl(dfl, domains='k', fig_name = '3-X_radiation_divergence')
     
-    return dfl     
+    return dfl
 
 def calc_phase_delay_poly(coeff, w, w0):
     """
@@ -2275,7 +2323,42 @@ def calc_phase_delay_poly(coeff, w, w0):
     return delta_phi
 
 
-def screen2dfl(screen, polarization='x'):
+def SR_norm_coeff_from_ebeam_I(I_ebeam=0):
+    '''
+    Normalization or SR radiation to match 
+    TODO: add documentation
+    Parameters
+    ----------
+    Ex : array
+        Ex component of the field.
+    Ey : array
+        Ey component of the field.
+    out : str, optional
+        Which intensity to return, of the given component or full component. The default is "Components".
+        
+    Returns
+    -------
+    Intensity.
+
+    '''
+    print('\n Normalizing radiation field...')
+
+    h_erg_s = 1.054571817 * 1e-27 
+    h_J_s = 1.054571817 * 1e-34 #TODO: check if can be calculated from globals
+    
+    speed_of_light_SGS = speed_of_light * 1e2
+    A = I_ebeam * speed_of_light / (q_e * h_erg_s * 4 * np.pi**2) / (1e7/speed_of_light**2) * 1e-2#* SI unit 1e-4 is due to cm^2 -> mm^2, (1e7/speed_of_light**2) is the factor due to transformation of (I/eh_bar) * c * E**2, I -> I * 1e-1 c, e -> e * 1e-1 c, h_bar -> h_bar * 1e7, c -> c * 1e2, E -> E * 1e6 / c 
+
+    # LenPntrConst = self.Distance - self.Zstart
+
+    # old constant with current in [mA]
+    # constQuant = 3.461090202456155e+9*current*gamma*gamma/LenPntrConst/LenPntrConst
+
+    # constQuant = 3*alpha/q_e/(4*pi**2)*1e-3 * current * gamma * gamma / LenPntrConst / LenPntrConst
+        
+    return A
+
+def screen2dfl(screen, polarization='x', norm='ebeam', beam=None):
     """
     Function converts synchrotron radiation from ocelot.rad.screen.Screen to ocelot.optics.wave.RadiationField.
     New ocelot.optics.wave.RadiationField object will be generated without changing ocelot.rad.screen.Screen object.
@@ -2287,7 +2370,7 @@ def screen2dfl(screen, polarization='x'):
     shape_tuple = (screen.ne, screen.ny, screen.nx)
     start = time.time()
     _logger.info('Converting Screen of shape (nz, ny, nx) = {:} to dfl'.format(shape_tuple))
-    _logger.warning(ind_str + 'in beta')
+    # _logger.warning(ind_str + 'in beta')
 
     dfl = RadiationField()
     dfl.domain_z = 'f'  # longitudinal domain (t - time, f - frequency)
@@ -2311,11 +2394,33 @@ def screen2dfl(screen, polarization='x'):
         dfl.dz = 1
         dfl.xlamds = h_eV_s * speed_of_light / screen.Eph[0]
 
+
     _logger.debug(ind_str + 'dfl.xlamds = {:.3e} [m]'.format(dfl.xlamds))
-    _logger.warning(ind_str + 'dfl.fld normalized to dfl.E() = 1 [J]')
-    dfl.fld = dfl.fld / np.sqrt(dfl.E())  # TODO normalize dfl.fld
+    
+    if norm=='ebeam':  #check if SR_norm_coeff_from_ebeam_I can be used here
+        _logger.info(ind_str + 'normalization')
+        try: 
+            gamma = beam.E/0.51099890221e-03
+            I = beam.I 
+            LenPntrConst = screen.Distance - screen.Zstart
+            constQuant = 3*alpha/q_e/(4*pi**2)*1e-3 * beam.I * gamma * gamma / LenPntrConst / LenPntrConst
+            dfl.fld = dfl.fld * np.sqrt(constQuant)
+            _logger.info(ind_str + 'dfl.fld normalized on the electron beam current')
+        except AttributeError:
+            _logger.error('dfl.fld was not normalized, \n please, provide a Beam object (electron beam) \n the original dfl was returned')
+            dfl.fld = dfl.fld 
+            
+    elif norm=='Epulse': #TODO: should be a number in Joules. check demos and examples, if no collision, improve and rename
+        _logger.info(ind_str + 'normalization')
+        dfl.fld = dfl.fld / np.sqrt(dfl.E())  
+        _logger.info(ind_str + 'dfl.fld normalized to dfl.E() = 1 [J]')
+    else:
+        _logger.info(ind_str + 'No normalization was chosen, the original dfl was returned')
+
+
     _logger.debug(ind_str + 'done in {:.3e} sec'.format(time.time() - start))
     _logger.debug(ind_str + 'returning dfl in "sf" domains ')
+    
     return dfl
 
 
@@ -2439,7 +2544,10 @@ def dfl_ap_rect(dfl, ap_x=np.inf, ap_y=np.inf):
     
     
     mask = np.zeros_like(dfl.fld[0, :, :])
-    mask[idx_y1:idx_y2, idx_x1:idx_x2] = 1
+    mask[idx_y1:(idx_y2+1), idx_x1:(idx_x2+1)] = 1
+    #                   ^                  ^
+    # also set to 1 elements indexed by idx_x2/idx_y2 (symmetric aperture)
+    #
     mask_idx = np.where(mask == 0)
 
     # dfl_out = deepcopy(dfl)
@@ -2622,6 +2730,109 @@ def dfl_prop(dfl, z, fine=1, debug=1):
 
     return dfl_out
 
+def dfl_prop_iris(dfl, N=10, a=0.055, center=(0,0), b=0.3, n_iter_per_iris=1, 
+              absorption_outer_pipe=False, acount_first_cell_loss=False):
+    '''
+    Propagates radiation through an iris line.
+    
+    Parameters
+    ----------
+    dfl : RadiationField
+        Input RadiationField object.
+    
+    N : int, optional
+        Number of irises. Default is 10.
+    
+    a : float, optional
+        Iris radius. Default is 0.055.
+    
+    center : array-like of floats, optional
+        Center of each individual iris. Default for a single iris is (0,0), but for a set of irises, it should be (np.array(N), np.array(N)).
+    
+    b : float, optional
+        Spacing between irises. Default is 0.3.
+    
+    n_iter_per_iris: int, optional
+        Number of propagation iterations. Must be divisible by N. Default is 100.
+    
+    absorption_outer_pipe : bool, optional
+        If the outer pipe absorbs radiation. Note: This may not represent accurate boundary conditions. Default is False.
+    
+    account_first_cell_loss : bool, optional
+        Whether to account for absorption on the first screen when calculating total loss. Default is False.
+    
+    Returns
+    -------
+    dfl_waveguide : RadiationField
+        Output RadiationField object.
+    
+    E_x_lineout : array-like of floats
+        line-out of the radiation distribution along the iris line in the (x,z) plane, y=0
+    
+    E_y_lineout : array-like of floats
+        line-out of the radiation distribution along the iris line in the (y,z) plane, y=0
+
+    rad_left_array : array-like of floats
+        Radiation remaining after each iris.
+    
+    loss_per_cell_array : array-like of floats
+        Radiation loss after each iris.
+
+    '''
+
+    L = N*b
+    dl = b/n_iter_per_iris #define propagation distance at each iteration
+    
+    dfl_waveguide = deepcopy(dfl)
+    dfl_waveguide.to_domain('sf')
+    
+    E_x_lineout = np.zeros((dfl_waveguide.Nx(), n_iter_per_iris*N), dtype='cfloat')
+    E_y_lineout = np.zeros((dfl_waveguide.Ny(), n_iter_per_iris*N), dtype='cfloat')
+
+    rad_left_array = np.array([])
+    loss_per_cell_array = np.array([])
+
+    P_entrance = 0
+    j = 0 #a count for the number of irises passed
+    P_entrance = dfl_waveguide.E()
+    
+    for i in range(n_iter_per_iris*N):
+
+        if acount_first_cell_loss and i==0: # check if we need to account for losses at the first iris, 
+                                            # relevant if propagate a plane wave
+            dfl_waveguide = dfl_ap_circ(dfl_waveguide, r=a)
+            P_entrance = dfl_waveguide.E()
+            
+        if (dl*i > j*b): #check if the next j-th iris is reached or not, if yes - cut
+            dfl_waveguide.to_domain('sf')
+
+            P_before=dfl_waveguide.E()
+            
+            if np.size(center) > 2:
+                x = center[0][j]
+                y = center[1][j]
+            else:
+                x = center[0]
+                y = center[1]  
+                
+            dfl_waveguide = dfl_ap_circ(dfl_waveguide, r=a, center=(x, y))
+            
+            P_after=dfl_waveguide.E()
+            
+            rad_left_array = np.append(rad_left_array, P_after/P_entrance*100)
+            loss_per_cell_array = np.append(loss_per_cell_array, (1-P_after/P_before)*100)
+            j = j+1
+            
+        E_x_lineout[:, i] = dfl_waveguide.fld[dfl_waveguide.Nz()//2, dfl_waveguide.Ny()//2, :]
+        E_y_lineout[:, i] = dfl_waveguide.fld[dfl_waveguide.Nz()//2, :, dfl_waveguide.Nx()//2]
+
+        dfl_waveguide.prop_m(z=dl, m=1)
+
+        if absorption_outer_pipe:
+            dfl_waveguide = dfl_ap_circ(dfl_waveguide, r=np.max(dfl_waveguide.scale_x())*0.98)
+        
+    return dfl_waveguide, E_x_lineout, E_y_lineout, rad_left_array, loss_per_cell_array
+
 
 def dfl_waistscan(dfl, z_pos, projection=0, **kwargs):
     """
@@ -2650,8 +2861,8 @@ def dfl_waistscan(dfl, z_pos, projection=0, **kwargs):
 
         scale_x = dfl.scale_x()
         scale_y = dfl.scale_y()
-        center_x = np.int((I_xy.shape[1] - 1) / 2)
-        center_y = np.int((I_xy.shape[0] - 1) / 2)
+        center_x = int((I_xy.shape[1] - 1) / 2)
+        center_y = int((I_xy.shape[0] - 1) / 2)
         _logger.debug(2 * ind_str + 'center_pixels = {}, {}'.format(center_x, center_y))
 
         if projection:

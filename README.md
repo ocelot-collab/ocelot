@@ -2,9 +2,14 @@ Accelerator, radiation and x-ray optics simulation framework
 
 # An Introduction to Ocelot
 
-Ocelot is a multiphysics simulation toolkit designed for studying FEL and storage ring-based light sources. Ocelot is written in Python. Its central concept is the writing of python's scripts for simulations with the usage of Ocelot's modules and functions and the standard Python libraries.
+Ocelot is a multiphysics simulation toolkit designed for studying Free Electron Lasers (FEL) and storage ring-based light sources. Implemented in Python, Ocelot caters to researchers seeking the flexibility provided by high-level languages like Matlab and Python.  Its core principle revolves around scripting beam physics simulations in Python, utilizing Ocelot's modules and extensive collection of Python libraries.
 
-Ocelot includes following main modules:
+Users developing high-level control applications can greatly accelerate development by using physics models from Ocelot and Python graphics libraries such as [PyQt](http://pyqt.sourceforge.net/Docs/PyQt5/) and [PyQtGraph](http://www.pyqtgraph.org/) to create a GUI. 
+
+Developing machine learning (ML) applications for accelerators can also benefit from using Ocelot, as many popular ML frameworks are written in Python. Ocelot provides a seamless connection between physics and ML methods, making it easier to integrate physical accelerator simulators with machine learning algorithms.
+
+## Ocelot main modules:
+
 * **Charged particle beam dynamics module (CPBD)**
     - optics
     - tracking
@@ -17,7 +22,7 @@ Ocelot includes following main modules:
 * **Native module for spontaneous radiation calculation** (some details can be found [here](http://accelconf.web.cern.ch/AccelConf/ipac2019/papers/wepts017.pdf) and [here](http://scripts.iucr.org/cgi-bin/paper?S1600577519002509))
 * **FEL calculations: interface to GENESIS and pre/post-processing**
 * **Modules for online beam control and online optimization of accelerator performances.**   [ref1](http://accelconf.web.cern.ch/accelconf/IPAC2014/papers/mopro086.pdf), [ref2](https://jacowfs.jlab.org/conf/y15/ipac15/prepress/TUPWA037.PDF), [ref3](http://accelconf.web.cern.ch/AccelConf/ipac2016/papers/wepoy036.pdf), [ref4](https://arxiv.org/pdf/1704.02335.pdf).
-    - This module is being developed in collaboration with other accelerator groups. The module has been migrated to a separate [repository](https://github.com/ocelot-collab/optimizer) (in [ocelot-collab](https://github.com/ocelot-collab) organization) for ease of collaborative development.
+    - This module is being developed in collaboration with SLAC. The module has been migrated to a separate [repository](https://github.com/ocelot-collab/optimizer) (in [ocelot-collab](https://github.com/ocelot-collab) organization) for ease of collaborative development.
 
 Ocelot extensively  uses Python's [NumPy (Numerical Python)](http://numpy.org) and [SciPy (Scientific Python)](http://scipy.org) libraries, which enable efficient in-core numerical and scientific computation within Python and give you access to various mathematical and optimization techniques and algorithms. To produce high quality figures Python's [matplotlib](http://matplotlib.org/index.html) library is used.
 
@@ -25,23 +30,19 @@ It is an open source project and it is being developed by physicists from  [The 
 
 We still have no documentation but you can find a lot of examples in /demos/ folder including this tutorial
 
-## Ocelot user profile
 
-Ocelot is designed for researchers who want to have the flexibility that is given by high-level languages such as Matlab, Python (with Numpy and SciPy) or Mathematica.
-However if someone needs a GUI  it can be developed using Python's libraries like a [PyQtGraph](http://www.pyqtgraph.org/) or [PyQt](http://pyqt.sourceforge.net/Docs/PyQt4/).
- 
-
- ## Preliminaries
+## Preliminaries
 
 The tutorial includes 9 examples dedicated to the beam dynamics and optics and 5 to Photon Field Simulation. However, you should have a basic understanding of Computer Programming terminologies. A basic understanding of Python language is a plus.
 
 ##### This tutorial requires the following packages:
 
-- Python 3.6 - 3.8
-- `numpy` version 1.8 or later: http://www.numpy.org/
-- `scipy` version 0.15 or later: http://www.scipy.org/
-- `matplotlib` version 1.5 or later: http://matplotlib.org/
-- `ipython` version 2.4 or later, with notebook support: http://ipython.org
+- Python 3.6 - 3.10
+- `numpy` version 1.8 or higher: http://www.numpy.org/
+- `scipy` version 0.15 or higher: http://www.scipy.org/
+- `matplotlib` version 1.5 or higher: http://matplotlib.org/
+- `h5py` version 3.10 or higher, https://www.h5py.org
+- `jupyter lab`  or `ipython notebbok` https://jupyter.org
 
 **Optional**, but highly recommended for speeding up calculations
 - numexpr (version 2.6.1)
@@ -134,8 +135,10 @@ You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zi
     - Lattice design, twiss matching, twiss backtracking
 * [Tutorial N8. Physics process addition. Laser heater](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/8_laser_heater.ipynb)
     - Theory of Laser Heater, implementation of new Physics Process, track particles w/o laser heater effect.
-* [Tutorial N9. Simple accelerator based THz source](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/9_thz_source.ipynb)
+* [Tutorial N9. Tracking with parallel-plate corrugated structures](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/9_thz_source.ipynb)
     - A simple accelerator with the electron beam formation system and an undulator to generate THz radiation.
+* [Tutorial N10. Simple accelerator based THz source](https://nbviewer.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/10_CorrugatedStructures.ipynb)
+    - In this tutorial, a few examples for tracking with parallel-plate corrugated structures are shown. The wakefields model are based on analytical wakefield formulas for flat corrugated structures. 
 
 #### Photon field simulation
 

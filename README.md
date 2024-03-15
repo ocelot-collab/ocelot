@@ -2,13 +2,20 @@ Accelerator, radiation and x-ray optics simulation framework
 
 # An Introduction to Ocelot
 
-Ocelot is a multiphysics simulation toolkit designed for studying Free Electron Lasers (FEL) and storage ring-based light sources. Implemented in Python, Ocelot caters to researchers seeking the flexibility provided by high-level languages like Matlab and Python.  Its core principle revolves around scripting beam physics simulations in Python, utilizing Ocelot's modules and extensive collection of Python libraries.
+Ocelot is a multiphysics simulation toolkit designed for studying Free Electron Lasers (FEL) and storage ring-based light sources. Implemented in Python, Ocelot caters to researchers seeking the flexibility provided by high-level languages like Matlab and Python. Its core principle revolves around scripting beam physics simulations in Python, utilizing Ocelot's modules and extensive collection of Python libraries.
 
-Users developing high-level control applications can greatly accelerate development by using physics models from Ocelot and Python graphics libraries such as [PyQt](http://pyqt.sourceforge.net/Docs/PyQt5/) and [PyQtGraph](http://www.pyqtgraph.org/) to create a GUI. 
+Users developing high-level control applications can accelerate development by using physics models from Ocelot and Python graphics libraries such as [PyQt](http://pyqt.sourceforge.net/Docs/PyQt5/) and [PyQtGraph](http://www.pyqtgraph.org/) to create a GUI. 
 
 Developing machine learning (ML) applications for accelerators can also benefit from using Ocelot, as many popular ML frameworks are written in Python. Ocelot provides a seamless connection between physics and ML methods, making it easier to integrate physical accelerator simulators with machine learning algorithms.
 
+## Contents
+1. [Ocelot main modules](#modules)
+2. [Ocelot installation](#installation)
+3. [Tutorials](#tutorials)
+
+
 ## Ocelot main modules:
+<a id='modules'></a>
 
 * **Charged particle beam dynamics module (CPBD)**
     - optics
@@ -28,56 +35,46 @@ Ocelot extensively  uses Python's [NumPy (Numerical Python)](http://numpy.org) a
 
 It is an open source project and it is being developed by physicists from  [The European XFEL](http://www.xfel.eu/), [DESY](http://www.desy.de/) (Germany), [NRC Kurchatov Institute](http://www.nrcki.ru/) (Russia).
 
-We still have no documentation but you can find a lot of examples in /demos/ folder including this tutorial
+We still have no documentation but you can find a lot of examples in /demos/ folder and jupyter [tutorials](#tutorials)
 
+## Ocelot installation
+<a id='installation'></a>
 
-## Preliminaries
-
-The tutorial includes 9 examples dedicated to the beam dynamics and optics and 5 to Photon Field Simulation. However, you should have a basic understanding of Computer Programming terminologies. A basic understanding of Python language is a plus.
-
-##### This tutorial requires the following packages:
-
-- Python 3.6 - 3.10
+### Requirements
+-  Python 3.6 - 3.10
 - `numpy` version 1.8 or higher: http://www.numpy.org/
 - `scipy` version 0.15 or higher: http://www.scipy.org/
 - `matplotlib` version 1.5 or higher: http://matplotlib.org/
 - `h5py` version 3.10 or higher, https://www.h5py.org
-- `jupyter lab`  or `ipython notebbok` https://jupyter.org
 
 **Optional**, but highly recommended for speeding up calculations
-- numexpr (version 2.6.1)
-- pyfftw (version 0.10)
+
+- numexpr (version 2.6.1 or higher)
+- pyfftw (version 0.10 or higher)
 - numba
 
-**Orbit Correction module**
-- pandas
+**Orbit Correction module is required**
+- `pandas`
 
-The easiest way to get these is to download and install the (large) [Anaconda software distribution](https://www.continuum.io/).
-
-Alternatively, you can download and install [miniconda](https://docs.conda.io/en/latest/miniconda.html).
-The following command will install all required packages:
-```
-$ conda install numpy scipy matplotlib jupyter
-```
-
-## Ocelot installation
-##### Anaconda Cloud **recommended**
-The easiest way to install OCELOT is to use Anaconda cloud. In that case use command:
- ```
- $ conda install -c ocelot-collab ocelot
- ``` 
-##### GitHub
+### Installation
+#### GitHub (for advanced python users)
 Clone OCELOT from GitHub:
 ```
 $ git clone https://github.com/ocelot-collab/ocelot.git
 ```
-or download last release [zip file](https://github.com/ocelot-collab/ocelot/archive/v18.02.0.zip).
+or download last release [zip file](https://github.com/ocelot-collab/ocelot/archive/v24.03.0.zip).
 Now you can install OCELOT from the source:
 ```
 $ python setup.py install
 ```
 
-##### PythonPath
+#### Anaconda Cloud (recommended)
+The easiest way to install OCELOT is to use Anaconda cloud. In that case use command:
+ ```
+ $ conda install -c ocelot-collab ocelot
+ ``` 
+
+#### PythonPath
 Another way is download ocelot from [GitHub](https://github.com/ocelot-collab/ocelot)
 1. you have to download from GitHub [zip file](https://github.com/ocelot-collab/ocelot/archive/master.zip).
 2. Unzip ocelot-master.zip to your working folder **/your_working_dir/**.
@@ -93,29 +90,8 @@ Another way is download ocelot from [GitHub](https://github.com/ocelot-collab/oc
     $ export PYTHONPATH=/your_working_dir/ocelot-master:$PYTHONPATH
     ```
 
-#### To launch "ipython notebook" or "jupyter notebook"
-in command line run following commands:
-
-```
-$ ipython notebook
-```
-
-or
-```
-$ ipython notebook --notebook-dir="path_to_your_directory"
-```
-
-or
-```
-$ jupyter notebook --notebook-dir="path_to_your_directory"
-```
-
-#### OCELOT jupyter tutorials
-You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zip file](https://github.com/ocelot-collab/ocelot/releases/download/v18.02.0/ocelot_jupyter_tutorial.zip).
-
 ## Tutorials
-* Preliminaries: Setup & introduction
-#### Beam dynamics
+<a id='tutorials'></a>
 
 * [Introduction. Tutorial N1. Linear optics](http://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/1_introduction.ipynb)
     - Linear optics. Double Bend Achromat (DBA). Simple example of usage OCELOT functions to get periodic solution for a storage ring cell.
@@ -156,6 +132,23 @@ You can download OCELOT jupyter tutorials (release v18.02) using GitHub link [zi
     - Aperture, RK tracking 
 * [Example of an accelerator section optimization](https://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/accelerator_optim.ipynb)
     - A simple demo of accelerator section optimization with a standard scipy numerical optimization method. 
+
+
+#### To launch "ipython notebook" or "jupyter notebook"
+
+If you want to play with these tutorials they can be found in `ocelot/demos/ipython_tutorials`. 
+Run the following commands in the command line:
+
+```
+$ ipython notebook
+```
+or 
+
+```
+jupyter lab
+```
+
+
 ## Documentation
 The API documentation can be build using [sphinx](https://sphinx.org).
 To do so, you have to clone the repository or download the zip file, as explained in the [ocelot installation section](#ocelot-installation).

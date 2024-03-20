@@ -846,7 +846,75 @@ class Genesis4ParticlesDump:
         # return filename_from_path(self.filePath)
 
 
-def gen4_lat_str(lat, line_name='LINE', zstop=np.inf):
+
+
+
+
+def gen4_lat_elem2str(element, element_num):
+    if isinstance(element, Undulator):
+        element_name = element_num + 'UND'
+
+        if element.Kx == 0 or element.Ky == 0:
+            is_helical = 'false'
+        elif element.Kx == element.Ky:
+            is_helical = 'true'
+        else:
+            _logger.warning(
+                'undulator element with different non-zero Kx and Ky; not implemented; setting to helical')
+            is_helical = 'true'
+        aw = np.sqrt((element.Kx ** 2 + element.Ky ** 2) / 2)
+        # TODO: implement ax,ay,kx,ky,gradx,grady
+        s = '{:}: UNDULATOR = {{lambdau = {:}, nwig = {:}, aw = {:.6f}, helical = {:}}};'.format(element_name,
+                                                                                                 element.lperiod,
+                                                                                                 element.nperiods,
+                                                                                                 aw, is_helical)
+
+    elif isinstance(element, Drift):
+        element_name = element_num + 'DR'
+        s = '{:}: DRIFT = {{l={:}}};'.format(element_name, element.l)
+
+    elif isinstance(element, Quadrupole):
+        # TODO: add dx and dy
+        if element.k1 >= 0:
+            element_name = element_num + 'QF'
+        else:
+            element_name = element_num + 'QD'
+        s = '{:}: QUADRUPOLE = {{l = {:}, k1 = {:.6f} }};'.format(element_name, element.l, element.k1)
+
+    elif isinstance(element, Chicane):
+        element_name = element_num + 'CH'
+        s = '{:}: CHICANE = {{l = {:}, lb = {:}, ld = {}, delay = {:.5e} }};'.format(element_name, element.l,
+                                                                                     element.lb, element.ld,
+                                                                                     element.delay)
+
+    elif isinstance(element, Marker):
+        element_name = element_num + 'M'
+        m_dumpfield = getattr(element, 'dumpfield', 0)
+        m_dumpbeam = getattr(element, 'dumpbeam', 0)
+        m_sort = getattr(element, 'sort', 0)
+        m_stop = getattr(element, 'stop', 0)
+        s = '{:}: MARKER = {{dumpfield = {:}, dumpbeam = {:}, sort = {:}, stop = {:} }};'.format(element_name,
+                                                                                                 m_dumpfield,
+                                                                                                 m_dumpbeam, m_sort,
+                                                                                                 m_stop)
+
+    elif isinstance(element, Phaseshifter):
+        element_name = element_num + 'PH'
+        s = '{:}: PHASESHIFTER = {{l = {:}, phi = {:}}};'.format(element_name, element.l, element.phi)
+
+    else:
+        # Unknown element type, replace by drift to get cell length right (while ignoring l=0 elements)
+        if element.l==0:
+            _logger.warning('Unknown element {} with length {}'.format(str(element), element.l))
+            return (None,None) # signal to caller that no line is to be written to lattice file
+        #
+        _logger.warning('Unknown element {} with length {}\n replacing with drift'.format(str(element), element.l))
+        element_name = element_num + 'UNKNOWN'
+        s = '{:}: DRIFT = {{l={:}}};'.format(element_name, element.l)
+
+    return (element_name,s)
+
+def gen4_lat_str(lat, line_name='LINE', zstop=np.inf, cb_latline=None):
     """
     Generates a string of lattice 
     in Genesis4 format
@@ -857,78 +925,35 @@ def gen4_lat_str(lat, line_name='LINE', zstop=np.inf):
     beamline = []
     location = 0
 
+    # Loop over elements in specified lattice sequence
+    # and collect GENESIS lattice representation
     for element in lat.sequence:
-
         if location >= zstop:
             break
 
-        element_num = line_name + '_' + str(len(beamline) + 1).zfill(3)
+        element_prefix = line_name + '_' + str(len(beamline) + 1).zfill(3)
 
         if hasattr(element, 'l'):
             location += element.l
         else:
             _logging.warning('[beta] element had no length: {:}'.format(str(element)))
 
-        if isinstance(element, Undulator):
-            element_name = element_num + 'UND'
+        got_info = False
+        if (cb_latline is not None) and callable(cb_latline):
+            ele_repr = cb_latline(lat, element, len(beamline), element_prefix)
+            if ele_repr!=(None,None):
+                (element_name,s) = ele_repr
+                got_info = True
 
-            if element.Kx == 0 or element.Ky == 0:
-                is_helical = 'false'
-            elif element.Kx == element.Ky:
-                is_helical = 'true'
-            else:
-                _logger.warning(
-                    'undulator element with different non-zero Kx and Ky; not implemented; setting to helical')
-                is_helical = 'true'
-            aw = np.sqrt((element.Kx ** 2 + element.Ky ** 2) / 2)
-            # TODO: implement ax,ay,kx,ky,gradx,grady
-            s = '{:}: UNDULATOR = {{lambdau = {:}, nwig = {:}, aw = {:.6f}, helical = {:}}};'.format(element_name,
-                                                                                                     element.lperiod,
-                                                                                                     element.nperiods,
-                                                                                                     aw, is_helical)
+        if not got_info:
+            # either callback function not defined, or callback function does not override default behavior
+            ele_repr = gen4_lat_elem2str(element, element_prefix)
+            if ele_repr!=(None,None):
+                (element_name,s) = ele_repr
+                got_info = True
 
-        elif isinstance(element, Drift):
-            element_name = element_num + 'DR'
-            s = '{:}: DRIFT = {{l={:}}};'.format(element_name, element.l)
-
-        elif isinstance(element, Quadrupole):
-            # TODO: add dx and dy
-            if element.k1 >= 0:
-                element_name = element_num + 'QF'
-            else:
-                element_name = element_num + 'QD'
-            s = '{:}: QUADRUPOLE = {{l = {:}, k1 = {:.6f} }};'.format(element_name, element.l, element.k1)
-
-        elif isinstance(element, Chicane):
-            element_name = element_num + 'CH'
-            s = '{:}: CHICANE = {{l = {:}, lb = {:}, ld = {}, delay = {:.5e} }};'.format(element_name, element.l,
-                                                                                         element.lb, element.ld,
-                                                                                         element.delay)
-
-        elif isinstance(element, Marker):
-            element_name = element_num + 'M'
-            m_dumpfield = getattr(element, 'dumpfield', 0)
-            m_dumpbeam = getattr(element, 'dumpbeam', 0)
-            m_sort = getattr(element, 'sort', 0)
-            m_stop = getattr(element, 'stop', 0)
-            s = '{:}: MARKER = {{dumpfield = {:}, dumpbeam = {:}, sort = {:}, stop = {:} }};'.format(element_name,
-                                                                                                     m_dumpfield,
-                                                                                                     m_dumpbeam, m_sort,
-                                                                                                     m_stop)
-
-        elif isinstance(element, Phaseshifter):
-            element_name = element_num + 'PH'
-            s = '{:}: PHASESHIFTER = {{l = {:}, phi = {:}}};'.format(element_name, element.l, element.phi)
-
-        else:
-            # Unknown element type, replace by drift to get cell length right (while ignoring l=0 elements)
-            if element.l==0:
-                _logger.warning('Unknown element {} with length {}'.format(str(element), element.l))
-                continue # not writing a line to the lattice file
-            #
-            _logger.warning('Unknown element {} with length {}\n replacing with drift'.format(str(element), element.l))
-            element_name = element_num + 'UNKNOWN'
-            s = '{:}: DRIFT = {{l={:}}};'.format(element_name, element.l)
+        if not got_info:
+            continue # no lattice element to be written to file
 
         beamline.append(element_name)
         lat_str.append(s)
@@ -943,7 +968,7 @@ def gen4_lat_str(lat, line_name='LINE', zstop=np.inf):
     return lat_str
 
 
-def write_gen4_lat(lattices, filepath, zstop=np.inf):
+def write_gen4_lat(lattices, filepath, zstop=np.inf, cb_latline=None):
     """
     Writing lattice file for Genesis1.3-version4 simulations
     :param lattices: dictionary: {'line_name': ocelot.cpbd.magnetic_lattice.MagneticLattice(), ...}
@@ -967,7 +992,7 @@ def write_gen4_lat(lattices, filepath, zstop=np.inf):
 
     for line_name, lat in zip(lattices.keys(), lattices.values()):
         _logger.debug(ind_str + "line={}, lat={}, zstop={}".format(line_name, type(lat), zstop.get(line_name, np.inf)))
-        lat_str = gen4_lat_str(lat, line_name=line_name, zstop=zstop.get(line_name, np.inf))
+        lat_str = gen4_lat_str(lat, line_name=line_name, zstop=zstop.get(line_name, np.inf), cb_latline=cb_latline)
         f.write(lat_str)
 
     f.write('\n# end of file')

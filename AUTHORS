@@ -29,3 +29,7 @@ coherent radiation class, unit tests, examples
 
 Michael Boese michael.boese@desy.de
 architecture, cpbd
+
+Christoph Lechner
+adaptors for "GENESIS 1.3", v4 and v2; functions for plotting of simulation results;
+control of MPI simulation jobs

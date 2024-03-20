@@ -260,17 +260,39 @@ def create_fel_lattice(und_N = 35,
         cell_N = 0
         cell_N_last = 0
     else:
-        cell_N = np.floor((und_N - 1)/2).astype(int)
-        cell_N_last = int((und_N - 1)/2%2)
+        cell_N = np.floor((und_N-1)/2).astype(int)
+        cell_N_last = int((und_N-1)%2)
+
+    # print(f'und_N={und_N}: cell_N={cell_N}, cell_N_last={cell_N_last}')
+
+    '''
+    If False, even number of undulators results in final
+    beamline element to be the last undulator.
+    This was the behavior before this new feature was added in March-2024
+    and is therefore the default (it prevents matching for Nund=2).
+    If True, all undulator half-cells are identical.
+    '''
+    # False is default value, not changing behavior before March-2024 unless requested by user
+    final_halfcell_complete=kwargs.get('final_halfcell_complete', False)
 
     if quad_start == 'd':
-        cell = (und, cx, cy, d1, qf, phs, d2, und, cx, cy, d1, qd, phs, d2) 
+        cell       = (und, cx, cy, d1, qf, phs, d2,
+                      und, cx, cy, d1, qd, phs, d2) 
         extra_fodo = (und, cx, cy, d2, qdh)
-        lat = (und, cx, cy, d1, qd, phs, d2) + cell_N * cell + cell_N_last * (und,)
+        if final_halfcell_complete==False:
+            fc     = (und,)
+        else:
+            fc     = (und, cx, cy, d1, qf, phs, d2)
+        lat        = (und, cx, cy, d1, qd, phs, d2) + cell_N*cell + cell_N_last*fc
     elif quad_start == 'f':
-        cell = (und, cx, cy, d1, qd, phs, d2, und, cx, cy, d1, qf, phs, d2) 
+        cell       = (und, cx, cy, d1, qd, phs, d2,
+                      und, cx, cy, d1, qf, phs, d2) 
         extra_fodo = (und, cx, cy, d2, qfh)
-        lat = (und, cx, cy, d1, qf, phs, d2) + cell_N * cell + cell_N_last * (und,)
+        if final_halfcell_complete==False:
+            fc     = (und,)
+        else:
+            fc     = (und, cx, cy, d1, qd, phs, d2)
+        lat        = (und, cx, cy, d1, qf, phs, d2) + cell_N*cell + cell_N_last*fc
     
     lat = MagneticLattice(lat)
     
@@ -328,7 +350,7 @@ def create_fel_lattice_tmp(und_N = 34,
     return (MagneticLattice(lat), None, cell)
 
 
-def create_fel_beamline(beamline = 'sase1', inters_phi=0, inters_K = "K_und", *, override_und_N=None):
+def create_fel_beamline(beamline = 'sase1', inters_phi=0, inters_K = "K_und", *, override_und_N=None, final_halfcell_complete=False):
     '''
     If provided, parameter override_und_N allows to adjust the number of undulator cells in the generated beamline.
     '''
@@ -348,8 +370,9 @@ def create_fel_beamline(beamline = 'sase1', inters_phi=0, inters_K = "K_und", *,
                         quad_K = 0,
                         phs_L = 0.0,
                         quad_start = 'd',
-                        beamline_name = beamline
-                            )
+                        beamline_name = beamline,
+                        final_halfcell_complete = final_halfcell_complete
+                    )
     elif beamline in ['sase3', 3, 'EuXFEL_SASE3']:
         und_N = 21 # default value
         if override_und_N is not None:
@@ -366,8 +389,9 @@ def create_fel_beamline(beamline = 'sase1', inters_phi=0, inters_K = "K_und", *,
                         quad_K = 0,
                         phs_L = 0.0,
                         quad_start = 'd',
-                        beamline_name = beamline
-                            )
+                        beamline_name = beamline,
+                        final_halfcell_complete = final_halfcell_complete
+                    )
     else:
         raise ValueError('Unknown beamline')
 

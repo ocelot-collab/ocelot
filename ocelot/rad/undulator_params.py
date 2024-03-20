@@ -18,6 +18,12 @@ def eV2lambda(Ephoton):
     Lambda = h_eV_s*speed_of_light/Ephoton
     return Lambda
     
+def THz2eV(THz):
+    return np.array(THz) * h_eV_s / 1e-12
+
+def eV2THz(Ephoton):
+    return np.array(Ephoton) / h_eV_s * 1e-12
+
 def k2lambda(k):
     Lambda = 2 * np.pi / k
     return Lambda

@@ -994,11 +994,11 @@ def write_gen4_lat(lattices, filepath, zstop=np.inf, cb_latline=None):
     for line_name, lat in zip(lattices.keys(), lattices.values()):
         _logger.debug(ind_str + "line={}, lat={}, zstop={}".format(line_name, type(lat), zstop.get(line_name, np.inf)))
         if isinstance(lat,str):
-			# user-provided string is written directly to file (useful for comments, advanced stuff not support yet by OCELOT)
+            # user-provided string is written directly to file (useful for comments, advanced stuff not support yet by OCELOT)
             _logger.info('Info: user-provided string written to lattice file. Only use if you know what you do as it could break the simulation.')
             lat_str=lat
         else:
-			# all others: standard behavior
+            # all others: standard behavior
             lat_str = gen4_lat_str(lat, line_name=line_name, zstop=zstop.get(line_name, np.inf), cb_latline=cb_latline)
         f.write(lat_str)
 

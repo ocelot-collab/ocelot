@@ -206,6 +206,8 @@ class Genesis4Simulation:
         return out
 
     def clean_output(self):
+        # TODO: replace by better solution:
+        # The combination of 'rm -rf' with wildcards can be dangerous, in particular when the command is executed with 'os.system' and a user-provided string is included into the command string.
         os.system('rm -rf {}*'.format(self.root_path()))
 
 

@@ -5,8 +5,12 @@ from ocelot.adaptors.genesis4 import *
 from ocelot.gui.beam_plot import *
 from ocelot.utils.xfel_utils import create_fel_beamline
 
+# TODO: Add test for functionality to write user-provided
+# string to lattice file. Can be done once the branches are merged.
+
+# Simple callback function for testing callbacks from 'write_gen4_lat'
 def my_cb_latline(lat, element, eleidx, element_prefix):
-	# put marker for this test
+    # put marker for this test
     element.cb_invoked=True
     
     # standard behavior of G4 adaptor

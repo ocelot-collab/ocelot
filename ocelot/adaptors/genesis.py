@@ -3706,7 +3706,12 @@ def transform_beam_file(beam_file=None, out_file='tmp.beam', s=None, transform=[
 
     return beam_new
 
-
+'''
+# C. Lechner, 2024-03-24, disabled this test function
+# There aren't any calls to this function and function 'gaussFromTwiss'
+# does not exist in OCELOT code (as of 2024-03).
+# Last git commit containing function gaussFromTwiss: fc89983 (date: 2015-11-17)
+# Function was probably renamed to gauss_from_twiss (see commit id 9a79211, date: 2015-11-17)
 def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
 
     ex = 1.0
@@ -3735,6 +3740,7 @@ def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
     xp3 = []
 
     for i in range(5000):
+        # remark, CL, 2024-03: now gauss_from_twiss?
         x_, xp_ = gaussFromTwiss(ex, beta1, alpha1)
         x.append(x_)
         xp.append(xp_)
@@ -3784,7 +3790,7 @@ def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
     plt.show()
 
     # 49.8131287015 1.12127199531 39.9184728466 -0.897874127701
-
+'''
 
 #import argparse
 #parser = argparse.ArgumentParser(description='Data plotting program.')

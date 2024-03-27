@@ -4,6 +4,12 @@ cpbd modules, optics functions, CSR,
 tracking module, orbit correction module,
 optimizer, SR module, LH, tutorials
 
+Svitozar Serkez svitozar.serkez@xfel.eu
+genesis2 & genesis4 adaptors,
+coherent radiation class,
+SASE estimator & imitator,
+Stokes parameters class.
+
 Ilya Agapov ilya.agapov@desy.de
 architecture, optimizer, x-ray optics,
 genesis2 adaptor
@@ -17,15 +23,9 @@ space charge, CSR, wakefields, LH
 Gianluca Geloni
 genesis2 adaptor
 
-Svitozar Serkez svitozar.serkez@xfel.eu
-genesis2 & genesis4 adaptors,
-coherent radiation class,
-SASE estimator & imitator,
-Stokes parameters class.
-
 Mykola Veremchuk, Andrei Trebushinin
 Stokes parameters calculation & visualization,
 coherent radiation class, unit tests, examples
 
-Michael Boese michael.boese@desy.de
+Michael Boese
 architecture, cpbd

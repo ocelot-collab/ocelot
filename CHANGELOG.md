@@ -42,11 +42,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `remove_coupler_kick` convenience method for Cavity class
 - Integrated quad strengths for `k1` and `k2` convenience getters/setters (`k1l` and `k2l).
 - Added new method `Navigator.add_physics_processes` for adding multiple physics processes at the same time.  This will be a lot fastwe when lots of physics processes are to be added.
+>>>>>>> 6fdd98a24d013057498abd8e9ccf734939ef30e7
 - `Navigator.jump_to` method allowing a `Navigator` instance to jump
   to arbitrary points in z along the magnetic lattice.  Useful as it
   does not require modifying the underling beamling to achieve
   equivalent behaviour.
 - new `__repr__` methods for some common physics processes: `CSR`, `SmoothBeam`, `SpaceCharge` and `WakeTable`.
+- `SmoothBeam` mslice attribute can now be set in the `__init__`.
+- `extract_slice` method on SliceParameters instances
 - modified the 'MagneticLattice.transfer_maps()' method. When using the 'output_at_each_step=True' flag,
   the method returns (Bs, Rs, Ts, S), where 'S' is a list of coordinates after each transfer map.
 - New `WakeTable3` and `Wake3` class for third order Taylor expansion of wakefield tracking.
@@ -55,6 +58,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   The other two waketables contain exponential decay term. The waketables with `3` provide third order Taylor expansion and should be used with `Wake3`.
   
   
+>>>>>>> 6fdd98a24d013057498abd8e9ccf734939ef30e7
 
 ### Fixed
 

@@ -788,7 +788,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones=None):
 
 
 def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinear", xlabel=None, ylabel=None, nfig=50,
-                 title=None, figsize=None, grid=True, show_xtick_label=True, limits=None):
+                 title=None, figsize=None, grid=True, show_xtick_label=True, limits=None, cmap=None):
     """
     Function shows density
 
@@ -808,6 +808,7 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
     :param show_xtick_label: True
     :param label, None or string.
     :param limits,  None or [[xmin, xmax], [ymin, ymax]]
+    :param cmap - color map
     :return:
     """
 
@@ -816,8 +817,12 @@ def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinea
         ax = plt.subplot(111)
     if title is not None:
         plt.title(title)
-    my_rainbow = copy(plt.cm.get_cmap('rainbow'))
-    my_rainbow.set_under('w')
+
+    if cmap == "my_rainbow":
+        my_rainbow = matplotlib.colormaps['rainbow']
+        my_rainbow.set_under('w')
+    else:
+        my_rainbow = matplotlib.colormaps[cmap]
 
     x_min = np.min(x)
     x_max = np.max(x)

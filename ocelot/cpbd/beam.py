@@ -225,7 +225,7 @@ class Twiss:
         result = cls()
         for key, value in series.items():
             if hasattr(result, key):
-                setattr(result, key, np.squeeze(value).item())
+                setattr(result, key, np.squeeze(value))
         return result
 
 class Particle:
@@ -1395,18 +1395,14 @@ def twiss_parray_slice(parray, slice="Imax", nparts_in_slice=5000, smooth_param=
     tws = Twiss()
     slice_params = global_slice_analysis(parray, nparts_in_slice=nparts_in_slice, smooth_param=smooth_param,
                                          filter_base=filter_base, filter_iter=filter_iter)
+
     if slice == "Imax":
         ind0 = np.argmax(slice_params.I)
     elif slice == "Emax":
         ind0 = np.argmax(slice_params.me)
     else:
         ind0 = np.argsort(np.abs(slice_params.s))[0]
-    tws.beta_x = slice_params.beta_x[ind0]
-    tws.alpha_x = slice_params.alpha_x[ind0]
-    tws.beta_y = slice_params.beta_y[ind0]
-    tws.alpha_y = slice_params.alpha_y[ind0]
-    tws.gamma_y = slice_params.gamma_y[ind0]
-    tws.gamma_x = slice_params.gamma_x[ind0]
+    tws = slice_params.extract_slice(ind0)
     return tws
 
 
@@ -1689,6 +1685,9 @@ class SliceParameters:
                                          "sig_y": "yy",
                                          "sig_xp": "pxpx",
                                          "sig_yp": "pypy"}
+    # SliceParameter energy is in units of eV whereas in Twiss
+    # instances it should be units of GeV.  Maybe I missed some here.
+    TWISS_UNITS_CONVERSION = {"E": 1e-6}
 
     def __init__(self):
         self.s = None
@@ -1735,6 +1734,11 @@ class SliceParameters:
         for slice_parameters_name, twiss_name in self.VARIANCE_SP_NAMES.items():
             chosen_slice_value = getattr(self, slice_parameters_name)[index] ** 2
             setattr(rtwiss, twiss_name, chosen_slice_value)
+
+        for attr, factor in self.TWISS_UNITS_CONVERSION.items():
+            value = getattr(rtwiss, attr)
+            new_value = value * factor
+            setattr(rtwiss, attr, new_value)
 
         return rtwiss
 

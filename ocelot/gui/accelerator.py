@@ -788,7 +788,7 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones=None):
 
 
 def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinear", xlabel=None, ylabel=None, nfig=50,
-                 title=None, figsize=None, grid=True, show_xtick_label=True, limits=None, cmap=None):
+                 title=None, figsize=None, grid=True, show_xtick_label=True, limits=None, cmap="my_rainbow"):
     """
     Function shows density
 

@@ -3056,6 +3056,7 @@ def transform_beam_twiss(beam, transform=None, s=None):
         else:
             idx = find_nearest_idx(beam.s, s)
 
+        # remark C. Lechner, 2024-04: when running pytest, the use of numpy.matrix in this function raises "PendingDeprecationWarning: the matrix subclass is not the recommended way to represent matrices or deal with linear algebra (see https://docs.scipy.org/doc/numpy/user/numpy-for-matlab-users.html). Please adjust your code to use regular ndarray."
         g1x = np.matrix([[beam.beta_x[idx], beam.alpha_x[idx]],
                          [beam.alpha_x[idx], (1 + beam.alpha_x[idx]**2) / beam.beta_x[idx]]])
 

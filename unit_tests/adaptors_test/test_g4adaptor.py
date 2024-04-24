@@ -1,5 +1,7 @@
 # C. Lechner, European XFEL, 2024-03-24
 
+import pytest
+
 import ocelot
 from ocelot.adaptors.genesis4 import *
 from ocelot.gui.beam_plot import *
@@ -17,12 +19,12 @@ def my_cb_latline(lat, element, eleidx, element_prefix):
     return (None,None)
 
 
-# Remark: there are 30+ PendingDeprecationWarning messages, related to genesis.py and the use of np.matrix
+# Remark/TODO CL 2024-03: there are 30+ PendingDeprecationWarning messages, related to genesis.py and the use of np.matrix
+@pytest.mark.filterwarnings('ignore::PendingDeprecationWarning')
 def test_g4adaptor_writelat_cb(tmpdir):
     '''
     Code is from demo_lat_callback.py
     '''
-
 
     '''
     Shorter lattice with SASE1-type FODO (uses functionality added by CL to OCELOT in Feb 2024)

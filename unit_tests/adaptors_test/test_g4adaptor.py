@@ -7,19 +7,10 @@ from ocelot.adaptors.genesis4 import *
 from ocelot.gui.beam_plot import *
 from ocelot.utils.xfel_utils import create_fel_beamline
 
-# Simple callback function for testing callbacks from 'write_gen4_lat'
-def my_cb_latline(lat, element, eleidx, element_prefix):
-    # put marker for this test
-    element.cb_invoked=True
-    
-    # standard behavior of G4 adaptor
-    return (None,None)
-
-
-# Remark/TODO CL 2024-03: there are 30+ PendingDeprecationWarning messages, related to genesis.py and the use of np.matrix
-@pytest.mark.filterwarnings('ignore::PendingDeprecationWarning')
-def test_g4adaptor_writelat_cb(tmpdir):
+def obtain_test_lattice():
     '''
+    Generates lattice used by some tests
+
     Code is from demo_lat_callback.py
     '''
 
@@ -40,6 +31,21 @@ def test_g4adaptor_writelat_cb(tmpdir):
     prepare_el_optics(beam, sase_lat_pkg, E_photon=Ephot, beta_av=betaavg)
 
     sase_lat, _, _ = sase_lat_pkg
+    return(sase_lat)
+
+# Simple callback function for testing callbacks from 'write_gen4_lat'
+def my_cb_latline(lat, element, eleidx, element_prefix):
+    # put marker for this test
+    element.cb_invoked=True
+    
+    # standard behavior of G4 adaptor
+    return (None,None)
+
+
+# Remark/TODO CL 2024-03: there are 30+ PendingDeprecationWarning messages, related to genesis.py and the use of np.matrix
+@pytest.mark.filterwarnings('ignore::PendingDeprecationWarning')
+def test_g4adaptor_writelat_cb(tmpdir):
+    sase_lat = obtain_test_lattice()
     sase_lat2 = deepcopy(sase_lat)
     #print(str(sase_lat))
 
@@ -63,27 +69,7 @@ def test_g4adaptor_writelat_cb(tmpdir):
 
 @pytest.mark.filterwarnings('ignore::PendingDeprecationWarning')
 def test_g4adaptor_writelat_verbstr(tmpdir):
-    '''
-    Code is based on test_g4adaptor_writelat_cb
-    '''
-
-    '''
-    Shorter lattice with SASE1-type FODO (uses functionality added by CL to OCELOT in Feb 2024)
-    New feature added in March-2024: Request complete final half-cell
-    -> this allows to match two-undulator-cell lattice
-    '''
-    sase_lat_pkg = create_fel_beamline('sase1', override_und_N=2, final_halfcell_complete=True)
-
-    # set up electron optics, undulator aw value
-    betaavg = 20 # m
-    Ephot = 9000 # eV
-    beam = generate_beam(
-        E=14, dE=0.003,
-        I=5000, shape='flattop', l_beam=1e-6, l_window=1.5e-6,
-        emit_n=0.4e-6, beta=betaavg, nslice=2)
-    prepare_el_optics(beam, sase_lat_pkg, E_photon=Ephot, beta_av=betaavg)
-
-    sase_lat, _, _ = sase_lat_pkg
+    sase_lat = obtain_test_lattice()
     #print(str(sase_lat))
 
     # Test string (provided with trailing '\n' to write_gen4_lat)

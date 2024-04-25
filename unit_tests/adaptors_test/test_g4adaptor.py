@@ -7,22 +7,10 @@ from ocelot.adaptors.genesis4 import *
 from ocelot.gui.beam_plot import *
 from ocelot.utils.xfel_utils import create_fel_beamline
 
-# TODO: Add test for functionality to write user-provided
-# string to lattice file. Can be done once the branches are merged.
-
-# Simple callback function for testing callbacks from 'write_gen4_lat'
-def my_cb_latline(lat, element, eleidx, element_prefix):
-    # put marker for this test
-    element.cb_invoked=True
-    
-    # standard behavior of G4 adaptor
-    return (None,None)
-
-
-# Remark/TODO CL 2024-03: there are 30+ PendingDeprecationWarning messages, related to genesis.py and the use of np.matrix
-@pytest.mark.filterwarnings('ignore::PendingDeprecationWarning')
-def test_g4adaptor_writelat_cb(tmpdir):
+def obtain_test_lattice():
     '''
+    Generates lattice used by some tests
+
     Code is from demo_lat_callback.py
     '''
 
@@ -43,6 +31,21 @@ def test_g4adaptor_writelat_cb(tmpdir):
     prepare_el_optics(beam, sase_lat_pkg, E_photon=Ephot, beta_av=betaavg)
 
     sase_lat, _, _ = sase_lat_pkg
+    return(sase_lat)
+
+# Simple callback function for testing callbacks from 'write_gen4_lat'
+def my_cb_latline(lat, element, eleidx, element_prefix):
+    # put marker for this test
+    element.cb_invoked=True
+    
+    # standard behavior of G4 adaptor
+    return (None,None)
+
+
+# Remark/TODO CL 2024-03: there are 30+ PendingDeprecationWarning messages, related to genesis.py and the use of np.matrix
+@pytest.mark.filterwarnings('ignore::PendingDeprecationWarning')
+def test_g4adaptor_writelat_cb(tmpdir):
+    sase_lat = obtain_test_lattice()
     sase_lat2 = deepcopy(sase_lat)
     #print(str(sase_lat))
 
@@ -61,3 +64,30 @@ def test_g4adaptor_writelat_cb(tmpdir):
 
     # check for presence of marker put in callback function
     assert sase_lat.sequence[0].cb_invoked==True
+
+###
+
+@pytest.mark.filterwarnings('ignore::PendingDeprecationWarning')
+def test_g4adaptor_writelat_verbstr(tmpdir):
+    sase_lat = obtain_test_lattice()
+    #print(str(sase_lat))
+
+    # Test string (provided with trailing '\n' to write_gen4_lat)
+    txt = '# ***VERBATIM_STRING***'
+
+    # working directory for the test
+    # https://docs.pytest.org/en/6.2.x/tmpdir.html
+    wd = tmpdir
+    import os.path
+    fn_lat = os.path.abspath(wd.join('./lat.lat'))
+
+    # write lattice including test string for verbatim functionality (note '\n' at the end)
+    write_gen4_lat({'LX':sase_lat,'V':txt+'\n'}, filepath=fn_lat)
+    # arriving here, we know that no exception was raised -> already good
+
+    ### NOW: verify that string really made it to lattice file
+    with open(fn_lat, 'r') as fin:
+        contents = fin.read()
+        found_string = txt in contents
+
+    assert found_string, 'test string not found in lattice file'

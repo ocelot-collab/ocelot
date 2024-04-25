@@ -974,6 +974,7 @@ def write_gen4_lat(lattices, filepath, zstop=np.inf, cb_latline=None):
     """
     Writing lattice file for Genesis1.3-version4 simulations
     :param lattices: dictionary: {'line_name': ocelot.cpbd.magnetic_lattice.MagneticLattice(), ...}
+                                               if string is provided instead of lattice, it is written to verbatim lattice file
     :param filepath: str: path to the file in which lattices information will be writen
     :param zstop: dict with active lengths for each lattice in lattices dictionary (can be a double if len(lattices)==1)
     :return:
@@ -994,7 +995,13 @@ def write_gen4_lat(lattices, filepath, zstop=np.inf, cb_latline=None):
 
     for line_name, lat in zip(lattices.keys(), lattices.values()):
         _logger.debug(ind_str + "line={}, lat={}, zstop={}".format(line_name, type(lat), zstop.get(line_name, np.inf)))
-        lat_str = gen4_lat_str(lat, line_name=line_name, zstop=zstop.get(line_name, np.inf), cb_latline=cb_latline)
+        if isinstance(lat,str):
+            # user-provided string is written directly to file (useful for comments, advanced stuff not support yet by OCELOT)
+            _logger.info('Info: user-provided string written to lattice file. Only use if you know what you do as it could break the simulation.')
+            lat_str=lat
+        else:
+            # all others: standard behavior
+            lat_str = gen4_lat_str(lat, line_name=line_name, zstop=zstop.get(line_name, np.inf), cb_latline=cb_latline)
         f.write(lat_str)
 
     f.write('\n# end of file')

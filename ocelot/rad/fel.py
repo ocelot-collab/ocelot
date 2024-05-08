@@ -613,25 +613,7 @@ def printFelParameters(p):
     print ('Saturation magn. length=', p.z_sat_min)
     print ('**************************************')
     
-    
-# CHECK with Xie paper parameters
-#inp = GenesisInput()
-#inp.curpeak = 3400
-#inp.xlamd = 0.03
-#inp.iwityp = 0
-#inp.gamma0 = 28000
-#inp.delgam = inp.gamma0 * 2e-4
-#inp.betax = 18
-#inp.betay = 18
-#inp.emitx=1.5e-6
-#inp.emity=1.5e-6
-#inp.xlamd=0.03
-#inp.aw0 = 3.7/sqrt(2)
+
 #
-#p = calculateFelParameters(inp)
-#print(p.xie_lscale,'new')
-#p.lg1
-#p.rho1
-#print(p.xie_etad, 0.0367)
-#print(p.xie_etae, 0.739)
-#print(p.xie_etagamma, 0.248)
+# Lechner, 2024-05-08: moved test case to pytest test
+#

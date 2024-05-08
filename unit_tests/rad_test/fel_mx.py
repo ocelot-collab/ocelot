@@ -37,6 +37,8 @@ def test_fel_MX():
     print('etae:     expected 0.739,  got {}'.format(p.xie_etae))
     print('etagamma: expected 0.248,  got {}'.format(p.xie_etagamma))
 
+    # Score the test result by comparing with values given in Xie paper
+    # -> if needed, the evaluation of the test can be modified
     reldev = np.array([p.xie_etad/0.0367-1, p.xie_etae/0.739-1, p.xie_etagamma/0.248-1])
     relscore = np.sum(reldev*reldev)
     print('score={:e}'.format(relscore))

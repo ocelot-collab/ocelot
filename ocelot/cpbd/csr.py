@@ -937,6 +937,7 @@ class CSR(PhysProc):
                                  traj[1,:], traj[2,:], traj[3,:] - rectangular coordinates, \
                                  traj[4,:], traj[5,:], traj[6,:] - tangential unit vectors
         """
+        self.check_step()
 
         # if pict_debug = True import matplotlib
         if self.pict_debug:

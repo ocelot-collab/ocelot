@@ -1185,6 +1185,7 @@ class Wake(PhysProc):
         return Px, Py, Pz, I00
 
     def prepare(self, lat):
+        self.check_step()
         if self.wake_table is None:
             _logger.info("Wake.wake_table is None! Please specify the WakeTable()")
         else:

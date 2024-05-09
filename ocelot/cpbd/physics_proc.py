@@ -34,6 +34,10 @@ class PhysProc:
         self.s_stop = None
         self.z0 = None
 
+    def check_step(self):
+        if not (self.step*1.).is_integer():
+            raise ValueError('step must be an integer number')
+
     def prepare(self, lat):
         """
         method is called at the moment of Physics Process addition to Navigator class.
@@ -41,7 +45,8 @@ class PhysProc:
         :param lat:
         :return:
         """
-        pass
+        self.check_step()
+
 
     def apply(self, p_array, dz):
         """

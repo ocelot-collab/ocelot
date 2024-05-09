@@ -100,6 +100,7 @@ class SpaceCharge(PhysProc):
         self.random_seed = 10     # random seeding number. if None seeding is random
 
     def prepare(self, lat):
+        self.check_step()
         if self.random_seed is not None:
             np.random.seed(self.random_seed)
 

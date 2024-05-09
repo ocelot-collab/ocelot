@@ -449,6 +449,8 @@ def track(
     """
     if navi is None:
         navi = Navigator(lattice)
+    if navi.lat is not lattice:
+        _logger.warning("MagneticLattice is not the same in lattice argument and in Navigator")
     tw0 = get_envelope(p_array, bounds=bounds) if calc_tws else Twiss()
     tws_track = [tw0]
     L = 0.

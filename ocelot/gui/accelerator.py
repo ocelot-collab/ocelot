@@ -857,7 +857,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
                 title=None, figsize=None, grid=True,
                 filename=None, headtail=True,
                 filter_base=2, filter_iter=2,
-                tau_units="mm", **kwargs
+                tau_units="mm", cmap="my_rainbow", **kwargs
                 ):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
@@ -943,7 +943,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.y() * 1e3, ax=ax_ys, nbins_x=nbins_x, nbins_y=nbins_y,
                  interpolation=interpolation, xlabel=tau_label, ylabel='$y\,[\mathrm{mm}]$', nfig=50,
-                 title="Side view", figsize=None, grid=grid)
+                 title="Side view", figsize=None, grid=grid, cmap=cmap)
     if show_moments:
         plt.plot(slice_params.s * tau_factor, slice_params.my * 1e3, "k", lw=2)
         plt.plot(slice_params.s * tau_factor, (slice_params.my + slice_params.sig_y) * 1e3, "w", lw=1)
@@ -953,7 +953,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.x() * 1e3, ax=ax_xs, nbins_x=nbins_x, nbins_y=nbins_y,
                  interpolation=interpolation, ylabel=r'$x\,[\mathrm{mm}]$',
-                 title="Top view", grid=grid, show_xtick_label=False)
+                 title="Top view", grid=grid, show_xtick_label=False, cmap=cmap)
     if show_moments:
         plt.plot(slice_params.s * tau_factor, slice_params.mx * 1e3, "k", lw=2)
         plt.plot(slice_params.s * tau_factor, (slice_params.mx + slice_params.sig_x) * 1e3, "w", lw=1)
@@ -963,7 +963,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.p() * 1e2, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
                  interpolation=interpolation, ylabel=r'$\delta_E\,[\%]$',
-                 title="Longitudinal phase space", grid=grid, show_xtick_label=False)
+                 title="Longitudinal phase space", grid=grid, show_xtick_label=False, cmap=cmap)
 
     if inverse_tau:
         arrow = r"$\Longrightarrow$"

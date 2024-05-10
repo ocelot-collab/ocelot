@@ -45,3 +45,16 @@ def test_fel_MX():
     maxrelscore = 3e-6 # I get relscore=1.74e-6
     ok = (relscore<maxrelscore)
     assert(ok)
+
+    '''
+    Check the values of some key parameters to protect against
+    unwanted side-effects changing these results.
+    Note that we compare with values computed with OCELOT source
+    code version git commit id=eb3fbdf (date: 2024-05-08).
+    '''
+    def check_small_reldev(a,b, maxreldev=1e-6):
+        reldev=a/b-1
+        assert(abs(reldev)<maxreldev) # if condition=False -> test fails
+    
+    check_small_reldev(p.lg3,  5.73242744516371)
+    check_small_reldev(p.rho3, 0.0002404430325092614)

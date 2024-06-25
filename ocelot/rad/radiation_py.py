@@ -13,18 +13,17 @@ import time
 from math import pi
 
 import numpy as np
-from scipy.integrate import cumtrapz
-from scipy.interpolate import splrep, splev
+from scipy.integrate import cumulative_trapezoid
+from scipy.interpolate import splev, splrep
 
-from ocelot.rad.spline_py import cspline_coef
-from ocelot.common.globals import m_e_GeV, h_eV_s, q_e, speed_of_light, ro_e
-from ocelot.cpbd.elements.undulator_atom import und_field
-from ocelot.cpbd.elements import Undulator
-from ocelot.cpbd.high_order import rk_track_in_field
-from ocelot.cpbd import track
-from ocelot.cpbd.navi import Navigator
-from ocelot.cpbd import beam
 import ocelot.cpbd.magnetic_lattice as mlattice
+from ocelot.common.globals import h_eV_s, m_e_GeV, q_e, ro_e, speed_of_light
+from ocelot.cpbd import beam, track
+from ocelot.cpbd.elements import Undulator
+from ocelot.cpbd.elements.undulator_atom import und_field
+from ocelot.cpbd.high_order import rk_track_in_field
+from ocelot.cpbd.navi import Navigator
+from ocelot.rad.spline_py import cspline_coef
 
 __author__ = 'Sergey Tomin'
 _logger = logging.getLogger(__name__)
@@ -122,7 +121,7 @@ class BeamTraject:
         xp2 = self.xp(n) ** 2
         yp2 = self.yp(n) ** 2
         # zp = np.sqrt(1. / (1. + xp2 + yp2))
-        s = cumtrapz(np.sqrt(1. + xp2 + yp2), self.z(n), initial=0)
+        s = cumulative_trapezoid(np.sqrt(1. + xp2 + yp2), self.z(n), initial=0)
         return s
 
     def p_array_end(self, p_array):

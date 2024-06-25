@@ -1,12 +1,12 @@
 
 __author__ = 'Sergey Tomin'
 
-from scipy.integrate import simps
 from numpy.linalg import eig
+from scipy.integrate import simpson
 
-from ocelot.cpbd.optics import *
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.elements import *
+from ocelot.cpbd.optics import *
 from ocelot.cpbd.transformations.transformation import TMTypes
 
 
@@ -42,8 +42,8 @@ def natural_chromaticity(lattice, tws_0, nsuperperiod=1):
                 H2 = np.array(h)*np.array(h)
                 X = np.array(bx)*(np.array(k) + H2)
                 Y = -np.array(by)*np.array(k)
-                integr_x += simps(X, Z)
-                integr_y += simps(Y, Z)
+                integr_x += simpson(X, x=Z)
+                integr_y += simpson(Y, x=Z)
             elif elem.__class__ == Multipole:
                 twiss_z = tm * tws_elem
                 integr_x += twiss_z.beta_x*elem.kn[1]
@@ -79,8 +79,8 @@ def sextupole_chromaticity(lattice, tws0, nsuperperiod=1):
 
             X = np.array(bx)*np.array(Dx)
             Y = np.array(by)*np.array(Dx)
-            integr_x += simps(X, Z)*elem.k2
-            integr_y += simps(Y, Z)*elem.k2
+            integr_x += simpson(X, x=Z)*elem.k2
+            integr_y += simpson(Y, x=Z)*elem.k2
 
         for tm in elem.first_order_tms:
             tws_elem = tm*tws_elem

@@ -2,11 +2,11 @@
 statistical analysis functions, fitting, optimization and the like
 """
 
-import numpy as np
-from scipy.special import gammaincc, gamma, exp1
-from scipy import fftpack, integrate, interpolate
-from scipy import optimize
 import sys
+
+import numpy as np
+from scipy import fftpack, integrate, interpolate, optimize
+from scipy.special import exp1, gamma, gammaincc
 
 try:
     import numba as nb
@@ -69,7 +69,7 @@ def invert_cdf(y, x):
     :return: function
     """
 
-    cum_int = integrate.cumtrapz(y, x, initial=0)
+    cum_int = integrate.cumulative_trapezoid(y, x, initial=0)
     #print("invert", np.max(cum_int), np.min(cum_int))
     cdf = cum_int / (np.max(cum_int) - np.min(cum_int))
     inv_cdf = interpolate.interp1d(cdf, x)

@@ -2,27 +2,26 @@
 @ authors Martin Dohlus DESY, 2015, Sergey Tomin XFEL, 2016
 """
 
-import time
 import copy
 import importlib
 import logging
+import time
 
 import numpy as np
-from scipy.integrate import cumtrapz
+from scipy.integrate import cumulative_trapezoid
 
-from ocelot.common.globals import pi, speed_of_light, m_e_eV, m_e_GeV
 from ocelot.common import math_op
+from ocelot.common.globals import m_e_eV, m_e_GeV, pi, speed_of_light
 from ocelot.cpbd.beam import Particle, s_to_cur
-from ocelot.cpbd.high_order import arcline, rk_track_in_field
-
-from ocelot.cpbd.elements.undulator import Undulator
-from ocelot.cpbd.elements.undulator_atom import und_field
 from ocelot.cpbd.elements.bend import Bend
 from ocelot.cpbd.elements.rbend import RBend
 from ocelot.cpbd.elements.sbend import SBend
+from ocelot.cpbd.elements.undulator import Undulator
+from ocelot.cpbd.elements.undulator_atom import und_field
 from ocelot.cpbd.elements.xyquadruple import XYQuadrupole
-
+from ocelot.cpbd.high_order import arcline, rk_track_in_field
 from ocelot.cpbd.physics_proc import PhysProc
+
 # matplotlib may or may not be on the HPC nodes at DESY.
 #try:
 #    import matplotlib.pyplot as plt
@@ -42,13 +41,11 @@ except:
 
 try:
 
-    from pyfftw.interfaces.numpy_fft import fft
-    from pyfftw.interfaces.numpy_fft import ifft
+    from pyfftw.interfaces.numpy_fft import fft, ifft
 except:
     logger.info("csr.py: module PYFFTW is not installed."
                 " Install it to speed up calculation.")
-    from numpy.fft import ifft
-    from numpy.fft import fft
+    from numpy.fft import fft, ifft
 
 try:
     import numexpr as ne
@@ -525,7 +522,7 @@ class K0_fin_anf:
             a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
             KS = np.cumsum(a[::-1])[::-1]
             # KS = cumsum_inv_jit(a)
-            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+            # KS = cumulative_trapezoid(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
         else:
             KS = 0.5 * K[-1] * s[-1]
         return w, KS
@@ -584,7 +581,7 @@ class K0_fin_anf:
         if len(K) > 1:
             a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
             KS = np.cumsum(a[::-1])[::-1]
-            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+            # KS = cumulative_trapezoid(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
         else:
             KS = 0.5 * K[-1] * s[-1]
 
@@ -641,7 +638,7 @@ class K0_fin_anf:
         if len(K) > 1:
             a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
             KS = np.cumsum(a[::-1])[::-1]
-            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+            # KS = cumulative_trapezoid(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
         else:
             KS = 0.5 * K[-1] * s[-1]
 
@@ -1035,7 +1032,7 @@ class CSR(PhysProc):
                 yp2 = yp * yp
                 zp = np.sqrt(1./(1. + xp2 + yp2))
 
-                s = cumtrapz(np.sqrt(1. + xp2 + yp2), z, initial=0)
+                s = cumulative_trapezoid(np.sqrt(1. + xp2 + yp2), z, initial=0)
                 if elem.__class__ == Undulator:
                     delta_s = s[-1]
 

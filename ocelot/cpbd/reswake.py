@@ -1,10 +1,12 @@
 """
 writen by I. Zagorodnov, DESY and S.Tomin XFEL, 2015.
 """
-from scipy.integrate import simps
 import numpy as np
-from numpy.fft import fft, irfft, ifft
+from numpy.fft import fft, ifft, irfft
+from scipy.integrate import simpson
+
 from ocelot.common.globals import *
+
 
 def wake2impedance(s, w):
     """
@@ -106,8 +108,8 @@ def LossShape(bunch, wake):
     w = wake[1]
     bi2 = bunch[1]
     s = wake[0]
-    loss = simps(-bi2*w, s)
-    spread = np.sqrt(simps(bi2*(w + loss)**2, s))
+    loss = simpson(-bi2*w, x=s)
+    spread = np.sqrt(simpson(bi2*(w + loss)**2, x=s))
     peak = max(abs(w))
     return loss, spread, peak
 
@@ -126,7 +128,7 @@ def pipe_wake(z, current, tube_radius, tube_len, conductivity, tau, roughness, d
     :return:
     """
 
-    Q = simps(current, z)/speed_of_light
+    Q = simpson(current, x=z)/speed_of_light
     print ("Charge = ", Q*1e12, "pC")
     
     xb = -z[::-1]
@@ -173,8 +175,8 @@ def xfel_pipe_wake(s, current):
 
 
 if __name__ == "__main__":
-    from numpy import loadtxt
     import matplotlib.pyplot as plt
+    from numpy import loadtxt
     tube_radius = 5e-3 #m radius
     tube_len = 1.   #m length
 

@@ -1,13 +1,13 @@
 __author__ = 'Sergey'
 
-from scipy.integrate import simps
+from scipy.integrate import simpson
 
-from ocelot.cpbd.optics import trace_z, twiss
+from ocelot.common.ocelog import *
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.elements import *
-from ocelot.rad.undulator_params import *
-from ocelot.common.ocelog import *
+from ocelot.cpbd.optics import trace_z, twiss
 from ocelot.cpbd.transformations.transformation import TMTypes
+from ocelot.rad.undulator_params import *
 
 _logger = logging.getLogger(__name__)
 
@@ -66,11 +66,11 @@ def radiation_integrals(lattice, twiss_0, nsuperperiod=1):
                 #H = array(h)
                 H2 = h*h
                 H3 = np.abs(h*h*h)
-                I1 += h*simps(np.array(Dx), Z)
-                I2 += H2*elem.l  # simps(H2, Z)*nsuperperiod
-                I3 += H3*elem.l  # simps(H3, Z)*nsuperperiod
-                I4 += h*(2*elem.k1 + H2)*simps(np.array(Dx), Z)
-                I5 += H3*simps(np.array(Hinvariant), Z)
+                I1 += h*simpson(np.array(Dx), x=Z)
+                I2 += H2*elem.l  # simpson(H2, x=Z)*nsuperperiod
+                I3 += H3*elem.l  # simpson(H3, x=Z)*nsuperperiod
+                I4 += h*(2*elem.k1 + H2)*simpson(np.array(Dx), x=Z)
+                I5 += H3*simpson(np.array(Hinvariant), x=Z)
             tws_elem = tm * tws_elem
     # if abs(tws_elem.beta_x - twiss_0.beta_x)>1e-7 or abs(tws_elem.beta_y - twiss_0.beta_y)>1e-7:
     #    print( "WARNING! Results may be wrong! radiation_integral() -> beta functions are not matching. ")

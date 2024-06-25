@@ -66,11 +66,11 @@ def radiation_integrals(lattice, twiss_0, nsuperperiod=1):
                 #H = array(h)
                 H2 = h*h
                 H3 = np.abs(h*h*h)
-                I1 += h*simpson(np.array(Dx), Z)
-                I2 += H2*elem.l  # simpson(H2, Z)*nsuperperiod
-                I3 += H3*elem.l  # simpson(H3, Z)*nsuperperiod
-                I4 += h*(2*elem.k1 + H2)*simpson(np.array(Dx), Z)
-                I5 += H3*simpson(np.array(Hinvariant), Z)
+                I1 += h*simpson(np.array(Dx), x=Z)
+                I2 += H2*elem.l  # simpson(H2, x=Z)*nsuperperiod
+                I3 += H3*elem.l  # simpson(H3, x=Z)*nsuperperiod
+                I4 += h*(2*elem.k1 + H2)*simpson(np.array(Dx), x=Z)
+                I5 += H3*simpson(np.array(Hinvariant), x=Z)
             tws_elem = tm * tws_elem
     # if abs(tws_elem.beta_x - twiss_0.beta_x)>1e-7 or abs(tws_elem.beta_y - twiss_0.beta_y)>1e-7:
     #    print( "WARNING! Results may be wrong! radiation_integral() -> beta functions are not matching. ")

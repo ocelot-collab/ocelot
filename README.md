@@ -37,7 +37,7 @@ The tutorial includes 9 examples dedicated to the beam dynamics and optics and 5
 
 ##### This tutorial requires the following packages:
 
-- Python 3.6 - 3.8
+- Python 3.9+
 - `numpy` version 1.8 or later: http://www.numpy.org/
 - `scipy` version 0.15 or later: http://www.scipy.org/
 - `matplotlib` version 1.5 or later: http://matplotlib.org/

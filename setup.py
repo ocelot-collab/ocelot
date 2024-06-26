@@ -23,4 +23,5 @@ setup(
     extras_require={'docs': ['Sphinx', 'alabaster', 'sphinxcontrib-jsmath']},
     package_data={'ocelot.optics': ['data/*.dat']},
     license="GNU General Public License v3.0",
+    python_requires=">=3.9"
 )

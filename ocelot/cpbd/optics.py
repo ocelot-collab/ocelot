@@ -196,7 +196,7 @@ def twiss(lattice, tws0=None, nPoints=None, return_df=False, attach2elem=False):
     """
     twiss parameters calculation
 
-    :param attach2elem: if True and nPoints=None Twiss will be attached to elem.tws, Twiss corresponds to the end of the element,
+    :param attach2elem: if True and nPoints=None Twiss will be attached to 'elem.tws', Twiss corresponds to the end of the element,
                         not recommended for standard use, but may be handy for small scripts
     :param return_df:
     :param lattice: lattice, MagneticLattice() object

@@ -881,6 +881,8 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     :param headtail: True, shows where is the beam head is.
     :param filter_base: support of rectangle filter is 2*p+1
     :param filter_iter: the number of the filter iterations
+    :param tau_units: unints of longitudinal coordinate tau - 'm', 'mm' or 'um'
+    :param cmap: color map
     :return:
     """
     if tau_units == "m":

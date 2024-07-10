@@ -1058,8 +1058,8 @@ class Wake(PhysProc):
     def add_wake(self, I, T):
         """
         [x, W] = AddWake(I, T)
-        :param I: wake table in V/C, W in V (R, L, Cinv, nm, W0, N0, W1, N1)
-        :param T: wake table in V/C, W in V
+        :param I: beam current
+        :param T: wake table in V/C, W in V (R, L, Cinv, nm, W0, N0, W1, N1)
         :return:
         """
         R, L, Cinv, nm, W0, N0, W1, N1 = T
@@ -1201,6 +1201,19 @@ class Wake(PhysProc):
         T, H = self.TH
         x, Wz = self.add_wake(current_profile, T[int(H[0, 0])])
         return x, Wz * self.factor
+
+    def get_dipole_wake(self, current_profile):
+        """
+        method to extract a dipole wake from the Table for specific current profile
+
+        :param current_profile: 2D array with shape (n, 2) where first column is position and second is a beam current
+        :return: wake
+        """
+        T, H = self.TH
+        x, Wy = self.add_wake(current_profile, T[int(H[0, 4])])
+        h = x[1] - x[0]
+        Wy = -Int1h(h, Wy)
+        return x, Wy * self.factor
 
     def apply(self, p_array, dz):
         _logger.debug(" Wake: apply fraction: dz = " + str(dz))

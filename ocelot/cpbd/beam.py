@@ -1510,7 +1510,7 @@ def s_to_cur(A, sigma, q0, v):
     Function to calculate beam current
 
     :param A: s-coordinates of particles
-    :param sigma: smoothing parameter
+    :param sigma: smoothing parameter, e,g, sigma = 0.01*np.std(A)
     :param q0: bunch charge
     :param v: mean velocity
     :return: [s, I]

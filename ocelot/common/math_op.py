@@ -2,11 +2,11 @@
 statistical analysis functions, fitting, optimization and the like
 """
 
-import numpy as np
-from scipy.special import gammaincc, gamma, exp1
-from scipy import fftpack, integrate, interpolate
-from scipy import optimize
 import sys
+
+import numpy as np
+from scipy import fftpack, integrate, interpolate, optimize
+from scipy.special import exp1, gamma, gammaincc
 
 try:
     import numba as nb
@@ -14,7 +14,6 @@ try:
 except ImportError:
     print("math_op.py: module Numba is not installed. Install it if you want speed up correlation calculations")
     numba_avail = False
-
 
 def complete_gamma(a, z):
     """

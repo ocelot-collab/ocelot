@@ -1,12 +1,14 @@
 from __future__ import annotations
+
 __author__ = 'Sergey Tomin'
 
-from typing import List, Dict, Type, Callable, Tuple, Union, Any
+from typing import Any, Callable, Dict, List, Tuple, Type, Union
+
 import numpy as np
-from scipy.integrate import simps
-from ocelot.common.globals import speed_of_light, Z0, m_e_GeV
-from ocelot.cpbd.beam import s_to_cur
-from ocelot.cpbd.beam import Twiss, SliceParameters
+from scipy.integrate import simpson
+
+from ocelot.common.globals import Z0, m_e_GeV, speed_of_light
+from ocelot.cpbd.beam import SliceParameters, Twiss, s_to_cur
 
 
 def RTU_56(LB, LD, r, m):
@@ -65,7 +67,7 @@ def bunching(p_array, lambda_mod, smooth_sigma=None):
 
     B = s_to_cur(p_array.tau(), sigma=smooth_sigma, q0=np.sum(p_array.q_array), v=speed_of_light)
 
-    b = np.abs(simps(B[:, 1] / speed_of_light * np.exp(-1j * 2 * np.pi / lambda_mod * B[:, 0]), B[:, 0])) / np.sum(
+    b = np.abs(simpson(B[:, 1] / speed_of_light * np.exp(-1j * 2 * np.pi / lambda_mod * B[:, 0]), x=B[:, 0])) / np.sum(
         p_array.q_array)
     return b
 
@@ -86,7 +88,7 @@ def slice_bunching(tau, charge, lambda_mod, smooth_sigma=None):
 
     B = s_to_cur(tau, sigma=smooth_sigma, q0=charge, v=speed_of_light)
 
-    b = np.abs(simps(B[:, 1] / speed_of_light * np.exp(-1j * 2 * np.pi / lambda_mod * B[:, 0]), B[:, 0])) / charge
+    b = np.abs(simpson(B[:, 1] / speed_of_light * np.exp(-1j * 2 * np.pi / lambda_mod * B[:, 0]), x=B[:, 0])) / charge
     return b
 
 

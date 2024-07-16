@@ -12,10 +12,9 @@ from scipy.signal import savgol_filter
 from scipy.stats import truncnorm
 
 from ocelot.common.globals import *
-from ocelot.common.math_op import find_nearest_idx
+from ocelot.common.math_op import find_nearest_idx, invert_cdf
 from ocelot.common.ocelog import *
 from ocelot.cpbd.reswake import pipe_wake
-
 
 TypeParticleArray = TypeVar("TypeParticleArray", bound="ParticleArray")
 
@@ -67,9 +66,8 @@ class Twiss:
         self.Dy = kwargs.get("Dy", 0.)
         self.Dxp = kwargs.get("Dxp", 0.)
         self.Dyp = kwargs.get("Dyp", 0.)
-        self.mux = kwargs.get("mux", 0.)   # phase advance
-        self.muy = kwargs.get("muy", 0.)   # phase advance
-
+        self.mux = kwargs.get("mux", 0.)  # phase advance
+        self.muy = kwargs.get("muy", 0.)  # phase advance
 
         # parameters below in the most cases are calculated from the ParticleArray object
         # during tracking (see func 'get_envelop()')
@@ -136,14 +134,18 @@ class Twiss:
     def track(R, tws0):
         tws = Twiss(tws0)
         tws.p = tws0.p
-        tws.beta_x = R[0, 0] * R[0, 0] * tws0.beta_x - 2 * R[0, 1] * R[0, 0] * tws0.alpha_x + R[0, 1] * R[0, 1] * tws0.gamma_x
+        tws.beta_x = R[0, 0] * R[0, 0] * tws0.beta_x - 2 * R[0, 1] * R[0, 0] * tws0.alpha_x + R[0, 1] * R[
+            0, 1] * tws0.gamma_x
         # tws.beta_x = ((M[0,0]*tws.beta_x - M[0,1]*self.alpha_x)**2 + M[0,1]*M[0,1])/self.beta_x
-        tws.beta_y = R[2, 2] * R[2, 2] * tws0.beta_y - 2 * R[2, 3] * R[2, 2] * tws0.alpha_y + R[2, 3] * R[2, 3] * tws0.gamma_y
+        tws.beta_y = R[2, 2] * R[2, 2] * tws0.beta_y - 2 * R[2, 3] * R[2, 2] * tws0.alpha_y + R[2, 3] * R[
+            2, 3] * tws0.gamma_y
         # tws.beta_y = ((M[2,2]*tws.beta_y - M[2,3]*self.alpha_y)**2 + M[2,3]*M[2,3])/self.beta_y
-        tws.alpha_x = -R[0, 0] * R[1, 0] * tws0.beta_x + (R[0, 1] * R[1, 0] + R[1, 1] * R[0, 0]) * tws0.alpha_x - R[0, 1] * R[
-            1, 1] * tws0.gamma_x
-        tws.alpha_y = -R[2, 2] * R[3, 2] * tws0.beta_y + (R[2, 3] * R[3, 2] + R[3, 3] * R[2, 2]) * tws0.alpha_y - R[2, 3] * R[
-            3, 3] * tws0.gamma_y
+        tws.alpha_x = -R[0, 0] * R[1, 0] * tws0.beta_x + (R[0, 1] * R[1, 0] + R[1, 1] * R[0, 0]) * tws0.alpha_x - R[
+            0, 1] * R[
+                          1, 1] * tws0.gamma_x
+        tws.alpha_y = -R[2, 2] * R[3, 2] * tws0.beta_y + (R[2, 3] * R[3, 2] + R[3, 3] * R[2, 2]) * tws0.alpha_y - R[
+            2, 3] * R[
+                          3, 3] * tws0.gamma_y
 
         tws.gamma_x = (1. + tws.alpha_x * tws.alpha_x) / tws.beta_x
         tws.gamma_y = (1. + tws.alpha_y * tws.alpha_y) / tws.beta_y
@@ -227,6 +229,7 @@ class Twiss:
             if hasattr(result, key):
                 setattr(result, key, np.squeeze(value))
         return result
+
 
 class Particle:
     """
@@ -478,9 +481,9 @@ class BeamArray(Beam):
             setattr(self, attr, values[inds])
 
     def equidist(self, ds=None):
-        dsarr = (self.s - np.roll(self.s,1))[1:]
+        dsarr = (self.s - np.roll(self.s, 1))[1:]
         dsm = np.mean(dsarr)
-        if (np.abs(dsarr-dsm)/dsm > 1/1000).any():
+        if (np.abs(dsarr - dsm) / dsm > 1 / 1000).any():
             if ds is None:
                 s_new = np.linspace(np.amin(self.s), np.amax(self.s), self.len())
             else:
@@ -625,7 +628,7 @@ class BeamArray(Beam):
         if s0 is None:
             s0 = (np.amax(self.s) - np.amin(self.s)) / 2
         elif isinstance(s0, str) is not True:
-            s0 = s0# / 1e6
+            s0 = s0  # / 1e6
         else:
             raise ValueError("s0 must be None or some value")
 
@@ -652,10 +655,11 @@ class BeamFormFactor:
     contains and calculates electron beam form-factor (fourier transform of currenta profile)
     from the electron beam "BeamArray" object
     '''
+
     def __init__(self, beam_array=None):
-        self.cfactor = None #modulus of form-factor
-        self.frequency = None #frequency in Hz
-        self.beam_array = beam_array #original beam file
+        self.cfactor = None  #modulus of form-factor
+        self.frequency = None  #frequency in Hz
+        self.beam_array = beam_array  #original beam file
 
         if self.beam_array is not None:
             self.beam_array.sort()
@@ -752,12 +756,13 @@ class ParticleArray:
             return None
 
     @classmethod
-    def random(cls, n, sigma_x=0.000121407185261, sigma_px=1.80989470506e-05, sigma_y=0.000165584800564, sigma_py=4.00994225888e-05):
+    def random(cls, n, sigma_x=0.000121407185261, sigma_px=1.80989470506e-05, sigma_y=0.000165584800564,
+               sigma_py=4.00994225888e-05):
         # generate beam file
-        x = np.random.randn(n)*sigma_x
-        px = np.random.randn(n)*sigma_px
-        y = np.random.randn(n)*sigma_y
-        py = np.random.randn(n)*sigma_py
+        x = np.random.randn(n) * sigma_x
+        px = np.random.randn(n) * sigma_px
+        y = np.random.randn(n) * sigma_y
+        py = np.random.randn(n) * sigma_py
 
         # covariance matrix for [tau, p] for beam compression in BC
         cov_t_p = [[1.30190131e-06, 2.00819771e-05],
@@ -777,7 +782,7 @@ class ParticleArray:
 
         Q = 5e-9
 
-        p_array.q_array = np.ones(n)*Q/n
+        p_array.q_array = np.ones(n) * Q / n
         return p_array
 
     def __init__(self, n=0):
@@ -890,12 +895,12 @@ class ParticleArray:
     def pz(self) -> float:
         """pz/p0 - the z-components of the macroparticle momenta normalised with
         respect to the reference momentum p0."""
-        return np.sqrt((self.momenta/self.p0c )**2 - self.px()**2 - self.py()**2)
+        return np.sqrt((self.momenta / self.p0c) ** 2 - self.px() ** 2 - self.py() ** 2)
 
     @property
     def p0c(self) -> float:
         """Get macroparticle reference momentum * speed of light in GeV."""
-        return np.sqrt(self.E**2 - m_e_GeV**2)
+        return np.sqrt(self.E ** 2 - m_e_GeV ** 2)
 
     @property
     def energies(self) -> float:
@@ -905,7 +910,7 @@ class ParticleArray:
     @property
     def momenta(self) -> float:
         """Get all macroparticle momenta in GeV/c."""
-        return np.sqrt(self.energies**2 - m_e_GeV**2)
+        return np.sqrt(self.energies ** 2 - m_e_GeV ** 2)
 
     @property
     def gamma(self) -> float:
@@ -915,7 +920,7 @@ class ParticleArray:
     @property
     def beta(self) -> float:
         """Get all macroparticle relativistic betas (v/c)."""
-        return np.sqrt(1 - self.gamma**-2)
+        return np.sqrt(1 - self.gamma ** -2)
 
     @property
     def total_charge(self) -> float:
@@ -1077,23 +1082,27 @@ class ParticleArray:
 
         tws.emit_xn = tws.emit_x * relgamma * relbeta
         tws.emit_yn = tws.emit_y * relgamma * relbeta
-        tws.pp = (slice_params.se[ind0]*1e-9/self.E)**2
+        tws.pp = (slice_params.se[ind0] * 1e-9 / self.E) ** 2
         tws.E = self.E
         tws.s = self.s
 
         return tws
 
-    def I(self):
+    def I(self, num_bins=None):
         """
         simple function to calculate current profile form the beam distribution.
         :return: np.array(Nx2), where s = B[:, 0], I = B[:, 1]
         """
-        sigma = np.std(self.tau())/10.
-        q0 = np.sum(self.q_array)
-        relgamma = self.E / m_e_GeV
-        relbeta = np.sqrt(1 - relgamma ** -2) if relgamma != 0 else 1.
-        v = relbeta*speed_of_light
-        B = s_to_cur(self.tau(), sigma, q0, v)
+        if num_bins is None:
+            sigma = np.std(self.tau()) / 10.
+            q0 = np.sum(self.q_array)
+            relgamma = self.E / m_e_GeV
+            relbeta = np.sqrt(1 - relgamma ** -2) if relgamma != 0 else 1.
+            v = relbeta * speed_of_light
+            B = s_to_cur(self.tau(), sigma, q0, v)
+        else:
+            s, I = get_current(self, num_bins=num_bins)
+            B = np.column_stack((s, I))
         return B
 
 
@@ -1195,19 +1204,19 @@ def get_envelope(p_array, tws_i=None, bounds=None):
         tws.pp = np.mean(ne.evaluate('(p - tw_p)**2'))
 
     else:
-        tws.xx = np.mean((x - tws.x)**2)
+        tws.xx = np.mean((x - tws.x) ** 2)
         tws.xpx = np.mean((x - tws.x) * (px - tws.px))
-        tws.pxpx = np.mean((px - tws.px)**2)
-        tws.yy = np.mean((y - tws.y)**2)
+        tws.pxpx = np.mean((px - tws.px) ** 2)
+        tws.yy = np.mean((y - tws.y) ** 2)
         tws.ypy = np.mean((y - tws.y) * (py - tws.py))
-        tws.pypy = np.mean((py - tws.py)**2)
+        tws.pypy = np.mean((py - tws.py) ** 2)
         tws.tautau = np.mean((tau - tws.tau) * (tau - tws.tau))
 
         tws.xy = np.mean((x - tws.x) * (y - tws.y))
         tws.pxpy = np.mean((px - tws.px) * (py - tws.py))
         tws.xpy = np.mean((x - tws.x) * (py - tws.py))
         tws.ypx = np.mean((y - tws.y) * (px - tws.px))
-        tws.pp = np.mean((p - tws.p)**2)
+        tws.pp = np.mean((p - tws.p) ** 2)
 
     Sigma = np.array([[tws.xx, tws.xy, tws.xpx, tws.xpy],
                       [tws.xy, tws.yy, tws.ypx, tws.ypy],
@@ -1223,7 +1232,7 @@ def get_envelope(p_array, tws_i=None, bounds=None):
     tws.emit_x = np.sqrt(tws.xx * tws.pxpx - tws.xpx ** 2)
     tws.emit_y = np.sqrt(tws.yy * tws.pypy - tws.ypy ** 2)
     relgamma = p_array.E / m_e_GeV
-    relbeta = np.sqrt(1 - relgamma**-2) if relgamma != 0 else 1.
+    relbeta = np.sqrt(1 - relgamma ** -2) if relgamma != 0 else 1.
     tws.emit_xn = tws.emit_x * relgamma * relbeta
     tws.emit_yn = tws.emit_y * relgamma * relbeta
 
@@ -1249,12 +1258,12 @@ def get_envelope(p_array, tws_i=None, bounds=None):
 
     eigemit2 = (1 / np.sqrt(2)) * (np.sqrt(xpx ** 2 - pxpx * xx - 2 * pxpy * xy + 2 * xpy * ypx + ypy ** 2 - pypy * yy
                                            + np.sqrt(
-                                               (xpx ** 2 - pxpx * xx - 2 * pxpy * xy + 2 * xpy * ypx + ypy ** 2 - pypy * yy) ** 2
-                                               + 4 * (-2 * pypy * xpx * xy * ypx - xpy ** 2 * ypx ** 2 + pypy * xx * ypx ** 2 + 2 * xpx * xpy * ypx * ypy
-                                                      - xpx ** 2 * ypy ** 2 + pypy * xpx ** 2 * yy
-                                                      + 2 * pxpy * (xpy * xy * ypx + xpx * xy * ypy - xx * ypx * ypy - xpx * xpy * yy)
-                                                      + pxpy ** 2 * (-xy ** 2 + xx * yy)
-                                                      + pxpx * (pypy * xy ** 2 - 2 * xpy * xy * ypy + xx * ypy ** 2 + xpy ** 2 * yy - pypy * xx * yy + 0j)))))
+        (xpx ** 2 - pxpx * xx - 2 * pxpy * xy + 2 * xpy * ypx + ypy ** 2 - pypy * yy) ** 2
+        + 4 * (-2 * pypy * xpx * xy * ypx - xpy ** 2 * ypx ** 2 + pypy * xx * ypx ** 2 + 2 * xpx * xpy * ypx * ypy
+               - xpx ** 2 * ypy ** 2 + pypy * xpx ** 2 * yy
+               + 2 * pxpy * (xpy * xy * ypx + xpx * xy * ypy - xx * ypx * ypy - xpx * xpy * yy)
+               + pxpy ** 2 * (-xy ** 2 + xx * yy)
+               + pxpx * (pypy * xy ** 2 - 2 * xpy * xy * ypy + xx * ypy ** 2 + xpy ** 2 * yy - pypy * xx * yy + 0j)))))
 
     tws.eigemit_1 = eigemit1.imag  # w[0].imag
     tws.eigemit_2 = eigemit2.imag  # w[2].imag
@@ -1290,7 +1299,7 @@ def get_current(p_array, num_bins=200, **kwargs):
 
     z = p_array.tau()
     hist, bin_edges = np.histogram(z, bins=num_bins, weights=weights)
-    bin_edges = (bin_edges[:-1] + bin_edges[1:])/2.
+    bin_edges = (bin_edges[:-1] + bin_edges[1:]) / 2.
     delta_Z = max(z) - min(z)
     delta_z = delta_Z / num_bins
     t_bins = delta_z / speed_of_light
@@ -1450,7 +1459,8 @@ def beam_matching(parray, bounds, x_opt, y_opt, remove_offsets=True, slice=None)
     alpha_y = -myys / emity0
 
     if slice is not None:
-        tw = twiss_parray_slice(parray, slice=slice, nparts_in_slice=5000, smooth_param=0.05, filter_base=2, filter_iter=2)
+        tw = twiss_parray_slice(parray, slice=slice, nparts_in_slice=5000, smooth_param=0.05, filter_base=2,
+                                filter_iter=2)
         beta_x = tw.beta_x
         alpha_x = tw.alpha_x
         beta_y = tw.beta_y
@@ -1741,7 +1751,6 @@ class SliceParameters:
             setattr(rtwiss, attr, new_value)
 
         return rtwiss
-
 
 
 def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
@@ -2050,13 +2059,13 @@ def cov_matrix_from_twiss(ex, ey, sigma_tau, sigma_p, **twiss):
     xyl = np.array(
         _horizontal_coupling_elements(dx, dy, dpx, dpy, sigma_p)
     ).T
-    sp2 = sigma_p**2
-    return np.array([[xb[0,0],  xb[0,1], xyu[0,0], xyu[0,1], 0., dx*sp2],
-                     [xb[1,0],  xb[1,1], xyu[1,0], xyu[1,1], 0., dpx*sp2],
-                     [xyl[0,0], xyl[0,1], yb[0,0],  yb[0,1], 0., dy*sp2],
-                     [xyl[1,0], xyl[1,1], yb[1,0],  yb[1,1], 0., dpy*sp2],
-                     [0.,            0,         0,  0, sigma_tau**2, 0.0],
-                     [dx*sp2, dpx*sp2, dy*sp2, dpy*sp2, 0, sp2]])
+    sp2 = sigma_p ** 2
+    return np.array([[xb[0, 0], xb[0, 1], xyu[0, 0], xyu[0, 1], 0., dx * sp2],
+                     [xb[1, 0], xb[1, 1], xyu[1, 0], xyu[1, 1], 0., dpx * sp2],
+                     [xyl[0, 0], xyl[0, 1], yb[0, 0], yb[0, 1], 0., dy * sp2],
+                     [xyl[1, 0], xyl[1, 1], yb[1, 0], yb[1, 1], 0., dpy * sp2],
+                     [0., 0, 0, 0, sigma_tau ** 2, 0.0],
+                     [dx * sp2, dpx * sp2, dy * sp2, dpy * sp2, 0, sp2]])
 
 
 def cov_matrix_to_parray(mean, cov, energy, charge, nparticles):
@@ -2084,16 +2093,16 @@ def cov_matrix_to_parray(mean, cov, energy, charge, nparticles):
 
 def _horizontal_2x2_elements(emit, alpha, beta, disp, disp_p, sigma_p):
     """2x2 correlation matrix between x/py  and y/py"""
-    gamma = (1 + alpha**2) / beta
-    offdiag = -emit * alpha + disp * disp_p * sigma_p**2
-    return np.array([[emit * beta + (disp*sigma_p)**2, offdiag],
-                     [offdiag, emit * gamma + (disp_p*sigma_p)**2]])
+    gamma = (1 + alpha ** 2) / beta
+    offdiag = -emit * alpha + disp * disp_p * sigma_p ** 2
+    return np.array([[emit * beta + (disp * sigma_p) ** 2, offdiag],
+                     [offdiag, emit * gamma + (disp_p * sigma_p) ** 2]])
 
 
 def _horizontal_coupling_elements(disp_x, disp_y, disp_px, disp_py, sigma_p):
     """generate cov matrix elements for correlations between horz. and
     vertical."""
-    sigp2 = sigma_p**2
+    sigp2 = sigma_p ** 2
     return np.array([[disp_x * disp_y * sigp2, disp_x * disp_py * sigp2],
                      [disp_px * disp_y * sigp2, disp_px * disp_py * sigp2]])
 
@@ -2138,9 +2147,9 @@ def _dispersionless_twiss_parameters(submatrix, dx, dpx, sigp2):
     dispersion.
 
     """
-    x = submatrix[0, 0] - dx**2 * sigp2
-    px = submatrix[1, 1] - dpx**2 * sigp2
-    xpx = submatrix[0, 1] - dx*dpx * sigp2
+    x = submatrix[0, 0] - dx ** 2 * sigp2
+    px = submatrix[1, 1] - dpx ** 2 * sigp2
+    xpx = submatrix[0, 1] - dx * dpx * sigp2
     emittance = np.sqrt(x * px - xpx * xpx)
     beta = x / emittance
     alpha = -xpx / emittance
@@ -2191,6 +2200,28 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     Note: in ParticleArray, {x, px} and {y, py} are canonical coordinates. {tau, p} is not, to make it canonical
             the sign of "tau" should be flipped.
 
+    Example:
+    --------
+
+    sigma_tau= 10e-6
+
+    A1, A2, A3 = 0.5, 0.2, 1
+    mu1, mu2, mu3 = -7.7e-08, 3.7e-06, -6.3e-06
+    sigma1, sigma2, sigma3 = 7.2e-06, 9.2e-06, 3e-06
+
+    f = lambda x:  A1*np.exp(-(x - mu1) ** 2 / (2. * sigma1 ** 2)) + A2*np.exp(-(x - mu2) ** 2 / (2. * sigma2 ** 2)) + A3*np.exp(-(x - mu3) ** 2 / (2. * sigma3 ** 2))
+
+    s = np.linspace(-5*sigma_tau, 5*sigma_tau, num=200)
+
+    shape = [s, f(s)]
+
+    parray = generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
+                        sigma_tau=sigma_tau, sigma_p=1e-4, chirp=0.01, charge=250e-12, nparticles=500000, energy=0.13,
+                        tau_trunc=None, tws=None, shape=shape)
+
+    ---------
+
+
     :param sigma_x: std(x), x is horizontal cartesian coordinate.
     :param sigma_px: std(px), 'px' is conjugate momentum canonical momentum px/p0.
     :param sigma_y: std(y), y is vertical cartesian coordinate.
@@ -2203,20 +2234,23 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     :param energy: beam energy in [GeV], 0.13 [GeV]
     :param tau_trunc: None, if not [float] - truncated gauss distribution in "tau" direction.
     :param tws: None, if Twiss obj - the beam is matched to twiss params.
-    :param shape: "gauss", shape of the beam current profile. Gaussian distribution by default. If not "gauss" - rectangular
+    :param shape: "gauss", "tri" - triangular, "rect" - shape of the beam current profile. Gaussian distribution by default.
+                  Current profile also can be arbitrary with shap=[s, f(s)] - shape
     :return: ParticleArray
     """
-    if isinstance(tws, Twiss) and np.all(np.array([tws.emit_x, tws.emit_y, tws.beta_x, tws.beta_y, tws.gamma_x, tws.gamma_y]) != 0):
+
+    if isinstance(tws, Twiss) and np.all(
+            np.array([tws.emit_x, tws.emit_y, tws.beta_x, tws.beta_y, tws.gamma_x, tws.gamma_y]) != 0):
         _logger.info("Twiss parameters have priority. sigma_{x, px, y, py} will be redefined")
 
         cov_x_px = tws.emit_x * np.array([[tws.beta_x, -tws.alpha_x],
-                   [-tws.alpha_x , tws.gamma_x]])
+                                          [-tws.alpha_x, tws.gamma_x]])
         hor_dist = np.random.multivariate_normal((0, 0), cov_x_px, nparticles)
         x = hor_dist[:, 0]
         px = hor_dist[:, 1]
 
         cov_y_py = tws.emit_y * np.array([[tws.beta_y, -tws.alpha_y],
-                   [-tws.alpha_y, tws.gamma_y]])
+                                          [-tws.alpha_y, tws.gamma_y]])
         vert_dist = np.random.multivariate_normal((0, 0), cov_y_py, nparticles)
         y = vert_dist[:, 0]
         py = vert_dist[:, 1]
@@ -2236,13 +2270,25 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
         y = np.random.randn(nparticles) * sigma_y
         py = np.random.randn(nparticles) * sigma_py
 
-    if tau_trunc is None:
-        tau = np.random.randn(nparticles) * sigma_tau
-    else:
-        tau = truncnorm.rvs(-tau_trunc, tau_trunc, loc=0, scale=sigma_tau, size=nparticles)
-    #
-    if shape != "gauss":
-        tau = (np.random.rand(nparticles) - 0.5)*2 * sigma_tau
+    if isinstance(shape, str):
+        if shape == "gauss":
+            f = lambda x: np.exp(-x ** 2 / (2. * sigma_tau ** 2))
+
+            tau_trunc = 5 if tau_trunc is None else tau_trunc
+            s = np.linspace(-tau_trunc * sigma_tau, tau_trunc * sigma_tau, num=500)
+            shape = [s, f(s)]
+        elif shape == "tri":
+            s = np.linspace(-1 * sigma_tau, 1 * sigma_tau, num=500)
+            f = lambda s: np.maximum(sigma_tau - np.abs(s), 0)
+            shape = [s, f(s)]
+        else:
+            s = np.linspace(-1 * sigma_tau, 1 * sigma_tau, num=500)
+            f = lambda s: np.where((s >= -sigma_tau) & (s <= sigma_tau), 1, 0)
+            shape = [s, f(s)]
+
+    inv_cdf = invert_cdf(y=shape[1], x=shape[0])
+    tau = inv_cdf(np.random.rand(nparticles))
+    #tau = np.random.randn(nparticles) * sigma_tau
     dp = np.random.randn(nparticles) * sigma_p
     if sigma_tau != 0:
         dp += chirp * tau / sigma_tau
@@ -2268,7 +2314,6 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     p_array.q_array = np.ones(nparticles) * charge / nparticles
 
     if isinstance(tws, Twiss):
-
         x_opt = [tws.alpha_x, tws.beta_x, tws.mux]
         y_opt = [tws.alpha_y, tws.beta_y, tws.muy]
         bounds = [-5, 5]

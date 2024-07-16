@@ -491,7 +491,8 @@ def passive_streaker_resolutions(dipole_kick, quad_kick, R, tw, kick="vert", emi
 
         # ENERGY RESOLUTION
         sigma_x2 = emitt_x * ((R[0, 0] - R[0, 1] * wq) ** 2 * tw.beta_x -
-                          2 * R[0, 1] * (R[0, 0] - R[0, 1] * wq) * tw.alpha_y + R[0, 1] ** 2 * tw.gamma_x)
+                          2 * R[0, 1] * (R[0, 0] - R[0, 1] * wq) * tw.alpha_x + R[0, 1] ** 2 * tw.gamma_x)
+
 
         r_energy = energy_eV / R[0, 5] * np.sqrt(sigma_R ** 2 + np.abs(sigma_x2))
     else:
@@ -503,10 +504,10 @@ def passive_streaker_resolutions(dipole_kick, quad_kick, R, tw, kick="vert", emi
         r_temp = np.sqrt(sigma_R ** 2 + sigma_x2) / np.abs(dy_ds)
 
         # ENERGY RESOLUTION
-        sigma_y2 = emitt_y * ((R[2, 2] - R[2, 3] * wq) ** 2 * tw.beta_x -
-                          2 * R[2, 3] * (R[2, 2] - R[2, 3] * wq) * tw.alpha_y + R[2, 3] ** 2 * tw.gamma_x)
+        sigma_y2 = emitt_y * ((R[2, 2] - R[2, 3] * wq) ** 2 * tw.beta_y -
+                          2 * R[2, 3] * (R[2, 2] - R[2, 3] * wq) * tw.alpha_y + R[2, 3] ** 2 * tw.gamma_y)
 
-        r_energy = energy_eV / R[0, 5] * np.sqrt(sigma_R ** 2 + np.abs(sigma_y2))
+        r_energy = energy_eV / R[2, 5] * np.sqrt(sigma_R ** 2 + np.abs(sigma_y2))
 
     r_temp = np.vstack([quad_kick[:, 0], r_temp]).T
     r_energy = np.vstack([quad_kick[:, 0], r_energy]).T

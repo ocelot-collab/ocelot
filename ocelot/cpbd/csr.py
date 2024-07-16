@@ -8,7 +8,7 @@ import importlib
 import logging
 
 import numpy as np
-from scipy.integrate import cumtrapz
+from scipy.integrate import cumulative_trapezoid
 
 from ocelot.common.globals import pi, speed_of_light, m_e_eV, m_e_GeV
 from ocelot.common import math_op
@@ -1036,7 +1036,7 @@ class CSR(PhysProc):
                 yp2 = yp * yp
                 zp = np.sqrt(1./(1. + xp2 + yp2))
 
-                s = cumtrapz(np.sqrt(1. + xp2 + yp2), z, initial=0)
+                s = cumulative_trapezoid(np.sqrt(1. + xp2 + yp2), z, initial=0)
                 if elem.__class__ == Undulator:
                     delta_s = s[-1]
 

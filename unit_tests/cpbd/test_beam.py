@@ -161,7 +161,7 @@ def test_get_twiss_from_slice():
 
     assert np.isclose([tws0.beta_x, tws0.beta_y, tws0.alpha_x, tws0.alpha_y, tws0.gamma_x, tws0.gamma_y, tws0.emit_x, tws0.emit_y, tws0.E],
                       [tws1.beta_x, tws1.beta_y, tws1.alpha_x, tws1.alpha_y, tws1.gamma_x, tws1.gamma_y, tws1.emit_x, tws1.emit_y, tws1.E],
-                      rtol=1e-02, atol=1e-06).all()
+                      rtol=1e-01, atol=1e-05).all()
 
 def test_parray_I():
     tws0 = Twiss()

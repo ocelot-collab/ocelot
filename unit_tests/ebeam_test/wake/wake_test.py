@@ -40,6 +40,31 @@ def test_get_long_wake(lattice, p_array, parameter=None, update_ref_values=False
     result2 = check_matrix(Wz, current_ref['Wz'], TOL, assert_info=' Wz - ')
     assert check_result(result1 + result2)
 
+def test_get_dipole_wake(lattice, p_array, parameter=None, update_ref_values=False):
+    """ func generate_parray testing """
+
+    wt = WakeTable(wake_file=HERE / "wake_table.dat")
+    w = Wake()
+    w.wake_table = wt
+    w.prepare(None)
+
+    x = np.arange(-30, 30, 0.01) * 1e-6
+    sigma = 7e-6
+    y2_x = lambda x: 5000 if np.abs(x) < 10e-6 else 0.
+    y = np.array([y2_x(xi) for xi in x])
+
+
+    profile = np.hstack((x.reshape(-1, 1), y.reshape(-1, 1)))
+    x, Wd = w.get_dipole_wake(profile)
+
+    if update_ref_values:
+        return {'x': list(x), 'Wd': list(Wd)}
+
+    current_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+    result1 = check_matrix(x, current_ref['x'], TOL, assert_info=' x - ')
+    result2 = check_matrix(Wd, current_ref['Wd'], TOL, assert_info=' Wd - ')
+    assert check_result(result1 + result2)
+
 
 def setup_module(module):
 
@@ -75,6 +100,7 @@ def test_update_ref_values(lattice, p_array, cmdopt):
     
     update_functions = []
     update_functions.append('test_get_long_wake')
+    update_functions.append("test_get_dipole_wake")
 
     update_function_parameters = {}
 

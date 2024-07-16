@@ -1,12 +1,16 @@
+"""
+Collection of function for dechirper LPS reconstrucion
+
+S.Tomin, 07.2024, DESY
+"""
+
 import numpy as np
 from scipy import ndimage, interpolate
 from scipy.integrate import solve_ivp
 from ocelot.common.math_op import invert_cdf
 from ocelot.common.globals import *
-from ocelot.gui import *
 from ocelot.cpbd.beam import s_to_cur, generate_parray
 from ocelot.cpbd.wake3D import Wake, WakeTableDechirperOffAxis
-import matplotlib.pyplot as plt
 from scipy.optimize import fmin
 from scipy.ndimage import gaussian_filter
 

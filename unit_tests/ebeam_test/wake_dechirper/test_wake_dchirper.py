@@ -10,6 +10,11 @@ import numpy as np
 from copy import deepcopy
 import sys
 import os
+import time
+import copy
+from unit_tests.params import *
+
+
 
 from ocelot.cpbd.wake3D import (Wake, 
                                 Wake3, 
@@ -139,72 +144,68 @@ def assert_equal_beams(p_array_1, p_array_2):
         np.allclose(p_array_1.rparticles[5], p_array_2.rparticles[5], rtol=1e-5) and \
         np.allclose(p_array_1.q_array, p_array_2.q_array, rtol=1e-5)
 
-def test_wake_02(model='02'):
+
+
+@pytest.mark.parametrize('parameter', [0, 1, 2, 3, 4])
+def test_wake(parameter, update_ref_values=False):
     p_array_init = generate_example_beam()
     
     b = 500e-6
-    
-    p1, p2 = track_with_tilt(p_array_init, model, b, tiltY=-15)
-    
-    #show_e_beam(p2, nparts_in_slice=100)
-
-    p_ref = load_particle_array(REF_RES_DIR + '02.npz')
-    assert_equal_beams(p2, p_ref)
-
-def test_wake_03(model='03'):
-    p_array_init = generate_example_beam()
-    
-    b = 500e-6
-    
-    p1, p2 = track_with_tilt(p_array_init, model, b, tiltY=-15)
-    
-    #show_e_beam(p2, nparts_in_slice=100)
-    
-    p_ref = load_particle_array(REF_RES_DIR + '03.npz')
-    assert_equal_beams(p2, p_ref)
-
-def test_wake_12(model='12'):
-    p_array_init = generate_example_beam()
-    
-    b = 500e-6
-    
-    p1, p2 = track_with_tilt(p_array_init, model, b, tiltY=-15)
-    
-    #show_e_beam(p2, nparts_in_slice=100)
-
-    p_ref = load_particle_array(REF_RES_DIR + '12.npz')
-    assert_equal_beams(p2, p_ref)
-
-def test_wake_N12(model='N12'):
-    p_array_init = generate_example_beam()
-    
-    b = 500e-6
-    
-    p1, p2 = track_with_tilt(p_array_init, model, b, tiltY=-15)
-    
-    #show_e_beam(p2, nparts_in_slice=100)
- 
-    p_ref = load_particle_array(REF_RES_DIR + 'N12.npz')
-    assert_equal_beams(p2, p_ref)
-
-
-def test_wake_13(model='13'):
-    p_array_init = generate_example_beam()
-    
-    b = 500e-6
-    
-    p1, p2 = track_with_tilt(p_array_init, model, b, tiltY=-15)
+    model = ['02', '03', '12', 'N12', '13']
+    p1, p2 = track_with_tilt(p_array_init, model[parameter], b, tiltY=-15)
   
     #show_e_beam(p2, nparts_in_slice=100)
     #save_particle_array('13.npz', p2)
-    
-    p_ref = load_particle_array(REF_RES_DIR +'13.npz')
+    if update_ref_values:
+        return p2
+    p_ref = load_particle_array(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) +'.npz')
     assert_equal_beams(p2, p_ref)
 
 
-if __name__ == '__main__':
-    test_wake_02()
-    test_wake_03()
-    test_wake_12()
-    test_wake_N12()
-    test_wake_13()
+def setup_module(module):
+    f = open(pytest.TEST_RESULTS_FILE, 'a')
+    f.write('### PHYS PROC START ###\n\n')
+    f.close()
+
+
+def teardown_module(module):
+    f = open(pytest.TEST_RESULTS_FILE, 'a')
+    f.write('### PHYS PROC END ###\n\n\n')
+    f.close()
+
+
+def setup_function(function):
+    f = open(pytest.TEST_RESULTS_FILE, 'a')
+    f.write(function.__name__)
+    f.close()
+
+    pytest.t_start = time.time()
+
+
+def teardown_function(function):
+    f = open(pytest.TEST_RESULTS_FILE, 'a')
+    f.write(' execution time is ' + '{:.3f}'.format(time.time() - pytest.t_start) + ' sec\n\n')
+    f.close()
+
+
+@pytest.mark.update
+def test_update_ref_values(cmdopt):
+    update_functions = ["test_wake"]
+
+    update_function_parameters = {}
+    update_function_parameters['test_wake'] = [0, 1, 2, 3, 4]
+
+    parameter = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
+
+    if cmdopt in update_functions:
+        print(cmdopt,parameter )
+
+        for p in parameter:
+            #p_arr = copy.deepcopy(p_array)
+            print(p, cmdopt)
+            result = eval(cmdopt)(p, True)
+            print(result)
+            if os.path.isfile(REF_RES_DIR + cmdopt + str(p) + '.npz'):
+                os.rename(REF_RES_DIR + cmdopt + str(p) + '.npz', REF_RES_DIR + cmdopt + str(p) + '.old')
+            print(REF_RES_DIR + cmdopt + str(p) + '.npz')
+            save_particle_array(REF_RES_DIR + cmdopt + str(p) + '.npz', result)

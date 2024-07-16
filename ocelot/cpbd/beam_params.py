@@ -67,8 +67,8 @@ def radiation_integrals(lattice, twiss_0, nsuperperiod=1):
                 H2 = h*h
                 H3 = np.abs(h*h*h)
                 I1 += h*simpson(np.array(Dx), x=Z)
-                I2 += H2*elem.l  # simps(H2, Z)*nsuperperiod
-                I3 += H3*elem.l  # simps(H3, Z)*nsuperperiod
+                I2 += H2*elem.l  # simpson(H2, x=Z)*nsuperperiod
+                I3 += H3*elem.l  # simpson(H3, x=Z)*nsuperperiod
                 I4 += h*(2*elem.k1 + H2)*simpson(np.array(Dx), x=Z)
                 I5 += H3*simpson(np.array(Hinvariant), x=Z)
             tws_elem = tm * tws_elem

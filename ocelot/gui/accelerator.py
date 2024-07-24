@@ -933,7 +933,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     imax = np.max(slice_params.I)
     imax_label = rf"$I_{{\mathrm{{max}}}}= {imax:.0f}\,\mathrm{{A}}$"
     leg = ax_c.legend([imax_label], handlelength=0, handletextpad=0, fancybox=True, loc="best")
-    for item in leg.legendHandles:
+    for item in leg.legend_handles:
         item.set_visible(False)
 
 
@@ -1467,7 +1467,7 @@ def show_e_beam_slices(p_array, nparts_in_slice=5000, smooth_param=0.05, inverse
         plt.legend()
     if headtail:
         leg = ax_c.legend([label_arr], handlelength=0, handletextpad=0, fancybox=True, loc=location)
-        for item in leg.legendHandles:
+        for item in leg.legend_handles:
             item.set_visible(False)
     plt.setp(ax_c.get_xticklabels(), visible=False)
     plt.ylabel("I [A]")
@@ -1583,7 +1583,7 @@ def beam_jointplot(p_array, show_plane="x", nparts_in_slice=5000, smooth_param=0
     # label = r"$I_{max}=$" + str(np.round(np.max(slice_params.I), 1))
     if show_head:
         leg = ax_top.legend([label], handlelength=0, handletextpad=0, fancybox=True, loc=location)
-        for item in leg.legendHandles:
+        for item in leg.legend_handles:
             item.set_visible(False)
     plt.setp(ax_top.get_xticklabels(), visible=False)
     plt.ylabel("I [A]")

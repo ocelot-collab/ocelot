@@ -31,10 +31,13 @@ class StructureConverter:
         self.longlist_matrix = {}
 
         self.longlist_matrix['MAGNET'] = {}
+        self.longlist_matrix['PMAGNET'] = {}
+
         self.longlist_matrix['MAGNET']['SBEN'] = {'type': SBend, 'strength': 'angle', 'e1_lag': 'e1', 'e2_freq': 'e2'}
         self.longlist_matrix['MAGNET']['RBEN'] = {'type': RBend, 'strength': 'angle'}
 
         self.longlist_matrix['MAGNET']['QUAD'] = {'type': Quadrupole, 'strength': ['k1', '1./length']}
+        self.longlist_matrix['PMAGNET']['QUAD'] = {'type': Quadrupole, 'strength': ['k1', '1./length']}
         self.longlist_matrix['MAGNET']['SEXT'] = {'type': Sextupole, 'strength': ['k2', '1./length']}
         self.longlist_matrix['MAGNET']['OCTU'] = {'type': Octupole, 'strength': ['k3', '1./length']}
         if "HKIC" in self.types:

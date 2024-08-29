@@ -8,7 +8,7 @@ class ApertureAtom(Element):
     Aperture
     xmax - half size in horizontal plane in [m],
     ymax - half size in vertical plane in [m],
-    type - "rect" or "elliptical".
+    type - "rect" or "ellipt".
     """
 
     def __init__(self, xmax=np.inf, ymax=np.inf, dx=0, dy=0, type="rect", eid=None):

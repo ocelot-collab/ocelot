@@ -15,7 +15,7 @@ class SBendAtom(BendAtom):
     fintx - allows (fintx > 0) to set fint at the element exit different from its entry value.
     gap - the magnet gap [m], NOTE in MAD and ELEGANT: HGAP = gap/2
     h_pole1 - the curvature (1/r) of the entrance face
-    h_pole1 - the curvature (1/r) of the exit face
+    h_pole2 - the curvature (1/r) of the exit face
     """
 
     def __init__(self, l=0., angle=0.0, k1=0.0, k2=0., e1=0.0, e2=0.0, tilt=0.0,

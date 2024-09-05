@@ -50,14 +50,23 @@ class ProcessTable:
 
 class Navigator:
     """
-    Navigator defines step (dz) of tracking and which physical process will be applied during each step.
-    lattice - MagneticLattice
+    Navigator defines the step size (dz) for tracking and specifies which physical processes will be applied during each step.
+
     Attributes:
-        unit_step = 1 [m] - unit step for all physics processes
+        lattice (MagneticLattice): The magnetic lattice to which the navigator is applied.
+        unit_step (float): Unit step size for all physics processes, default is 1 meter.
+
     Methods:
-        add_physics_proc(physics_proc, elem1, elem2)
-            physics_proc - physics process, can be CSR, SpaceCharge or Wake,
-            elem1 and elem2 - first and last elements between which the physics process will be applied.
+        add_physics_proc(physics_proc, elem1, elem2):
+            Adds a physical process to be applied between two elements.
+
+            Parameters:
+                physics_proc: The physical process to be applied (e.g., CSR, SpaceCharge, Wake, etc.).
+                elem1: The element where the physical process begins (applied at the start of elem1).
+                elem2: The element where the physical process ends (applied up to the start of elem2).
+
+            Note:
+                The physical process starts at the beginning of elem1 and ends at the beginning of elem2.
     """
 
     def __init__(self, lattice, unit_step=1):
@@ -106,13 +115,13 @@ class Navigator:
 
     def add_physics_proc(self, physics_proc, elem1, elem2) -> None:
         """
-        Method adds Physics Process.
+        Adds a physical process to be applied between two elements in the lattice.
 
-        :param physics_proc: PhysicsProc, e.g. SpaceCharge, CSR, Wake ...
-        :param elem1: the element in the lattice where to start applying the physical process.
-        :param elem2: the element in the lattice where to stop applying the physical process,
-                        can be the same as starting element.
-        :return:
+        :param physics_proc: The physical process to be applied, e.g., SpaceCharge, CSR, Wake, etc.
+        :param elem1: The element in the lattice where the physical process starts (applied at the start of elem1).
+        :param elem2: The element in the lattice where the physical process stops (applied up to the start of elem2).
+                      elem2 can be the same as elem1.
+        :return: None
         """
         _logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)
         self.process_table.add_physics_proc(physics_proc, elem1, elem2)

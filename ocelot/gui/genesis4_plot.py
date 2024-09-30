@@ -727,14 +727,14 @@ def plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_pos', 'el_energy',
     plots evolution of given parameters from genesis output with undulator length
     """
     import matplotlib.ticker as ticker
-
+    
     if showfig == False and savefig == False:
         return
-
+    
     params_str = str(params).replace("'", '').replace('[', '').replace(']', '').replace(' ', '').replace(',', '--')
-
+    
     if os.path.isfile(str(out)):
-        out = read_out_file(out, read_level=2)
+        out = read_gout4(out)
     # add check for output object
     if fig_name is None:
         if out.fileName() == '':
@@ -747,17 +747,17 @@ def plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_pos', 'el_energy',
         fig = plt.figure(fig_name)
         if debug > 0:
             _logger.info('plotting ' + fig_name)
-
+    
     if np.size(figsize) == 1:
         figsize = (3 * figsize, (len(params) + 0.5) * figsize)
-
+    
     fig.set_size_inches(figsize, forward=True)
     # plt.rc('axes', grid=True)
     # plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     # left, width = 0.1, 0.85
     plt.clf()
     fig.subplots_adjust(hspace=0)
-
+    
     ax = []
     is_tdp = out.tdp
     for index, param in enumerate(params):
@@ -814,15 +814,15 @@ def plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_pos', 'el_energy',
                 subfig_evo_rad_pow_sz(ax[-1], out, legend, norm=0)
         else:
             _logger.warning('wrong parameter ' + param)
-
+    
     ax[0].set_xlim(out.z[0], out.z[-1])
     ax[-1].set_xlabel('z [m]')
     fig.subplots_adjust(top=0.95, bottom=0.1, right=0.8, left=0.15)
-
+    
     for axi in ax[0:-1]:
         for label in axi.get_xticklabels():
             label.set_visible(False)
-
+    
     if savefig != False:
         if savefig == True:
             savefig = 'png'
@@ -830,7 +830,7 @@ def plot_gen4_out_evo(out, params=['und_quad', 'el_size', 'el_pos', 'el_energy',
             savepath = out.filePath + '_elec.' + str(savefig)
         elif fig_name == 'Radiation':
             savepath = out.filePath + '_rad.' + str(savefig)
-        elif fig_name == '':
+        elif fig_name in [None, '']:
             savepath = out.filePath + '_' + params_str + '.' + str(savefig)
         else:
             savepath = out.filePath + '_' + fig_name + '.' + str(savefig)

@@ -351,7 +351,7 @@ def dchirper_recon_RK(img, t_crisp, y_crisp, img_mask_thresh=0.03, img_sigma=5, 
     """
     img = simple_filter_and_mask(img, sigma=img_sigma, threshold=img_mask_thresh)
 
-    img = crop_2d(img, threshold=img_crop_thresh, hor_margin=[0, 0], ver_margin=[0, 0])
+    img = crop_2d(img, threshold=img_crop_thresh, hor_margin=[5, 5], ver_margin=[5, 5])
 
     proj = get_image_proj(img)
 
@@ -374,7 +374,7 @@ def dchirper_recon_RK(img, t_crisp, y_crisp, img_mask_thresh=0.03, img_sigma=5, 
 
     x_distr_transformed = f_transform(x_distr)
 
-    crisp_proc = (x_crisp, y_crisp)
+    crisp_proc = np.array([x_crisp, y_crisp])
     transformed_distr = (x_distr_transformed, y_distr)
     return transformed_distr, crisp_proc, img, x_proj_img, f_transform
 

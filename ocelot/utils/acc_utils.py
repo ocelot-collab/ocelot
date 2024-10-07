@@ -403,8 +403,11 @@ def passive_streaker_resolutions(dipole_kick, quad_kick, R, tw, kick="vert", emi
     :param emittn_x: normalized emittance in horizontal plane
     :param emittn_y: normalized emittance in vertical plane
     :param energy: beam energy in GeV
-    :param sigma_R: Resolution of the screen
-    :return:
+    :param sigma_R: Resolution of the screen [m]
+    :return:r_temp, r_energy, sigma_x2, sigma_y2
+            r_temp - 2D array both axis in [m]
+            r_energy - 2D array. s axis in [m], 'E' energy axis in [eV]
+
 
     Examples
     --------

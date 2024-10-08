@@ -11,7 +11,7 @@ from ocelot.common.math_op import invert_cdf
 from ocelot.common.globals import *
 from ocelot.cpbd.beam import s_to_cur, generate_parray
 from ocelot.cpbd.wake3D import Wake, WakeTableDechirperOffAxis
-from scipy.optimize import fmin
+from scipy.optimize import fmin, curve_fit
 from scipy.ndimage import gaussian_filter
 
 
@@ -313,6 +313,7 @@ def find_solution_with_rk(x_crisp, y_crisp, x_proj_img, y_proj_img, der0, num=50
 
     f = interpolate.interp1d(x_crisp, y_crisp, bounds_error=False, fill_value=(0, 0))
     g = interpolate.interp1d(x_proj_img, y_proj_img, bounds_error=False, fill_value=(0, 0))
+
     #g = interpolate.CubicSpline(x_proj_img, y_proj_img, bc_type='natural')
     #f = interpolate.CubicSpline(x_crisp, y_crisp, bc_type='natural')
     def func(y, x, f, g):
@@ -357,15 +358,14 @@ def dchirper_recon_RK(img, t_crisp, y_crisp, img_mask_thresh=0.03, img_sigma=5, 
 
     x_proj_img, y_proj_img = current_processing(x=np.arange(len(proj)), y=proj, nbins=750, threshold=0)
 
-
     x_crisp, y_crisp = current_processing(x=t_crisp * 1e-15 * speed_of_light * 1e6, y=y_crisp, nbins=250,
                                           threshold=crisp_thresh)
 
     # find roughly inital derivative
-    intg_crisp = (y_crisp[0] + y_crisp[1])/2*(x_crisp[1] - x_crisp[0])
-    intg_img_proj = (y_proj_img[0:20] + y_proj_img[1:21])/2*(x_proj_img[1] - x_proj_img[0])
+    intg_crisp = (y_crisp[0] + y_crisp[1]) / 2 * (x_crisp[1] - x_crisp[0])
+    intg_img_proj = (y_proj_img[0:20] + y_proj_img[1:21]) / 2 * (x_proj_img[1] - x_proj_img[0])
     indx_min = np.argmin(np.abs(intg_img_proj - intg_crisp))
-    der = y_proj_img[indx_min+1]/y_crisp[1]
+    der = y_proj_img[indx_min + 1] / y_crisp[1]
 
     x, y = find_solution_with_rk(x_crisp, y_crisp, x_proj_img, y_proj_img, der0=der, num=500)
     f_transform = interpolate.interp1d(x, y, fill_value="extrapolate")
@@ -467,7 +467,6 @@ def track_1D(distance, R34, s_coord, y_scr_arr, charge=250e-12, energy=14, beta_
     bin_edges, hist = get_hist(y_coord, nbins=500)
 
     if emit is not None or beta_y is not None:
-
         # gaussian filter
         dx = bin_edges[1] - bin_edges[0]
         sigma_y = np.sqrt(emit / energy * m_e_GeV * beta_y)
@@ -516,11 +515,11 @@ def track_6D(distance, R, s_coord, p_coord, tws_ws, y_scr_arr, charge):
 
     x, Wd = ws.get_dipole_wake(current_profile=B)
 
-    p_array = generate_parray(tws=tws_ws, charge=charge, nparticles=len(s_coord), chirp=0.0, energy=tws_ws.E, sigma_tau=np.std(s_coord))
+    p_array = generate_parray(tws=tws_ws, charge=charge, nparticles=len(s_coord), chirp=0.0, energy=tws_ws.E,
+                              sigma_tau=np.std(s_coord))
 
     p_array.tau()[:] = s_coord[:]
-    p_array.p()[:] = p_coord[:]/(tws_ws.E*1000)
-
+    p_array.p()[:] = p_coord[:] / (tws_ws.E * 1000)
 
     f_transform = interpolate.interp1d(x, Wd / (tws_ws.E * 1e9), fill_value="extrapolate")
     p_array.py()[:] += f_transform(s_coord)[:]
@@ -537,7 +536,7 @@ def track_6D(distance, R, s_coord, p_coord, tws_ws, y_scr_arr, charge):
 
 
 def find_distance_to_corrugated_plate_6D(s_coord, p_coord, img_proc,
-                                            x_px_size, tws_ws_start, R, charge=250e-12, align_peaks=False):
+                                         x_px_size, tws_ws_start, R, charge=250e-12, align_peaks=False):
     """
 
     :param s_coord: s coordinates of the beam before corrugated plate [m]
@@ -563,7 +562,7 @@ def find_distance_to_corrugated_plate_6D(s_coord, p_coord, img_proc,
         g_img_n = g_img(y_scr_arr) / np.trapz(g_img(y_scr_arr), y_scr_arr)
 
         g_track = track_6D(distance, R=R, s_coord=s_coord, p_coord=p_coord, tws_ws=tws_ws_start,
-                 y_scr_arr=y_scr_array, charge=charge)
+                           y_scr_arr=y_scr_array, charge=charge)
         if align_peaks:
             # Find peaks
             peak_im = np.argmax(g_img_n)
@@ -572,14 +571,14 @@ def find_distance_to_corrugated_plate_6D(s_coord, p_coord, img_proc,
             # Calculate shift
             shift = peak_im - peak_tr
             # interpolate for sift
-            g_tr_shift_func = interpolate.interp1d(np.arange(len(g_track)) + shift, g_track, fill_value=(0, 0), bounds_error=False)
+            g_tr_shift_func = interpolate.interp1d(np.arange(len(g_track)) + shift, g_track, fill_value=(0, 0),
+                                                   bounds_error=False)
 
             # get new array
             i = np.arange(len(g_img_n))
             g_track = g_tr_shift_func(i)
 
-
-        res = np.sqrt(np.sum((g_track - g_img_n) ** 2)) #+ 10000*np.abs(max(g_track) - max(g_img_n))
+        res = np.sqrt(np.sum((g_track - g_img_n) ** 2))  #+ 10000*np.abs(max(g_track) - max(g_img_n))
         return res
 
     res = fmin(err_func, x0=800e-6, args=(img_proc, x_px_size, y_scr_array), xtol=0.1, ftol=0.1, maxiter=50)
@@ -618,7 +617,7 @@ def find_distance_to_corrugated_plate(s_coord, img_proc, x_px_size, R34=35.33, c
         g_track = track_1D(distance, R34=R34, s_coord=s_coord * 1e-6, y_scr_arr=y_scr_array, charge=charge,
                            energy=energy,
                            beta_y=beta_y, emit=emit)
-        print(distance, np.sqrt(np.sum((g_track - g_img_n) ** 2)), 1000*np.abs(max(g_track) - max(g_img_n)))
+        print(distance, np.sqrt(np.sum((g_track - g_img_n) ** 2)), 1000 * np.abs(max(g_track) - max(g_img_n)))
         if align_peaks:
             # Find peaks
             peak_im = np.argmax(g_img_n)
@@ -627,14 +626,14 @@ def find_distance_to_corrugated_plate(s_coord, img_proc, x_px_size, R34=35.33, c
             # Calculate shift
             shift = peak_im - peak_tr
             # interpolate for sift
-            g_tr_shift_func = interpolate.interp1d(np.arange(len(g_track)) + shift, g_track, fill_value=(0, 0), bounds_error=False)
+            g_tr_shift_func = interpolate.interp1d(np.arange(len(g_track)) + shift, g_track, fill_value=(0, 0),
+                                                   bounds_error=False)
 
             # get new array
             i = np.arange(len(g_img_n))
             g_track = g_tr_shift_func(i)
 
-
-        res = np.sqrt(np.sum((g_track - g_img_n) ** 2)) + 1000*np.abs(max(g_track) - max(g_img_n))
+        res = np.sqrt(np.sum((g_track - g_img_n) ** 2)) + 1000 * np.abs(max(g_track) - max(g_img_n))
         return res
 
     res = fmin(err_func, x0=500e-6, args=(img_proc, x_px_size, y_scr_array), xtol=0.01, ftol=0.01, maxiter=100)
@@ -672,7 +671,7 @@ def calculate_long_wake(s_coord, dist):
 
     x_w, Wl = ws.get_long_wake(current_profile=B)
 
-    return (B[:,0], B[:, 1]), (x_w, Wl)
+    return (B[:, 0], B[:, 1]), (x_w, Wl)
 
 
 def subtract_long_wake(s_coord, p_coord, dist):
@@ -691,3 +690,138 @@ def subtract_long_wake(s_coord, p_coord, dist):
     y = p_coord - energy_kick(s_coord)
 
     return s_coord, y
+
+
+def gauss_fit(x, y, sigma_estm=None, mu_estm=0.0):
+    # TODO: create unit tests
+    """
+    Fit a Gaussian function to the given data.
+
+    Parameters
+    ----------
+    x : array_like
+        Independent variable data (e.g., positions).
+    y : array_like
+        Dependent variable data (e.g., intensities at positions x).
+    sigma_estm : float, optional
+        Initial estimate of the standard deviation (sigma) of the Gaussian.
+        If None, it is estimated as one-fourth of the x-range.
+    mu_estm : float, optional
+        Initial estimate of the mean (mu) of the Gaussian. Default is 0.0.
+
+    Returns
+    -------
+    A : float
+        Amplitude of the fitted Gaussian function.
+    mu : float
+        Mean (center position) of the fitted Gaussian function.
+    sigma : float
+        Standard deviation (spread or width) of the fitted Gaussian function.
+
+    Notes
+    -----
+    The Gaussian function is defined as:
+        f(x) = A * exp(- (x - mu)^2 / (2 * sigma^2))
+    where:
+        - A is the amplitude,
+        - mu is the mean,
+        - sigma is the standard deviation.
+    """
+    if sigma_estm is None:
+        sigma_estm = (np.max(x) - np.min(x)) / 4.0
+
+    def gauss(x, A, mu, sigma):
+        return A * np.exp(- (x - mu) ** 2 / (2.0 * sigma ** 2))
+
+    # Initial guess for the fitting coefficients: [A, mu, sigma]
+    p0 = [np.max(y), mu_estm, sigma_estm]
+
+    coeff, _ = curve_fit(gauss, x, y, p0=p0)
+    A, mu, sigma = coeff
+    return A, mu, sigma
+
+
+def get_slice_parameters(image, gauss_fit_enabled=True):
+    # TODO: create unit tests
+    """
+    Calculate slice parameters of an image spot, optionally fitting Gaussian profiles.
+
+    Parameters
+    ----------
+    image : 2D array_like
+        The input image containing the spot (intensity values).
+    gauss_fit_enabled : bool, optional
+        If True, perform Gaussian fitting on each column (slice) of the image.
+        Default is True.
+
+    Returns
+    -------
+    x : ndarray
+        Array of x-axis coordinates (column indices).
+    y : ndarray
+        Array of y-axis coordinates (row indices).
+    proj_x : ndarray
+        Projection of the image along the y-axis (sum over rows for each column).
+    proj_y : ndarray
+        Projection of the image along the x-axis (sum over columns for each row).
+    slice_energy : ndarray
+        Weighted mean position (energy) along the y-axis for each column.
+    slice_energy_spread : ndarray
+        Standard deviation (spread) of the energy along the y-axis for each column.
+    x_sigma : float
+        Standard deviation of the spot along the x-axis.
+
+    Notes
+    -----
+    - The function computes the centroid and spread of the intensity distribution
+      for each column (x-axis) of the image.
+    - If `gauss_fit_enabled` is True, it refines the centroid and spread by fitting
+      a Gaussian function to the intensity profile of each column.
+    """
+    ny, nx = image.shape
+    x = np.arange(nx)
+    y = np.arange(ny)
+
+    # Projections along x and y axes
+    proj_x = np.sum(image, axis=0)  # Sum over rows (y-axis) for each column
+    proj_y = np.sum(image, axis=1)  # Sum over columns (x-axis) for each row
+
+    total_intensity = np.sum(proj_y)
+
+    # Mean position along x-axis
+    x_mean = np.sum(x * proj_x) / total_intensity
+
+    # Standard deviation along x-axis
+    x_variance = np.sum((x - x_mean) ** 2 * proj_x) / total_intensity
+    x_sigma = np.sqrt(x_variance)
+
+    # Weighted mean position (slice energy) along y-axis for each column
+    slice_energy = np.sum(image * y[:, np.newaxis], axis=0) / proj_x
+
+    # Compute the squared differences from the mean for each column
+    y_diff_squared = (y[:, np.newaxis] - slice_energy) ** 2
+
+    # Weighted sum of squared differences (variance) for each column
+    y_variance = np.sum(image * y_diff_squared, axis=0) / proj_x
+
+    # Standard deviation (spread) along y-axis for each column
+    slice_energy_spread = np.sqrt(y_variance)
+
+    if gauss_fit_enabled:
+        # Refine slice energy and spread by Gaussian fitting
+        for i in range(nx):
+            try:
+                A, mu, sigma = gauss_fit(
+                    y,
+                    image[:, i],
+                    sigma_estm=slice_energy_spread[i],
+                    mu_estm=slice_energy[i]
+                )
+                slice_energy[i] = mu
+                slice_energy_spread[i] = sigma
+            except RuntimeError as e:
+                print(f"Gaussian fit failed for slice {i}: {e}")
+            except Exception as e:
+                print(f"An error occurred for slice {i}: {e}")
+
+    return x, y, proj_x, proj_y, slice_energy, slice_energy_spread, abs(x_sigma)

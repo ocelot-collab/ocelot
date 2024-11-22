@@ -73,14 +73,12 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
     c = speed_of_light
     m0 = m_e_eV
     B0 = Kx * m0 * kz / c
-    k1 = -B0 * kx / ky
-    k2 = -B0 * kz / ky
+    k1 = B0 * kx / ky
+    k2 = B0 * kz / ky
 
     kx_x = kx * x
     ky_y = ky * y
     kz_z = kz * z + phase
-
-    cosz = np.cos(kz_z)
 
     if nperiods is not None:
 
@@ -92,10 +90,12 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
         if end_poles == '0':
             z_coef = 1
             cosz = np.cos(kz_z + ph_shift) * z_coef
+            sinz = np.sin(kz_z + ph_shift) * z_coef
 
         elif end_poles == '1':
             z_coef = 1
             cosz = np.cos(kz_z) * z_coef
+            sinz = np.sin(kz_z) * z_coef
 
         elif end_poles == '3/4':
             z_coef = (0.25 * heaviside(z) + 0.5 * heaviside(z - lperiod / 2.) + 0.25 * heaviside(z - lperiod)
@@ -103,6 +103,7 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
                       - 0.25 * heaviside(z - nperiods * lperiod))
 
             cosz = np.cos(kz_z + ph_shift) * z_coef
+            sinz = np.sin(kz_z + ph_shift) * z_coef
 
         elif end_poles == '1/2':
             z_coef = (-0.5 * heaviside(z - lperiod * 0.5) - 0.5 * heaviside(z + lperiod)
@@ -110,6 +111,7 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
                       + 0.5 * heaviside(z - nperiods * lperiod))
 
             cosz = np.cos(kz_z + ph_shift) * z_coef
+            sinz = np.sin(kz_z + ph_shift) * z_coef
 
         else:
             raise ValueError("'end_poles' must be either '1', '0', '3/4' or '1/2';" +
@@ -117,13 +119,18 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
                              "if '0' the field starts from 0;" +
                              "if 3/4' the following end poles sequence is added 1/4, -3/4, +1, -1 instead of existing +1, -1, +1, -1" +
                              "if 1/2 the following end poles sequence is added 1/2, -1, +1 instead of existing +1, -1, +1.")
+    else:
+        cosz = np.cos(kz_z)
+        sinz = np.sin(kz_z)
 
-    cosx = np.cos(kx_x)
+    coshx = np.cosh(kx_x)
+    sinhx = np.sinh(kx_x)
+    coshy = np.cosh(ky_y)
     sinhy = np.sinh(ky_y)
     # cosz = np.cos(kz_z + ph_shift)*z_coef
-    Bx = k1 * np.sin(kx_x) * sinhy * cosz  # // here kx is only real
-    By = B0 * cosx * np.cosh(ky_y) * cosz
-    Bz = k2 * cosx * sinhy * np.sin(kz_z)
+    Bx =  k1 * sinhx * sinhy * cosz  # // here kx is only real
+    By =  B0 * coshx * coshy * cosz
+    Bz = -k2 * coshx * sinhy * sinz
     return (Bx, By, Bz)
 
 

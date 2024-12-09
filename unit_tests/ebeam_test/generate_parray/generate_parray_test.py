@@ -10,6 +10,7 @@ import pytest
 
 from ocelot import *
 from scipy.interpolate import interp1d
+from scipy.integrate import trapezoid
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 REF_RES_DIR = FILE_DIR + '/ref_results/'
@@ -31,7 +32,7 @@ def test_default_beam(parameter=None, update_ref_values=False):
     s = np.linspace(-5 * sigma_tau, 5 * sigma_tau, num=500)
 
     f_g = interp1d(cur[:, 0], cur[:, 1], bounds_error=False, fill_value=(0, 0))
-    df = np.trapz(np.abs(f_g(s) - f(s)), s)
+    df = trapezoid(np.abs(f_g(s) - f(s)), s)
 
     output = f"value is {df} \n shape difference should be less than 0.001"
 
@@ -56,7 +57,7 @@ def test_tri_beam(parameter=None, update_ref_values=False):
     s = np.linspace(-2 * sigma_tau, 2 * sigma_tau, num=500)
 
     f_g = interp1d(cur[:, 0], cur[:, 1], bounds_error=False, fill_value=(0, 0))
-    df = np.trapz(np.abs(f_g(s) - f(s)), s)
+    df = trapezoid(np.abs(f_g(s) - f(s)), s)
 
     output = f"value is {df} \n shape difference should be less than 0.005"
 
@@ -86,7 +87,7 @@ def test_arbitrary_shape_beam(parameter=None, update_ref_values=False):
     cur = parray.I()
 
     f_g = interp1d(cur[:, 0], cur[:, 1], bounds_error=False, fill_value=(0, 0))
-    df = np.trapz(np.abs(f_g(s) - f(s) / max(f(s)) * max(cur[:, 1])), s)
+    df = trapezoid(np.abs(f_g(s) - f(s) / max(f(s)) * max(cur[:, 1])), s)
 
     output = f"value is {df} \n shape difference should be less than 0.005"
 

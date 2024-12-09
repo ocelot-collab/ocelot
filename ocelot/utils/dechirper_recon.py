@@ -12,7 +12,10 @@ from ocelot.common.globals import *
 from ocelot.cpbd.beam import s_to_cur, generate_parray
 from ocelot.cpbd.wake3D import Wake, WakeTableDechirperOffAxis
 from scipy.optimize import fmin, curve_fit
-from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter, uniform_filter
+import cv2
+from scipy.ndimage import label
+from scipy.signal import find_peaks
 
 
 def image2distrib(image, n_particles=200000):
@@ -73,7 +76,7 @@ def image2distrib_v2(image, n_particles=200000):
     return x_distr, y_distr
 
 
-def simple_filter_and_mask(image, sigma=5, threshold=0.01):
+def simple_filter_and_mask(image, sigma=5, threshold=0.0):
     """
     The function returns the same image but with the background cut (masked).
     First, the function filters the original image with a Gaussian filter (sigma=5 by default).
@@ -86,10 +89,21 @@ def simple_filter_and_mask(image, sigma=5, threshold=0.01):
     :return: masked image with the same sizes
     """
 
-    Hg = ndimage.gaussian_filter(image, sigma=sigma)
+    Hg = ndimage.gaussian_filter(image, sigma=sigma, truncate=2)
+    inds_mask_neg = ((Hg - np.max(Hg) * threshold) < 0).nonzero()
+    for i in range(10):
+        img_neg = np.copy(image)
+        img_neg[:] = 1
+        img_neg[inds_mask_neg] = 0.0
+        proj = np.sum(img_neg, axis=0)
+        if np.all(proj[0:20] == 0) and np.all(proj[-20:] == 0):
+            break
+        threshold += 0.01
+        print(f"threshold = {threshold}")
+        inds_mask_neg = ((Hg - np.max(Hg) * threshold) < 0).nonzero()
 
-    inds_mask_neg = np.asarray((Hg - np.max(Hg) * threshold) < 0).nonzero()
     image[inds_mask_neg] = 0.0
+
     return image
 
 
@@ -180,7 +194,7 @@ def get_image_proj(image):
     return proj
 
 
-def roi_1d(y, threshold=0.01, lmargin=0, rmargin=0):
+def roi_1d_simple(y, threshold=0.01, lmargin=0, rmargin=0):
     """
     function returns indices of y array when y values are higher thresholds.
 
@@ -190,8 +204,8 @@ def roi_1d(y, threshold=0.01, lmargin=0, rmargin=0):
     :param rmargin: add number of pixes (indices) on the right side
     :return: indx1, indx2
     """
-
     zero_crossings = np.where(np.diff(np.sign(y - max(y) * threshold)))[0]
+    print("zero_crossings = ", zero_crossings)
     if len(zero_crossings) == 1:
         zero_crossings = np.insert(zero_crossings, 0, 0)
     indx1 = zero_crossings[0]
@@ -199,6 +213,44 @@ def roi_1d(y, threshold=0.01, lmargin=0, rmargin=0):
     indx1 = max([0, indx1 - lmargin])
     indx2 = min([len(y), indx2 + rmargin])
     return indx1, indx2
+    #print("roi_1d = ", y - max(y) * threshold)
+    #print("roi_1d = diff", np.diff(np.sign(y - max(y) * threshold)))
+    #print("roi_1d = where", np.where(np.diff(np.sign(y - max(y) * threshold))))
+
+
+def find_peaks_regions(y):
+    """
+    Finds peaks in the 1D array y and returns the indices of the regions around the peaks.
+    """
+    # Find peaks
+    peaks, properties = find_peaks(y, prominence=0.05 * np.max(y))
+
+    # You can adjust 'prominence' to suit your data
+    # Alternatively, use 'height', 'distance', 'width', etc.
+
+    regions = []
+    for peak in peaks:
+        # Find the left and right bases of the peak
+        left_base = properties['left_bases'][np.where(peaks == peak)[0][0]]
+        right_base = properties['right_bases'][np.where(peaks == peak)[0][0]]
+        regions.append((left_base, right_base))
+    print("find_peaks_regions ", regions, len(regions))
+    if len(regions) == 1:
+        return regions[0]
+    elif len(regions) == 0:
+        return regions
+    dists = [r[1] - r[0] for r in regions]
+    ind = np.argmax(dists)
+    return regions[ind]
+
+
+def roi_1d(y, **kwargs):
+    threshold = kwargs.get("threshold", 0)
+    lmargin = kwargs.get("lmargin", 0)
+    rmargin = kwargs.get("rmargin", 0)
+    #regions = roi_1d_simple(y, threshold=threshold, lmargin=lmargin, rmargin=rmargin)
+    regions = find_peaks_regions(y)
+    return regions
 
 
 def crop_1d(x, y, threshold=0.01, lmargin=0, rmargin=0):
@@ -228,10 +280,12 @@ def roi_2d(image, threshold=0.01, hor_margin=[5, 5], ver_margin=[5, 5]):
     """
     h_proj = get_image_proj(image)
     h_proj = gaussian_filter(h_proj, sigma=2)
+    #h_proj = uniform_filter(h_proj, size=2)
     ix1, ix2 = roi_1d(y=h_proj, threshold=threshold, lmargin=hor_margin[0], rmargin=hor_margin[1])
 
     v_proj = get_image_proj(image.T)
     v_proj = gaussian_filter(v_proj, sigma=2)
+    #v_proj = uniform_filter(v_proj, size=2)
     iy1, iy2 = roi_1d(y=v_proj, threshold=threshold, lmargin=ver_margin[0], rmargin=ver_margin[1])
 
     return ix1, ix2, iy1, iy2
@@ -248,6 +302,7 @@ def crop_2d(image, threshold=0.01, hor_margin=[5, 5], ver_margin=[5, 5]):
     :return:
     """
     ix1, ix2, iy1, iy2 = roi_2d(image, threshold=threshold, hor_margin=hor_margin, ver_margin=ver_margin)
+    print("crop = ", ix1, ix2, iy1, iy2)
     return image[iy1:iy2, ix1:ix2]
 
 
@@ -332,12 +387,66 @@ def find_solution_with_rk(x_crisp, y_crisp, x_proj_img, y_proj_img, der0, num=50
     sol = solve_ivp(func, [x[0], x[-1]], y0, t_eval=x, args=(f, g), method="RK23")
     return sol.t, sol.y[0]
 
+def get_largest_contour_roi(contours):
+    largest_contour = max(contours, key=cv2.contourArea)
+    x, y, w, h = cv2.boundingRect(largest_contour)
+    return x, y, w, h
 
-def dchirper_recon_RK(img, t_crisp, y_crisp, img_mask_thresh=0.03, img_sigma=5, img_crop_thresh=0.01, crisp_thresh=0.01,
-                      n_particles=200000):
+def improved_roi_detection(image):
+    img_blur = cv2.GaussianBlur(image, (5, 5), 0)
+    _, img_thresh = cv2.threshold(
+        img_blur.astype(np.uint8), 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    kernel = np.ones((5, 5), np.uint8)
+    img_close = cv2.morphologyEx(img_thresh, cv2.MORPH_CLOSE, kernel)
+    contours, _ = cv2.findContours(
+        img_close, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if contours:
+        x, y, w, h = get_largest_contour_roi(contours)
+        roi = image[y:y+h, x:x+w]
+        return roi
+    else:
+        return None
+
+
+def detect_roi_with_opencv(image):
+    # Normalize and convert to uint8
+    image_normalized = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX)
+    image_uint8 = image_normalized.astype(np.uint8)
+
+    # Apply Gaussian Blur
+    img_blur = cv2.GaussianBlur(image_uint8, (5, 5), 0)
+
+    # Apply Otsu's Thresholding
+    _, img_thresh = cv2.threshold(
+        img_blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+
+    # Morphological Operations
+    kernel = np.ones((3, 3), np.uint8)
+    img_morph = cv2.morphologyEx(img_thresh, cv2.MORPH_CLOSE, kernel)
+    img_morph = cv2.morphologyEx(img_morph, cv2.MORPH_OPEN, kernel)
+
+    # Find Contours
+    contours, _ = cv2.findContours(
+        img_morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    if contours:
+        # Assume the largest contour is the ROI
+        largest_contour = max(contours, key=cv2.contourArea)
+        # Get bounding rectangle
+        x, y, w, h = cv2.boundingRect(largest_contour)
+        # Extract ROI
+        roi = image[y:y+h, x:x+w]
+        return roi, (x, y, w, h)
+    else:
+        return None, None
+
+
+def dchirper_recon_RK(img, t_crisp, y_crisp, img_mask_thresh=0.03, img_sigma=3, img_crop_thresh=0.01, crisp_thresh=0.01,
+                      n_particles=200000, is_image_processed=False):
     """
     main function transforms streaked beam image from nonlinear passive streaker to linear streak using beam current
      from CRISP reconstruction as the reference
+
 
 
     :param img: image
@@ -348,11 +457,13 @@ def dchirper_recon_RK(img, t_crisp, y_crisp, img_mask_thresh=0.03, img_sigma=5, 
     :param img_crop_thresh: to crop image
     :param crisp_thresh: crop CRISP current
     :param n_particles: number of particle for distribution
+    :param is_image_processed: if True image was processed before, if False it will be processed here
     :return: (x_distrib_transformed, y_distrib), (x_crisp, y_crisp), image_processed, (x_transf_curve, y_transf_curve)
     """
-    img = simple_filter_and_mask(img, sigma=img_sigma, threshold=img_mask_thresh)
+    if not is_image_processed:
+        img = simple_filter_and_mask(img, sigma=img_sigma, threshold=img_mask_thresh)
 
-    img = crop_2d(img, threshold=img_crop_thresh, hor_margin=[5, 5], ver_margin=[5, 5])
+        img = crop_2d(img, threshold=img_crop_thresh, hor_margin=[5, 5], ver_margin=[5, 5])
 
     proj = get_image_proj(img)
 

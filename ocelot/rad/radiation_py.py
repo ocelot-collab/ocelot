@@ -13,7 +13,7 @@ import time
 from math import pi
 
 import numpy as np
-from scipy.integrate import cumulative_trapezoid
+from scipy.integrate import cumulative_trapezoid, trapezoid
 from scipy.interpolate import splrep, splev
 
 from ocelot.rad.spline_py import cspline_coef
@@ -134,7 +134,7 @@ class BeamTraject:
             y1 = u[3::9, :]
             # dz = u[4 + 9::9, :] - u[4:-9:9, :]
             z = u[4::9, :]
-            s_fin += np.trapz(np.sqrt(1 + x1 * x1 + y1 * y1), z, axis=0)
+            s_fin += trapezoid(np.sqrt(1 + x1 * x1 + y1 * y1), z, axis=0)
             # s_fin += np.sum(dz * np.sqrt(1 + x1 * x1 + y1 * y1), axis=0)
 
         N = int(np.shape(self.U[-1])[0] / 9)

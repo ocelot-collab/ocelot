@@ -126,7 +126,7 @@ class ParameterScanFile:
 
     @parameter_name.setter
     def parameter_name(self, value):
-        self._hdf["parameter-name"] = np.string_(value)
+        self._hdf["parameter-name"] = np.bytes_(value)
 
     @property
     def parameter_values(self):

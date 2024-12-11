@@ -41,7 +41,7 @@ We still have no documentation but you can find a lot of examples in /demos/ fol
 <a id='installation'></a>
 
 ### Requirements
--  Python 3.6 - 3.10
+-  Python 3.9+
 - `numpy` version 1.8 or higher: http://www.numpy.org/
 - `scipy` version 0.15 or higher: http://www.scipy.org/
 - `matplotlib` version 1.5 or higher: http://matplotlib.org/

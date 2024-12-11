@@ -21,6 +21,8 @@ setup(
         'numpy', 'scipy', 'matplotlib', 'pandas', 'h5py'
     ],
     extras_require={'docs': ['Sphinx', 'alabaster', 'sphinxcontrib-jsmath']},
-    package_data={'ocelot.optics': ['data/*.dat']},
+    package_data={'ocelot.optics': ['data/*.dat'],
+                  "ocelot": ["py.typed"]},
     license="GNU General Public License v3.0",
+    python_requires=">=3.9"
 )

@@ -1,6 +1,11 @@
-from __future__ import print_function
 '''
 basic fel calculations
+
+Version with first version of MX estimation code for Harmonic Lasing, initial code CL 2022-Nov
+
+Some of the Literature referenced in the code:
+M. Xie, "Exact and variational solutions of 3D eigenmodes in high gain FELs", Nucl. Instruments Methods Phys. Res. Sect. A Accel. Spectrometers, Detect. Assoc. Equip., vol. 445, no. 1--3, pp. 59--66, 2000, DOI https://doi.org/10.1016/S0168-9002(00)00114-5
+E.A. Schneidmiller and M.V. Yurkov, "Harmonic lasing in x-ray free electron lasers", Phys Rev ST Accel Beams 15, 080702 (2012), DOI:10.1103/PhysRevSTAB.15.080702
 '''
 
 #from pylab import *
@@ -85,7 +90,7 @@ class FelParameters:
         
         # self.N = self.I * self.lambda0 / 1.4399644850445153e-10
         # self.sigb = 0.5 * (self.rxbeam + self.rybeam) # average beam size
-                # h_eV_s * speed_of_light / self.lambda0
+        # h_eV_s * speed_of_light / self.lambda0
         
         ### Check criterion given in Eq.6, 10.1103/PhysRevSTAB.15.080702
         emit_n = np.sqrt(self.emitx * self.emity)
@@ -127,19 +132,27 @@ class FelParameters:
             self.xie_etad = self.lg1 / (2 * self.k0 * self.rxbeam * self.rybeam)
             
             #self.xie_etae = 4 * pi * self.lg1 / (self.betax*2*pi) * self.k0 * (self.emitx / self.gamma0)
-            self.xie_etae = 4 * np.pi * self.lg1 * (self.emitx * self.emity) / self.lambda0 / (self.rxbeam * self.rybeam) / self.gamma0**2 * ((self.fc/self.fch)**2 / self.hn)**(1/3) / self.hn # expressed via average x-y beam size
+            # self.xie_etae = 4 * np.pi * self.lg1 * (self.emitx * self.emity) / self.lambda0 / (self.rxbeam * self.rybeam) / self.gamma0**2 * ((self.fc/self.fch)**2 / self.hn)**(1/3) / self.hn # expressed via average x-y beam size
+            # removed the additional factor, which evaluates to 1.0 for hn=1.
+            self.xie_etae = 4 * np.pi * self.lg1 * (self.emitx * self.emity) / self.lambda0 / (self.rxbeam * self.rybeam) / self.gamma0**2 ## * ((self.fc/self.fch)**2 / self.hn)**(1/3) / self.hn # expressed via average x-y beam size
             self.xie_etagamma = self.deta / (self.rho1 * np.sqrt(3))
             
             if self.hn !=1:
+                # Equations after Eq C2 in DOI:10.1103/PhysRevSTAB.15.080702 + erratum fixing typo: https://doi.org/10.1103/PhysRevSTAB.15.119901
                 self.xie_etad *= ((self.fc/self.fch)**2 / self.hn)**(1/3) / self.hn 
                 self.xie_etae *= ((self.fc/self.fch)**2 / self.hn)**(1/3) * self.hn
-                self.xie_etagamma *= ((self.fc/self.fch)**2 / self.hn)**(1/3) * self.hn #eq C2+ DOI:10.1103/PhysRevSTAB.15.080702
+                self.xie_etagamma *= ((self.fc/self.fch)**2 / self.hn)**(1/3) * self.hn
             
             self.delta = (a[1] * self.xie_etad ** a[2] + a[3] * self.xie_etae ** a[4] + a[5] * self.xie_etagamma ** a[6] 
             + a[7] * self.xie_etae ** a[8] * self.xie_etagamma ** a[9] + a[10] * self.xie_etad ** a[11] * self.xie_etagamma ** a[12] + a[13] * self.xie_etad ** a[14] * self.xie_etae ** a[15]
             + a[16] * self.xie_etad ** a[17] * self.xie_etae ** a[18] * self.xie_etagamma ** a[19])
             
             # self.lg3 = self.lg1 * (1 + self.xie_lscale)
+            ### Nov-2022: Correction of 1-D gain length for harmonic lasing
+            ### Need to think about impact on parameters other than rho and gain lengths
+            if self.hn>1:
+                self.lg1 *= ((self.fc/self.fch)**2/self.hn)**(1/3)
+
             self.method = 'mxie'
             
         elif method == 'ssy_opt':
@@ -148,18 +161,18 @@ class FelParameters:
             '''
             
             
+            # eq.4, DOI:10.1103/PhysRevSTAB.15.080702
+            # Equation in paper is for FIELD gain length: power gain length = 0.5 * field gain length
             self.lg1 = 0.5 * 1.67 * np.sqrt(I_Alfven / self.I) * (emit_n * self.xlamd)**(5/6) / self.lambdah**(2/3) * (1 + self.aw0**2)**(1/3) / (self.hn**(5/6) * self.aw0 * self.fch) 
-            #eq.4, DOI:10.1103/PhysRevSTAB.15.080702
-            # it is power gain length = 0.5 * field gain length
             
-            self.delta = 131 * (I_Alfven / self.I) * emit_n**(5/4) / (self.lambdah * self.xlamd**9)**(1/8) * self.hn**(9/8) * self.delgam**2 / (self.aw0 * self.fch)**2 / (1 + self.aw0**2)**(1/8) 
-            #eq.5, DOI:10.1103/PhysRevSTAB.15.080702
-            
-                
+            # eq.5, DOI:10.1103/PhysRevSTAB.15.080702
+            self.delta = 131 * (I_Alfven / self.I) * emit_n**(5/4) / (self.lambdah * self.xlamd**9)**(1/8) * self.hn**(9/8) * self.delgam**2 / (self.aw0 * self.fch)**2 / (1 + self.aw0**2)**(1/8)
             
             # if hasattr(self, 'qf'):
                 # if self.qf==1:
                     # self.lg3 = self.lg1 * (1 + self.delta_eff)
+
+            # FIXME 2022-Nov: Correction for harmonic lasing needed?
             
             self.method = 'ssy_opt'
         else:
@@ -167,7 +180,7 @@ class FelParameters:
             raise ValueError('method should be in ["mxie", "ssy_opt"]')
 
         if self.qf == 1:
-            self.delta_q = 5.5e4 * (I_Alfven / self.I)**(3/2) * lambda_C_r * ro_e * emit_n**2 / self.lambda0**(11/4) / self.xlamd**(5/4) * (1 + self.aw0**2)**(9/4) * F_aw / (self.aw0 * self.fch**3 * self.hn**(5/3))
+            self.delta_q = 5.5e4 * (I_Alfven / self.I)**(3/2) * lambda_C_r * ro_e * emit_n**2 / self.lambda0**(11/4) / self.xlamd**(5/4) * (1 + self.aw0**2)**(9/4) * F_aw / (self.aw0 * self.fch**3 * self.hn**(5/3)) # EQ B4 in DOI:10.1103/PhysRevSTAB.15.080702
             
             if np.any(self.delta_q >= 1):
                 _logger.warning('quantum fluctuation effect exceeds 1, estimation not applicable anymore')
@@ -176,6 +189,7 @@ class FelParameters:
         else:
             self.delta_q = 0
             
+        # Eq B5 in DOI:10.1103/PhysRevSTAB.15.080702
         self.delta_eff = (self.delta + self.delta_q) / (1 - self.delta_q)
         
         self.delta_criterion = 2.5 * (1 - np.exp(-0.5 * self.emit_nn**2))
@@ -582,19 +596,25 @@ def beam2fel(beam, lu, K_peak, iwityp=0, method='mxie', hn=1, qf=0):
 def printFelParameters(p):
     
     #print (input.parameters)
+
+    is_harm_est = p.hn!=1
     
     print ('********    FEL Parameters    ********')
+    if is_harm_est:
+        print('*** WARNING: Estimation is for harmonic, computation of some values still has to be corrected ***')
     print ('ex=', p.emitx)
     print ('ey=', p.emity)
     print ('rxbeam=', p.rxbeam, ' [m]')
     print ('rybeam=', p.rybeam, ' [m]')
-    print ('rel energy spread deta=', p.deta, ' [m]')
+    print ('rel energy spread deta=', p.deta)
     print ('xlamd=', p.xlamd)
     print ('aw0=', p.aw0)
     print ('coupling parameter fc=', p.fc)
     print ('gamma0=', p.gamma0)
     print ('Ip=', p.I, ' beam peak current [A]')
     print ('lambda0=', p.lambda0)
+    if is_harm_est:
+        print ('lambdah=', p.lambdah, ' (harmonic {})'.format(p.hn))
     print ('Pb= %.3e beam power [W]'%(p.Pb))
     # print ('N=', p.N)
     print ('rho (1D)=', p.rho1)
@@ -602,7 +622,11 @@ def printFelParameters(p):
     # print ('power=', p.power, ' equivalent shot noise power [W]')
     print ('Rayleigh length estimate zr=', p.zr)
     print ('')
-    print ('Ming Xie gain reduction estimates:')
+    #
+    if not is_harm_est:
+        print ('Ming Xie gain reduction estimates:')
+    else:
+        print ('Ming Xie gain reduction estimates for harmonic {}:'.format(p.hn))
     print ('diffraction parameter eta_d=', p.xie_etad)
     print ('emittance/focusing parameter eta_e=', p.xie_etae)
     print ('energy spread parameter eta_gamma=', p.xie_etagamma)
@@ -611,27 +635,11 @@ def printFelParameters(p):
     print ('scaled rho (3D)=', p.rho3)
     print ('')
     print ('Saturation magn. length=', p.z_sat_min)
+    if is_harm_est:
+        print('*** WARNING: Estimation is for harmonic, computation of some values still has to be corrected ***')
     print ('**************************************')
     
-    
-# CHECK with Xie paper parameters
-#inp = GenesisInput()
-#inp.curpeak = 3400
-#inp.xlamd = 0.03
-#inp.iwityp = 0
-#inp.gamma0 = 28000
-#inp.delgam = inp.gamma0 * 2e-4
-#inp.betax = 18
-#inp.betay = 18
-#inp.emitx=1.5e-6
-#inp.emity=1.5e-6
-#inp.xlamd=0.03
-#inp.aw0 = 3.7/sqrt(2)
+
 #
-#p = calculateFelParameters(inp)
-#print(p.xie_lscale,'new')
-#p.lg1
-#p.rho1
-#print(p.xie_etad, 0.0367)
-#print(p.xie_etae, 0.739)
-#print(p.xie_etagamma, 0.248)
+# Lechner, 2024-05-08: moved test case to pytest test
+#

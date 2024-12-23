@@ -1,5 +1,7 @@
 import pytest
+import pandas as pd
 import numpy as np
+from random import random
 
 from ocelot.cpbd.beam import (cov_matrix_from_twiss,
                               cov_matrix_to_parray,
@@ -186,3 +188,26 @@ def test_parray_I():
     I = s_to_cur(parray_init.tau(), sigma, q0, v)
 
     assert np.isclose(I_p, I, rtol=1e-07, atol=1e-10).all()
+
+def test_ParticleArray_slicing():
+    parray = ParticleArray(n=5)
+
+    rparts = np.random.rand(*parray.rparticles.shape)
+    charges = np.random.rand(*parray.q_array.shape)
+
+    parray.rparticles = rparts
+    parray.q_array = charges
+
+    start = 1
+    stop = 4
+
+    sliced_parray = parray[start:stop]
+
+    assert (sliced_parray.rparticles == rparts[..., start:stop]).all()
+    assert (sliced_parray.q_array == charges[..., start:stop]).all()
+
+def test_Twiss_from_series(a_twiss_dictionary):
+    series = pd.Series(data=a_twiss_dictionary)
+    twiss = Twiss.from_series(series)
+    for key, value in a_twiss_dictionary.items():
+        assert getattr(twiss, key) == value

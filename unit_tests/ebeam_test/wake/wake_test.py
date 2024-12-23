@@ -1,5 +1,6 @@
 """Test of the demo file demos/ebeam/csr_ex.py"""
 
+from pathlib import Path
 import os
 import sys
 import copy
@@ -11,12 +12,13 @@ REF_RES_DIR = FILE_DIR + '/ref_results/'
 from unit_tests.params import *
 from wake_conf import *
 
+HERE = Path(__file__).parent
 
 
 def test_get_long_wake(lattice, p_array, parameter=None, update_ref_values=False):
     """ func generate_parray testing """
 
-    wt = WakeTable(wake_file="./unit_tests/ebeam_test/wake/wake_table.dat")
+    wt = WakeTable(wake_file=HERE / "wake_table.dat")
     w = Wake()
     w.wake_table = wt
     w.prepare(None)

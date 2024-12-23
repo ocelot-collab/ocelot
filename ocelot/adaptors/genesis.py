@@ -2069,7 +2069,7 @@ def read_dfl_file_out(out, filePath=None, harmonic=1, *args, **kwargs):
 
     if filePath is None:
         _logger.debug(ind_str + 'from out.filePath')
-        if harmonic is not 1:
+        if harmonic != 1:
             filePath = out.filePath + '.dfl' + str(harmonic)
         else:
             filePath = out.filePath + '.dfl'
@@ -3056,6 +3056,7 @@ def transform_beam_twiss(beam, transform=None, s=None):
         else:
             idx = find_nearest_idx(beam.s, s)
 
+        # remark C. Lechner, 2024-04: when running pytest, the use of numpy.matrix in this function raises "PendingDeprecationWarning: the matrix subclass is not the recommended way to represent matrices or deal with linear algebra (see https://docs.scipy.org/doc/numpy/user/numpy-for-matlab-users.html). Please adjust your code to use regular ndarray."
         g1x = np.matrix([[beam.beta_x[idx], beam.alpha_x[idx]],
                          [beam.alpha_x[idx], (1 + beam.alpha_x[idx]**2) / beam.beta_x[idx]]])
 
@@ -3321,6 +3322,10 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
     prevLenQ = 0
     prevPosD = 0
     prevLenD = 0
+    prevPosCX = 0
+    prevPosCY = 0
+    prevLenCX = 0
+    prevLenCY = 0
     
     L_inters = 0
     K_rms = 0
@@ -3419,6 +3424,15 @@ def generate_lattice(lattice, unit=1.0, energy=None, debug=1, min_phsh = False):
                 K_inters = e.K
                 if K_inters == 'K_und':
                     K_inters = K_rms
+        
+        elif e.__class__ == Hcor:
+            undLat += 'CX' + '    ' + str(e.angle) + '   ' + str(1 * e.l / unit) + '  ' + str(round((pos - prevPosCX - prevLenCX)/unit, 2)) + '\n'
+            prevPosCX = pos
+            prevLenCX = float(e.l)
+        elif e.__class__ == Vcor:
+            undLat += 'CY' + '    ' + str(e.angle) + '   ' + str(1 * e.l / unit) + '  ' + str(round((pos - prevPosCY - prevLenCY)/unit, 2)) + '\n'
+            prevPosCY = pos
+            prevLenCY = float(e.l)
             
         elif e.__class__ == Quadrupole:
             #k = energy/0.2998 * float(e.k1) *  ( e.l / unit - int(e.l / unit) )
@@ -3693,7 +3707,12 @@ def transform_beam_file(beam_file=None, out_file='tmp.beam', s=None, transform=[
 
     return beam_new
 
-
+'''
+# C. Lechner, 2024-03-24, disabled this test function
+# There aren't any calls to this function and function 'gaussFromTwiss'
+# does not exist in OCELOT code (as of 2024-03).
+# Last git commit containing function gaussFromTwiss: fc89983 (date: 2015-11-17)
+# Function was probably renamed to gauss_from_twiss (see commit id 9a79211, date: 2015-11-17)
 def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
 
     ex = 1.0
@@ -3722,6 +3741,7 @@ def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
     xp3 = []
 
     for i in range(5000):
+        # remark, CL, 2024-03: now gauss_from_twiss?
         x_, xp_ = gaussFromTwiss(ex, beta1, alpha1)
         x.append(x_)
         xp.append(xp_)
@@ -3771,7 +3791,7 @@ def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
     plt.show()
 
     # 49.8131287015 1.12127199531 39.9184728466 -0.897874127701
-
+'''
 
 #import argparse
 #parser = argparse.ArgumentParser(description='Data plotting program.')

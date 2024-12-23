@@ -2913,8 +2913,8 @@ def dfl_waistscan(dfl, z_pos, projection=0, **kwargs):
 
         scale_x = dfl.scale_x()
         scale_y = dfl.scale_y()
-        center_x = np.int((I_xy.shape[1] - 1) / 2)
-        center_y = np.int((I_xy.shape[0] - 1) / 2)
+        center_x = int((I_xy.shape[1] - 1) / 2)
+        center_y = int((I_xy.shape[0] - 1) / 2)
         _logger.debug(2 * ind_str + 'center_pixels = {}, {}'.format(center_x, center_y))
 
         if projection:

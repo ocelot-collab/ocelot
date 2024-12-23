@@ -1,11 +1,12 @@
 from ocelot.cpbd.io import save_particle_array
-from ocelot.common.globals import *
-import numpy as np
+from ocelot.common.globals import h_eV_s, m_e_eV, m_e_GeV, ro_e, speed_of_light
 from ocelot.cpbd.beam import Twiss, beam_matching
-from scipy import optimize
 from ocelot.utils.acc_utils import slice_bunching
 from ocelot.common.ocelog import *
 from ocelot.cpbd.beam import ParticleArray
+
+import numpy as np
+from scipy import optimize
 
 _logger = logging.getLogger(__name__)
 
@@ -131,31 +132,29 @@ class SmoothBeam(PhysProc):
         _logger.debug(" SmoothBeam applied, dz =" + str(dz))
 
         def myfunc(x, A):
-            if x < 2 * A:
-                y = x - x * x / (4 * A)
-            else:
-                y = A
+            y = np.where(x < 2 * A, x - x * x / (4 * A), A)
             return y
-
-        # Zin = np.copy(p_array.tau())
         Zin = p_array.tau()
         inds = np.argsort(Zin, axis=0)
-        Zout = np.copy(Zin[inds])
+        Zout = np.sort(Zin, axis=0)
         N = Zin.shape[0]
         S = np.zeros(N + 1)
-        S[N] = 0
-        S[0] = 0
-        for i in range(N):
-            S[i + 1] = S[i] + Zout[i]
+        S[1:] = np.cumsum(Zout)
         Zout2 = np.zeros(N)
         Zout2[N - 1] = Zout[N - 1]
         Zout2[0] = Zout[0]
-        for i in range(1, N - 1):
-            m = min(i, N - i + 1)
-            m = int(np.floor(myfunc(0.5 * m, 0.5 * self.mslice) + 0.500001))
-            Zout2[i] = (S[i + m + 1] - S[i - m]) / (2 * m + 1)
-        # Zout[inds] = Zout2
+
+        i = np.arange(1, N - 1)
+        m = np.minimum(i, N - i + 1)
+        m = np.floor(myfunc(0.5 * m, 0.5 * self.mslice) + 0.500001).astype(int)
+        Zout2[i] = (S[i + m + 1] - S[i - m]) / (2 * m + 1)
+        #Zout[inds] = Zout2
         p_array.tau()[inds] = Zout2
+
+    def __repr__(self) -> str:
+        cname = type(self).__name__
+        mslice = self.mslice
+        return f"<{cname}: {mslice=}>"
 
 
 class LaserModulator(PhysProc):
@@ -533,7 +532,7 @@ class SpontanRadEffects(PhysProc):
         k = 2 * np.pi / lperiod
 
         lambda_compt = h_eV_s / m_e_eV * speed_of_light  # m
-        lambda_compt_r = lambda_compt / 2. / pi
+        lambda_compt_r = lambda_compt / 2. / np.pi
         if type == "helical":
             f = lambda K: 1.42 * K + 1. / (1 + 1.5 * K + 0.95 * K * K)
         else:
@@ -633,3 +632,4 @@ class LatticeEnergyProfile(PhysProc):
         p_new = (p_old * p0c_old + Eref_old - self.Eref) / p0c_new
         p_array.E = self.Eref
         p_array.p()[:] = p_new[:]
+

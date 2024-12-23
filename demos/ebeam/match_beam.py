@@ -19,7 +19,7 @@ tws0.alpha_x = -0.838833736086
 tws0.alpha_y = -0.838833736086
 
 
-lat = MagneticLattice(i1.cell, i1.start_sim, method=MethodTM({"global": SecondTM}))
+lat = MagneticLattice(i1.cell, i1.start_sim, method={"global": SecondTM})
 
 
 print(lat[i1.start_sim] is i1.start_sim)

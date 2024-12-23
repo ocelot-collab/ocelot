@@ -5,7 +5,7 @@ import numpy as np
 
 from ocelot.cpbd.io import ParameterScanFile
 from ocelot.cpbd.track import ParameterScanner
-from ocelot.cpbd.optics import Navigator
+from ocelot.cpbd.navi import Navigator
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.elements import SBend, Marker
 from ocelot.cpbd.transformations import SecondTM
@@ -21,6 +21,11 @@ PARAMETER_NAME = "parameter-name"
 MARKER_NAMES = ["pytest-marker-name-1", "pytest-marker-name-2"]
 PARAMETER_VALUES = [0.1, 0.3]
 FILENAME = "test.hdf5"
+
+try:
+    import h5py
+except ImportError:
+    pytest.skip(reason="No h5py installed", allow_module_level=True)
 
 @pytest.fixture
 def navigator():

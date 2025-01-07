@@ -1117,20 +1117,37 @@ def recalculate_ref_particle(p_array):
     return p_array
 
 
-def get_envelope(p_array, tws_i=None, bounds=None):
+def get_envelope(p_array, tws_i=None, bounds=None, slice=None):
     """
-    Function to calculate twiss parameters form the ParticleArray
+    Calculate Twiss parameters from a ParticleArray.
+
+    This function processes particle data to compute Twiss parameters, optionally considering bounds
+    based on standard deviations of the particle distribution and a reference slice for calculations.
 
     :param p_array: ParticleArray
-    :param tws_i: optional, design Twiss for dispersion correction.
-    :param bounds: optional, [left_bound, right_bound] - bounds in units of std(p_array.tau())
-    :return: Twiss()
+        The input particle array containing particle properties such as position and momentum.
+    :param tws_i: Twiss (optional)
+        Design Twiss parameters for dispersion correction. Defaults to None.
+    :param bounds: list (optional)
+        A list specifying bounds as `[left_bound, right_bound]` in units of std(p_array.tau()).
+        If provided, only particles within these bounds are considered.
+    :param slice: str or None (optional)
+        Reference slice definition when `bounds` is specified:
+        - None (default): Takes the central slice with z0 = np.mean(tau).
+        - "Imax": Defines the reference slice at the position of maximum beam current.
+    :return: Twiss
+        Computed Twiss parameters for the filtered particle array.
     """
 
+    tau = p_array.tau()
     if bounds is not None:
-        tau = p_array.tau()
-        z0 = np.mean(tau)
         sig0 = np.std(tau)
+        if slice == "Imax":
+            charge = np.sum(p_array.q_array)
+            B = s_to_cur(tau, 0.01 * sig0, charge, speed_of_light)
+            z0 = B[np.argmax(B[:, 1]), 0]
+        else:
+            z0 = np.mean(tau)
         inds = np.argwhere((z0 + sig0 * bounds[0] <= tau) * (tau <= z0 + sig0 * bounds[1]))
         p = p_array.p()[inds]
         x = p_array.x()[inds]
@@ -1144,7 +1161,6 @@ def get_envelope(p_array, tws_i=None, bounds=None):
         px = p_array.px()
         y = p_array.y()
         py = p_array.py()
-        tau = p_array.tau()
 
     tws = Twiss()
     tws.E = np.copy(p_array.E)

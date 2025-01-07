@@ -72,12 +72,6 @@ def check_value(value, value_ref, tolerance=1.0e-15, tolerance_type='relative', 
 def check_matrix(matrix, matrix_ref, tolerance=1.0e-15, tolerance_type='relative', assert_info='', numerical_zero=1e-15):
     """Matrix with reference matrix check function"""
 
-    delta_matrix = np.abs(matrix - matrix_ref)
-    if tolerance_type == 'relative':
-        tol_matrix = tolerance * np.abs(matrix_ref)
-    else:
-        tol_matrix = tolerance
-
     result = []
     for (index, x), (index_ref, x_ref) in zip(np.ndenumerate(matrix), np.ndenumerate(matrix_ref)):
         result.append(check_value(x, x_ref, tolerance, tolerance_type,

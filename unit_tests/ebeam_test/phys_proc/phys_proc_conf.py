@@ -8,6 +8,7 @@ from ocelot.cpbd.beam import generate_parray
 from ocelot.utils.acc_utils import chicane_RTU
 from ocelot.cpbd.sc import LSC
 from ocelot.cpbd.wake3D import s2current
+from ocelot.cpbd.physics_proc import IBS
 
 """Lattice elements definition"""
 

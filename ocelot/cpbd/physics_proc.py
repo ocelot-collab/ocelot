@@ -1,6 +1,6 @@
 from ocelot.cpbd.io import save_particle_array
-from ocelot.common.globals import h_eV_s, m_e_eV, m_e_GeV, ro_e, speed_of_light
-from ocelot.cpbd.beam import Twiss, beam_matching
+from ocelot.common.globals import h_eV_s, m_e_eV, m_e_GeV, ro_e, speed_of_light, q_e
+from ocelot.cpbd.beam import Twiss, beam_matching, global_slice_analysis, s_to_cur, get_envelope
 from ocelot.utils.acc_utils import slice_bunching
 from ocelot.common.ocelog import *
 from ocelot.cpbd.beam import ParticleArray
@@ -637,4 +637,119 @@ class LatticeEnergyProfile(PhysProc):
         p_new = (p_old * p0c_old + Eref_old - self.Eref) / p0c_new
         p_array.E = self.Eref
         p_array.p()[:] = p_new[:]
+
+
+class IBS(PhysProc):
+    """
+    Intrabeam Scattering (IBS) Physics Process.
+
+    This class models the intrabeam scattering process in particle beams. Two methods are implemented based on different formulations:
+
+    1. **Huang Method:** Based on Z. Huang's work: *Intrabeam Scattering in an X-ray FEL Driver* (LCLS-TN-02-8, 2002).
+       URL: https://www-ssrl.slac.stanford.edu/lcls/technotes/LCLS-TN-02-8.pdf
+    2. **Nagaitsev Method:** Based on S. Nagaitsev's work: *Intrabeam scattering formulas for fast numerical evaluation*
+       (PRAB 8, 064403, 2005). URL: https://journals.aps.org/prab/abstract/10.1103/PhysRevSTAB.8.064403
+
+    The methods can be selected using `self.method`, which accepts "Huang" or "Nagaitsev".
+
+    Key assumptions and features:
+    - A **round beam approximation** is used, where `sigma_xy = (sigma_x + sigma_y) / 2`.
+    - Beam parameters are calculated within a slice of width ±0.5 `sigma_tau` relative to the slice with maximum current
+      (`self.slice = "Imax"` by default).
+    - The Coulomb logarithm (`self.Clog`) is a configurable parameter, defaulting to 8 (based on Z. Huang's work).
+    - A factor of 2 is applied to the Nagaitsev formula to align high-energy results with the Huang formula.
+
+    Attributes:
+    - `method` (str): Selected method for IBS calculation ("Huang" or "Nagaitsev").
+    - `Clog` (float): Coulomb logarithm (default: 8) is used constant if update_Clog = False
+    - `update_Clog` (bool): recalculate Clog on each step using Huang's formula without cut off.
+    - `bounds` (list): Range of bounds for slice analysis in units of `sigma_tau` (default: `[-0.5, 0.5]`).
+    - `slice` (str): Reference slice ("Imax" for maximum current by default).
+
+    Methods:
+    - `get_beam_params(p_array)`: Computes beam parameters such as `sigma_xy`, `sigma_z`, and normalized emittance.
+    - `apply(p_array, dz)`: Applies the IBS process to a particle array over a specified distance.
+
+    Raises:
+    - `ValueError`: If an invalid method is specified.
+    """
+
+    def __init__(self, method="Huang"):
+        PhysProc.__init__(self)
+        self.method = method
+        self.Clog = 8
+        self.update_Clog = True
+        self.bounds = [-0.5, 0.5]
+        self.slice = "Imax"
+
+        self.emit_n = None
+        self.sigma_xy = None
+        self.sigma_z = None
+        self.sigma_dgamma0 = None
+
+    def get_beam_params(self, p_array):
+        """
+        Compute beam parameters such as sigma_xy, sigma_z, and normalized emittance.
+
+        :param p_array: ParticleArray
+            Input particle array containing particle properties.
+        """
+        tws = get_envelope(p_array, bounds=self.bounds, slice=self.slice)
+        self.sigma_z = np.std(p_array.tau())
+        self.sigma_xy = (np.sqrt(tws.xx) + np.sqrt(tws.yy)) / 2.
+        self.emit_n = (tws.emit_xn + tws.emit_yn) / 2.
+        pc = np.sqrt(p_array.E ** 2 - m_e_GeV ** 2)
+        self.sigma_dgamma0 = np.sqrt(tws.pp)*pc / m_e_GeV
+
+    def estimate_Clog(self):
+        """
+        Used formula from Hunag's paper without cut offs
+
+        :return: float - Coulomb logarithm
+        """
+        Clog = np.log(self.emit_n * self.emit_n / (ro_e * self.sigma_xy))
+        return Clog
+
+    def apply(self, p_array, dz):
+        """
+        Apply the IBS process to a particle array over a given path length.
+
+        :param p_array: ParticleArray
+            The particle array to be processed.
+        :param dz: float
+            The path length over which the IBS process is applied.
+
+        Raises:
+        - ValueError: If an invalid method is specified.
+        """
+        # Number of particles
+        Nb = np.sum(p_array.q_array) / q_e
+
+        # Update beam parameters
+        self.get_beam_params(p_array)
+
+        # estimate C log
+        if self.update_Clog:
+            Clog = self.estimate_Clog()
+        else:
+            Clog = self.Clog
+
+        # Particle energy and momentum
+        gamma = p_array.E / m_e_GeV
+        pc = np.sqrt(p_array.E**2 - m_e_GeV**2)
+
+        # Calculate sigma_gamma based on the selected method
+        if self.method == "Huang":
+            sigma_gamma = np.sqrt(Clog * ro_e**2 * Nb / (self.sigma_xy * self.emit_n * self.sigma_z) * dz / 4)
+
+        elif self.method == "Nagaitsev":
+            xi = (self.sigma_dgamma0 * self.sigma_xy / (gamma * self.emit_n))**2
+            F = (1 - xi**0.25) * np.log(xi + 1) / xi
+            sigma_gamma = np.sqrt(Clog / 4 * ro_e**2 * Nb / (self.sigma_xy * self.emit_n * self.sigma_z) * F * dz)
+        else:
+            raise ValueError(f"Invalid method '{self.method}'. Choose 'Huang' or 'Nagaitsev'.")
+
+        # Energy spread and update particle momenta
+        sigma_e = sigma_gamma * m_e_GeV / pc
+        p_array.p()[:] += np.random.randn(p_array.n) * sigma_e
 

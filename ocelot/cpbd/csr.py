@@ -701,12 +701,39 @@ class K0_fin_anf:
 
 class CSR(PhysProc):
     """
-    coherent synchrotron radiation
+    This class simulates the CSR wakefield, its interaction with the beam, and applies the corresponding CSR kick to the particle array.
+
     Attributes:
-        self.step = 1 [in Navigator.unit_step] - step of the CSR kick applying for beam (ParticleArray)
-        self.sigma_min = 1.e-4  - minimal sigma if gauss filtering applied
-        self.traj_step = 0.0002 [m] - trajectory step or, other words, integration step for calculation of the CSR-wake
-        self.apply_step = 0.0005 [m] - step of the calculation CSR kick, to calculate average CSR kick
+        step (int): Step size for applying the CSR kick to the beam (ParticleArray). Default is 1 [in Navigator.unit_step].
+        sigma_min (float): Minimal sigma used in Gaussian filtering. Default is 1.e-4.
+        traj_step (float): Trajectory step, or integration step for CSR-wake calculation. Default is 0.0002 [m].
+        apply_step (float): Step size for calculating the CSR kick. Default is 0.0005 [m].
+
+        x_qbin (float): length or charge binning; 0... 1 = length...charge. Default is 0.
+        n_bin (int): Number of bins used for binning. Default is 100.
+        m_bin (int): Multiple binning factor with shifted bins. Default is 5.
+
+        ip_method (int): Method for smoothing (0: rectangular, 1: triangular, 2: Gaussian). Default is 2 (Gaussian).
+        sp (float): Smoothing parameter for the Gaussian method. Default is 0.5.
+        step_unit (int): Step unit for the CSR kick. If positive, `step` is multiplied by `step_unit`. Default is 0.
+
+        energy (float or None): The beam energy in [GeV]. If None, assumes `beta = 1` and the trajectory is calculated without the Runge-Kutta method.
+
+        z_csr_start (float): Position of the start element in the trajectory in [m]. Default is 0.
+        z0 (float): Position in the navigator for the starting point in the track. Default is 0.
+
+        end_poles (bool): If True, magnetic field configuration will be applied (1/4, -3/4, 1, ...). Default is False.
+        rk_traj (bool): If True, the trajectory of the reference particle is calculated using the Runge-Kutta method. Default is False.
+
+        debug (bool): If True, enables debugging output. Default is False.
+        filter_order (int): The order of the filter for CSR calculations. Default is 10.
+        n_mesh (int): Number of mesh points for the CSR wakefield calculations. Default is 345.
+
+        pict_debug (bool): If True, the trajectory of the reference particle and CSR wakes will be saved for each step in the working folder. Default is False.
+
+        sub_bin (SubBinning): An instance of the SubBinning class for particle binning.
+        bin_smoth (Smoothing): An instance of the Smoothing class for applying smoothing to the CSR wakefield.
+        k0_fin_anf (K0_fin_anf): An instance of the K0_fin_anf class for further CSR-related calculations.
     """
 
     def __init__(self, **kw):
@@ -927,12 +954,16 @@ class CSR(PhysProc):
 
     def prepare(self, lat):
         """
-        calculation of trajectory in rectangular coordinates
-        calculation of the z_csr_start
-        :param lat: Magnetic Lattice
-        :return: self.csr_traj: trajectory. traj[0,:] - longitudinal coordinate,
-                                 traj[1,:], traj[2,:], traj[3,:] - rectangular coordinates, \
-                                 traj[4,:], traj[5,:], traj[6,:] - tangential unit vectors
+        Calculates the trajectory in rectangular coordinates and determines the starting point for CSR calculations.
+
+        Args:
+            lat (MagneticLattice): The magnetic lattice for which the calculations are performed.
+
+        Returns:
+            ndarray: The CSR trajectory with the following components:
+                - `traj[0, :]`: Longitudinal coordinates.
+                - `traj[1, :]`, `traj[2, :]`, `traj[3, :]`: Rectangular coordinates.
+                - `traj[4, :]`, `traj[5, :]`, `traj[6, :]`: Tangential unit vectors.
         """
         self.check_step()
 

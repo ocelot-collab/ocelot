@@ -163,21 +163,29 @@ class SmoothBeam(PhysProc):
 
 
 class LaserModulator(PhysProc):
-    def __init__(self, step=1):
-        PhysProc.__init__(self, step)
-        # amplitude of energy modulation on axis
-        self.dE = 12500e-9  # GeV
-        self.Ku = 1.294  # undulator parameter
-        self.Lu = 0.8  # [m] - undulator length
-        self.lperiod = 0.074  # [m] - undulator period length
-        self.sigma_l = 300e-6  # [m]
-        self.sigma_x = self.sigma_l
-        self.sigma_y = self.sigma_l
-        self.x_mean = 0
-        self.y_mean = 0
-        self.z_waist = None  # center of the undulator
-        self.include_r56 = False
-        self.laser_peak_pos = 0  # relative to the beam center, if 0 laser_peak_pos == mean(p_array.tau()) - laser_peak_pos
+    def __init__(self, **kwargs):
+        # Extract 'step' if provided, otherwise default to 1
+        step = kwargs.pop('step', 1)
+        super().__init__(step)
+
+        # Pull out known parameters with defaults
+        self.dE           = kwargs.pop('dE',           12500e-9)  # GeV
+        self.Ku           = kwargs.pop('Ku',           1.294)     # Undulator parameter
+        self.Lu           = kwargs.pop('Lu',           0.8)       # [m] - Undulator length
+        self.lperiod      = kwargs.pop('lperiod',      0.074)     # [m] - Undulator period length
+        self.sigma_l      = kwargs.pop('sigma_l',      300e-6)    # [m]
+        self.sigma_x      = kwargs.pop('sigma_x',      self.sigma_l)
+        self.sigma_y      = kwargs.pop('sigma_y',      self.sigma_l)
+        self.x_mean       = kwargs.pop('x_mean',       0)
+        self.y_mean       = kwargs.pop('y_mean',       0)
+        self.z_waist      = kwargs.pop('z_waist',      None)       # Center of the undulator
+        self.include_r56  = kwargs.pop('include_r56',  False)
+        self.laser_peak_pos = kwargs.pop('laser_peak_pos', 0)
+        # relative to the beam center; if 0, laser_peak_pos == mean(p_array.tau()) - laser_peak_pos
+
+        # If there are any additional kwargs left, you can set them as attributes:
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     def lambda_ph(self, energy):
         """
@@ -268,20 +276,20 @@ class PhaseSpaceAperture(PhysProc):
     :param ymax: 5 vertical plane in [rms] from center of mass
     """
 
-    def __init__(self, step=1):
+    def __init__(self, step=1, **kwargs):
         PhysProc.__init__(self, step)
-        self.longitudinal = True
-        self.vertical = False
-        self.horizontal = False
+        self.longitudinal = kwargs.get("longitudinal", True)
+        self.vertical = kwargs.get("vertical", False)
+        self.horizontal = kwargs.get("horizontal", False)
 
-        self.taumin = -5  # in simgas
-        self.taumax = 5  # in simgas
+        self.taumin = kwargs.get("taumin", -5)  # in simgas
+        self.taumax = kwargs.get("taumax", 5)  # in simgas
 
-        self.xmin = -5  # in simgas
-        self.xmax = 5  # in simgas
+        self.xmin = kwargs.get("xmin", -5)  # in simgas
+        self.xmax = kwargs.get("xmax", 5)  # in simgas
 
-        self.ymin = -5  # in simgas
-        self.ymax = 5  # in simgas
+        self.ymin = kwargs.get("ymin", -5)  # in simgas
+        self.ymax = kwargs.get("ymax", 5)  # in simgas
 
     def apply(self, p_array, dz):
         _logger.debug(" Aperture applied")
@@ -674,13 +682,14 @@ class IBS(PhysProc):
     - `ValueError`: If an invalid method is specified.
     """
 
-    def __init__(self, method="Huang"):
+    def __init__(self, step=1, **kwargs):
         PhysProc.__init__(self)
-        self.method = method
-        self.Clog = 8
-        self.update_Clog = True
-        self.bounds = [-0.5, 0.5]
-        self.slice = "Imax"
+        self.step = step  # in unit step
+        self.method = kwargs.get("method", "Huang")
+        self.Clog = kwargs.get("Clog", 8)
+        self.update_Clog = kwargs.get("update_Clog", True)
+        self.bounds = kwargs.get("bounds", [-0.5, 0.5])
+        self.slice = kwargs.get("slice", "Imax")
 
         self.emit_n = None
         self.sigma_xy = None

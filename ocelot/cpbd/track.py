@@ -460,14 +460,7 @@ def track(
             start = time()
             tm.apply(p_array)
             time_delta = time() - start
-            _logger.debug("tracking_step -> tm.class: %s  l = %s",
-                          tm.__class__.__name__,
-                          tm.length
-            )
-            _logger.debug(
-                "tracking_step -> tm.apply: time exec = %s sec",
-                time_delta
-            )
+            _logger.debug("tracking_step -> tm.class: %s  l = %s", tm.__class__.__name__, tm.length)
 
         #part = p_array[0]
         for p, z_step in zip(proc_list, phys_steps):

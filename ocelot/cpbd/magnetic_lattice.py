@@ -162,22 +162,39 @@ def flatten(iterable: Iterator[Any]) -> Generator[Any, None, None]:
 
 class MagneticLattice:
     """
-    sequence - list of the elements,
-    start - first element of lattice. If None, then lattice starts from first element of sequence,
-    stop - last element of lattice. If None, then lattice stops by last element of sequence,
-    method - A dictionary that contains the method of the tracking. If nothing is set TransferMap will
-    be used as the global method for all elements. Setting TransferMaps for specific elements is also possible.
-    Notes: If the elements doesn't support the defined transfer map, the default transfer map will be used, which is
-    defined in the specific element class.
-    For example:
-        '''
-        from ocelot import *
+    Represents a magnetic lattice, which is a sequence of elements defining a beamline.
 
-        method = {"global": SecondTM, Octupole: KickTM, Undulator:RungeKuttaTM }
-        lat  = MagneticLattice(cell, method=method)
-        '''
-    Sets for all elements SecondTM as transfer map, expect for the Octupole and Undulator elements.
-    see more at Section 7 https://nbviewer.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/small_useful_features.ipynb
+    Args:
+        sequence (list): A list of elements forming the lattice.
+        start (Element, optional): The first element of the lattice. If `None`, the lattice starts with the
+            first element of the sequence. Defaults to `None`.
+        stop (Element, optional): The last element of the lattice. If `None`, the lattice stops with the
+            last element of the sequence. Defaults to `None`.
+        method (dict, optional): A dictionary specifying the tracking method for the lattice. If no method is provided,
+            `TransferMap` is used as the global default for all elements. Specific methods for individual elements
+            can also be set. Defaults to `None`.
+
+            Example:
+                ```python
+                from ocelot import *
+
+                method = {"global": TransferMap} # default first order transfer map
+                lat = MagneticLattice(cell, method=method)
+                # or
+                method = {"global": SecondTM, Octupole: KickTM, Undulator: RungeKuttaTM}
+                lat = MagneticLattice(cell, method=method)
+                ```
+
+            In this example:
+            - Sets `SecondTM` (second order transfer maps) as the global transfer map for all elements.
+            - Assigns `KickTM` specifically for `Octupole` elements.
+            - Assigns `RungeKuttaTM` specifically for `Undulator` elements.
+
+    Notes:
+        - If an element does not support the specified transfer map, the default transfer map defined in
+          the element class is used.
+        - For more details, refer to Section 7 of the tutorial:
+          [Small Useful Features](https://nbviewer.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/small_useful_features.ipynb).
     """
 
     def __init__(self, sequence, start: E = None, stop: E = None, method=None):
@@ -302,13 +319,18 @@ class MagneticLattice:
 
     def save_as_py_file(self, file_name: str, tws0=None, remove_rep_drifts=True, power_supply=False):
         """
-        Saves the lattice in a python file.
-        :param file_name: path and python file name where the lattice will be stored
-        :param tws0: None or Twiss object. If Twiss object then twiss parameters will be printed in the beginning of
-                    lattice file
-        :param remove_rep_drifts: removes the drift elements
-        :param power_supply: Writes the power supply ids in the file
-        :return: None
+        Saves the lattice to a Python file.
+
+        Args:
+            file_name (str): The path and name of the Python file where the lattice will be stored.
+            tws0 (Twiss, optional): A `Twiss` object. If provided, the Twiss parameters will be printed at the beginning
+                of the lattice file. Defaults to `None`.
+            remove_rep_drifts (bool, optional): If `True`, removes repeated drift elements from the lattice.
+                Defaults to `True`.
+            power_supply (bool, optional): If `True`, writes the power supply IDs into the file. Defaults to `False`.
+
+        Returns:
+            None
         """
         LatticeIO.save_lattice(self, tws0=tws0, file_name=file_name, remove_rep_drifts=remove_rep_drifts,
                                power_supply=power_supply)

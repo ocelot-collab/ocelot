@@ -1045,15 +1045,15 @@ class Wake(PhysProc):
     TH - list from WakeTable, (T, H): T- table of wakes coefs, H - matrix of the coefs place in T
     """
 
-    def __init__(self, step=1, w_sampling=500, filter_order=20):
+    def __init__(self, step=1, **kwargs):
         PhysProc.__init__(self)
-        self.w_sampling = w_sampling  # wake sampling
-        self.filter_order = filter_order  # smoothing filter order
+        self.w_sampling = kwargs.get("w_sampling", 500)  # wake sampling
+        self.filter_order = kwargs.get("filter_order", 20)   # smoothing filter order
         # self.wake_file = ""
-        self.wake_table = None
-        self.factor = 1.
+        self.wake_table = kwargs.get("wake_table", None)
+        self.factor = kwargs.get("factor", 1.)
         self.step = step
-        self.TH = None
+        self.TH = kwargs.get("TH", None)
 
     def add_wake(self, I, T):
         """

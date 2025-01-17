@@ -95,9 +95,9 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
         tw_loc = deepcopy(tw)
         tw0 = deepcopy(tw)
 
-        '''
-        parameter to be varied is determined by variable class
-        '''
+
+        # parameter to be varied is determined by variable class
+
         for i in range(len(vars)):
             if isinstance(vars[i], Drift):
                 if x[i] < 0:
@@ -222,8 +222,8 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
             err = err + delta_err
 
         if min_i5:
-            ''' evaluating integral parameters
-            '''
+            # evaluating integral parameters
+
             I1, I2, I3, I4, I5 = radiation_integrals(lat, tw0, nsuperperiod=1)
             err += I5 * weights('i5')
 
@@ -241,9 +241,9 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
             print('iteration error:', err)
         return err
 
-    '''
-    list of arguments determined based on the variable class
-    '''
+
+    # list of arguments determined based on the variable class
+
     x = [0.0] * len(vars)
     for i in range(len(vars)):
         if vars[i].__class__ == list:
@@ -275,17 +275,17 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
     if method == 'bfgs':
         res = fmin_bfgs(errf, x, gtol=tol, epsilon=1.e-5, maxiter=max_iter)
 
-    '''
-    if initial twiss was varied set the twiss argument object to resulting value
-    '''
+
+    # if initial twiss was varied set the twiss argument object to resulting value
+
     for i in range(len(vars)):
         if vars[i].__class__ == list:
             if vars[i][0].__class__ == Twiss and vars[i][1].__class__ == str:
                 k = vars[i][1]
                 tw.__dict__[k] = res[i]
-    '''
-    update MagneticLattice total length in case a Drift length was in list of variables
-    '''
+
+    # update MagneticLattice total length in case a Drift length was in list of variables
+
     lat.totalLen = np.sum([e.l for e in lat.sequence])
 
     return res
@@ -353,9 +353,9 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
         tw0 = deepcopy(tws)
         nonlocal run_number
 
-        '''
-        parameter to be varied is determined by variable class
-        '''
+
+        # parameter to be varied is determined by variable class
+
         for i in range(len(vars)):
             if vars[i].__class__ == Drift:
                 if x[i] < 0:
@@ -489,8 +489,8 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
             err = err + weights('total_len') * (tw_loc.s - total_len) ** 2
 
         if min_i5:
-            ''' evaluating integral parameters
-            '''
+            # evaluating integral parameters
+
             I1, I2, I3, I4, I5 = radiation_integrals(lat, tw0, nsuperperiod=1)
             err += I5 * weights('i5')
 
@@ -510,9 +510,9 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
 
         return err
 
-    '''
-    list of arguments determined based on the variable class
-    '''
+
+    # list of arguments determined based on the variable class
+
     x = [0.0] * len(vars)
     for i in range(len(vars)):
         if vars[i].__class__ == list:
@@ -550,18 +550,18 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
         for xi in x:
             bounds.append((-5, 5))
         res = differential_evolution(errf, bounds, maxiter=max_iter, workers=1)
-    '''
-    if initial twiss was varied set the twiss argument object to resulting value
-    '''
+
+    # if initial twiss was varied set the twiss argument object to resulting value
+
     # for i in range(len(vars)):
     #    if vars[i].__class__ == list:
     #        if vars[i][0].__class__ == Twiss and vars[i][1].__class__ == str:
     #            k = vars[i][1]
     #            tw.__dict__[k] = res[i]
 
-    '''
-    update MagneticLattice total length in case a Drift length was in list of variables
-    '''
+
+    # update MagneticLattice total length in case a Drift length was in list of variables
+
     lat.totalLen = np.sum([e.l for e in lat.sequence])
 
     return res
@@ -649,3 +649,79 @@ def closed_orbit(lattice, eps_xy=1.e-7, eps_angle=1.e-7, energy=0):
     res = fmin(errf, P, xtol=1e-8, maxiter=2e3, maxfun=2.e3)
 
     return Particle(x=res[0], px=res[1], y=res[2], py=res[3])
+
+
+def inverse_lattice(lat):
+    """
+    Inverts a MagneticLattice for backtracking purposes.
+
+    :param lat: MagneticLattice - the lattice to be inverted.
+    :return: MagneticLattice - the inverted lattice.
+    """
+    lat_inv = MagneticLattice(lat.sequence[::-1], method=lat.method)
+    for elem in lat_inv.sequence:
+        if isinstance(elem, Cavity):
+            elem.phi += 180  # Adjust cavity phase for inversion
+    return lat_inv
+
+
+def inverse_twiss(tws):
+    """
+    Inverts the Twiss parameters for backtracking.
+
+    :param tws: Twiss - Twiss object whose parameters need to be inverted.
+    :return: Twiss - Twiss object with inverted alpha_x and alpha_y.
+    """
+    tws_inv = Twiss(tws)
+    tws_inv.alpha_x *= -1
+    tws_inv.alpha_y *= -1
+    return tws_inv
+
+
+def beam_matching(parray, navi, tws_end, vars, iter=3):
+    """
+    Matches the beam to desired Twiss parameters at the end of the lattice using
+    an iterative approach based on linear tracking.
+
+    :param parray: ParticleArray - particle array at the beginning of the lattice.
+    :param navi: Navigator - navigator for the lattice.
+    :param tws_end: Twiss - desired Twiss parameters at the end of the lattice.
+    :param vars: list - list of adjustable variables (e.g., quadrupoles [q1, q2, q3, ...]).
+    :param iter: int - number of iterations for the matching process (default: 3).
+    :return: list - optimized variables after matching.
+    """
+    # Initial envelope based on the particle array
+    tws_tmp = get_envelope(parray, bounds=[-2, 2])
+    lat = navi.lat
+    constr = {
+        lat.sequence[-1]: {
+            "beta_x": tws_end.beta_x,
+            "beta_y": tws_end.beta_y,
+            "alpha_x": tws_end.alpha_x,
+            "alpha_y": tws_end.alpha_y,
+        }
+    }
+
+    for i in range(iter):
+        # Create a deep copy of the particle array for tracking
+        parray_track = deepcopy(parray)
+
+        # Perform linear matching to optimize variables
+        res = match(lat, constr, vars, tws_tmp, verbose=False, max_iter=1000, tol=1e-5)
+
+        # Track the beam through the lattice
+        navi.reset_position()
+        navi.lat = lat
+        tws_track, parray_track = track(lat, p_array=parray_track, navi=navi)
+
+        # Calculate Twiss parameters at the end of the lattice
+        tws_end_tmp = get_envelope(parray_track, bounds=[-2, 2])
+
+        # Backtrack Twiss parameters using the inverted lattice
+        lat_inv = inverse_lattice(lat)
+        tws_end_inv = inverse_twiss(tws_end_tmp)
+        tws = twiss(lat_inv, tws_end_inv)
+        tws_tmp = inverse_twiss(tws[-1])
+        lat = inverse_lattice(lat_inv)
+
+    return vars

@@ -745,16 +745,21 @@ class IBS(PhysProc):
 
         # Particle energy and momentum
         gamma = p_array.E / m_e_GeV
+
+        igamma2 = 1. / (gamma * gamma)
+
+        beta = np.sqrt(1. - igamma2)
+
         pc = np.sqrt(p_array.E**2 - m_e_GeV**2)
 
         # Calculate sigma_gamma based on the selected method
         if self.method == "Huang":
-            sigma_gamma = np.sqrt(Clog * ro_e**2 * Nb / (self.sigma_xy * self.emit_n * self.sigma_z) * dz / 4)
+            sigma_gamma = np.sqrt(Clog * ro_e**2 * Nb / (beta**3 * self.sigma_xy * self.emit_n * self.sigma_z) * dz / 4)
 
         elif self.method == "Nagaitsev":
             xi = (self.sigma_dgamma0 * self.sigma_xy / (gamma * self.emit_n))**2
             F = (1 - xi**0.25) * np.log(xi + 1) / xi
-            sigma_gamma = np.sqrt(Clog / 4 * ro_e**2 * Nb / (self.sigma_xy * self.emit_n * self.sigma_z) * F * dz)
+            sigma_gamma = np.sqrt(Clog / 4 * ro_e**2 * Nb / (beta**3 * self.sigma_xy * self.emit_n * self.sigma_z) * F * dz)
         else:
             raise ValueError(f"Invalid method '{self.method}'. Choose 'Huang' or 'Nagaitsev'.")
 

@@ -868,20 +868,20 @@ class GenesisElectronDist:
         xp = self.xp
         yp = self.yp
 
-        mean_x2 = mean(x**2)
-        mean_y2 = mean(y**2)
-        mean_px2 = mean(xp**2)
-        mean_py2 = mean(yp**2)
-        mean_xpx = mean(x * xp)
-        mean_ypy = mean(y * yp)
-        mean_g = mean(self.g)
+        mean_x2 = np.mean(x**2)
+        mean_y2 = np.mean(y**2)
+        mean_px2 = np.mean(xp**2)
+        mean_py2 = np.mean(yp**2)
+        mean_xpx = np.mean(x * xp)
+        mean_ypy = np.mean(y * yp)
+        mean_g = np.mean(self.g)
 
-        tws.emit_x = mean_g * (mean_x2 * mean_px2 - mean_xpx**2)**0.5 / mean_g
-        tws.emit_y = mean_g * (mean_y2 * mean_py2 - mean_ypy**2)**0.5 / mean_g
-        tws.beta_x = mean_g * mean_x2 / tws.emit_x
-        tws.beta_y = mean_g * mean_y2 / tws.emit_y
-        tws.alpha_x = -mean_g * mean_xpx / tws.emit_x
-        tws.alpha_y = -mean_g * mean_ypy / tws.emit_y
+        tws.emit_x = (mean_x2 * mean_px2 - mean_xpx**2)**0.5
+        tws.emit_y = (mean_y2 * mean_py2 - mean_ypy**2)**0.5
+        tws.beta_x = mean_x2 / tws.emit_x
+        tws.beta_y = mean_y2 / tws.emit_y
+        tws.alpha_x = - mean_xpx / tws.emit_x
+        tws.alpha_y = - mean_ypy / tws.emit_y
         tws.E = mean_g * m_e_GeV
 
         return tws

@@ -261,24 +261,6 @@ class MagneticLattice:
             _logger.debug(f"update: {','.join([tm.__class__.__name__ for tm in element.tms])}")
         return self
 
-    def update_endings(self, lat_index, element, body_elements, element_util):
-
-        if element_util.suffix_1 in element.id:
-            body = self.sequence[lat_index + 1]
-            if body.__class__ not in body_elements:
-                body = self.sequence[lat_index - 1]
-                _logger.debug("Backtracking?")
-            element_util.update_first(element, body)
-        elif element_util.suffix_2 in element.id:
-            body = self.sequence[lat_index - 1]
-            if body.__class__ not in body_elements:
-                body = self.sequence[lat_index + 1]
-                _logger.debug("Backtracking?")
-            element_util.update_last(element, body)
-        else:
-            _logger.error(
-                element.__class__.__name__ + " is not updated. Use standard function to create and update MagneticLattice")
-
     def __str__(self):
         line = "LATTICE: length = " + str(self.totalLen) + " m \n"
         for e in self.sequence:
@@ -418,27 +400,6 @@ class MagneticLattice:
         R = self.transfer_maps(energy=tws.E)[1]
         tw_periodic = periodic_twiss(tws, R)
         return tw_periodic
-
-
-class EndElements:
-    suffix_1 = "_1"
-    suffix_2 = "_2"
-
-    @staticmethod
-    def check(lattice):
-        pass
-
-    @staticmethod
-    def add(lattice):
-        pass
-
-    @staticmethod
-    def update_first(end_element, body):
-        pass
-
-    @staticmethod
-    def update_last(end_element, body):
-        pass
 
 
 def merge_drifts(cell):

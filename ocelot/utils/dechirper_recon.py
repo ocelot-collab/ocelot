@@ -107,6 +107,47 @@ def simple_filter_and_mask(image, sigma=5, threshold=0.0):
     return image
 
 
+import numpy as np
+from scipy import ndimage
+
+def simple_filter_and_mask_v2(image, sigma=5, threshold=0.0, max_iterations=10):
+    """
+    The function returns the same image but with the background cut (masked).
+    1) The function filters the original image with a Gaussian filter (sigma=5 by default).
+    2) A mask is generated for areas where intensity < threshold * max(Hg).
+    3) threshold is iteratively adjusted so that the first and last 20 columns become fully masked.
+    4) The mask is then applied in-place (zeroing out masked areas) to the original image.
+
+    :param image: 2D numpy array - particle density distribution
+    :param sigma: Gaussian filter width (5 pixels by default)
+    :param threshold: Initial threshold fraction of the max intensity in the filtered image
+    :param max_iterations: Maximum number of increments to find a threshold that masks edges
+    :return: The modified (in-place) masked image
+    """
+
+    # 1) Filter the image
+    Hg = ndimage.gaussian_filter(image, sigma=sigma, truncate=2)
+    max_val = np.max(Hg)
+
+    # 2) Iteratively adjust threshold until the edges are fully masked or we hit max_iterations
+    for _ in range(max_iterations):
+        mask = (Hg < threshold * max_val)
+        # Check if the first 20 and last 20 columns are fully masked
+        if mask[:, :20].all() and mask[:, -20:].all():
+            break
+        threshold += 0.01
+        # Optionally: print the updated threshold if you want to track it
+        # print(f"threshold = {threshold}")
+
+    # 3) Create the final mask after adjustments
+    mask = (Hg < threshold * max_val)
+
+    # 4) Zero out the masked area in-place
+    image[mask] = 0.0
+
+    return image
+
+
 def current_processing(x, y, nbins=250, threshold=0.01, normilize=True):
     """
     The function processes the beam current (or density distribution or screen projection).

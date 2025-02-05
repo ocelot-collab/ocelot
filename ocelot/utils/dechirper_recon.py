@@ -13,7 +13,6 @@ from ocelot.cpbd.beam import s_to_cur, generate_parray
 from ocelot.cpbd.wake3D import Wake, WakeTableDechirperOffAxis
 from scipy.optimize import fmin, curve_fit
 from scipy.ndimage import gaussian_filter, uniform_filter
-import cv2
 from scipy.ndimage import label
 from scipy.signal import find_peaks
 
@@ -427,59 +426,6 @@ def find_solution_with_rk(x_crisp, y_crisp, x_proj_img, y_proj_img, der0, num=50
 
     sol = solve_ivp(func, [x[0], x[-1]], y0, t_eval=x, args=(f, g), method="RK23")
     return sol.t, sol.y[0]
-
-def get_largest_contour_roi(contours):
-    largest_contour = max(contours, key=cv2.contourArea)
-    x, y, w, h = cv2.boundingRect(largest_contour)
-    return x, y, w, h
-
-def improved_roi_detection(image):
-    img_blur = cv2.GaussianBlur(image, (5, 5), 0)
-    _, img_thresh = cv2.threshold(
-        img_blur.astype(np.uint8), 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-    kernel = np.ones((5, 5), np.uint8)
-    img_close = cv2.morphologyEx(img_thresh, cv2.MORPH_CLOSE, kernel)
-    contours, _ = cv2.findContours(
-        img_close, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if contours:
-        x, y, w, h = get_largest_contour_roi(contours)
-        roi = image[y:y+h, x:x+w]
-        return roi
-    else:
-        return None
-
-
-def detect_roi_with_opencv(image):
-    # Normalize and convert to uint8
-    image_normalized = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX)
-    image_uint8 = image_normalized.astype(np.uint8)
-
-    # Apply Gaussian Blur
-    img_blur = cv2.GaussianBlur(image_uint8, (5, 5), 0)
-
-    # Apply Otsu's Thresholding
-    _, img_thresh = cv2.threshold(
-        img_blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-
-    # Morphological Operations
-    kernel = np.ones((3, 3), np.uint8)
-    img_morph = cv2.morphologyEx(img_thresh, cv2.MORPH_CLOSE, kernel)
-    img_morph = cv2.morphologyEx(img_morph, cv2.MORPH_OPEN, kernel)
-
-    # Find Contours
-    contours, _ = cv2.findContours(
-        img_morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    if contours:
-        # Assume the largest contour is the ROI
-        largest_contour = max(contours, key=cv2.contourArea)
-        # Get bounding rectangle
-        x, y, w, h = cv2.boundingRect(largest_contour)
-        # Extract ROI
-        roi = image[y:y+h, x:x+w]
-        return roi, (x, y, w, h)
-    else:
-        return None, None
 
 
 def dchirper_recon_RK(img, t_crisp, y_crisp, img_mask_thresh=0.03, img_sigma=3, img_crop_thresh=0.01, crisp_thresh=0.01,

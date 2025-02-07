@@ -274,7 +274,7 @@ def find_peaks_regions(y):
         left_base = properties['left_bases'][np.where(peaks == peak)[0][0]]
         right_base = properties['right_bases'][np.where(peaks == peak)[0][0]]
         regions.append((left_base, right_base))
-    print("find_peaks_regions ", regions, len(regions))
+    #print("find_peaks_regions ", regions, len(regions))
     if len(regions) == 1:
         return regions[0]
     elif len(regions) == 0:
@@ -342,7 +342,7 @@ def crop_2d(image, threshold=0.01, hor_margin=[5, 5], ver_margin=[5, 5]):
     :return:
     """
     ix1, ix2, iy1, iy2 = roi_2d(image, threshold=threshold, hor_margin=hor_margin, ver_margin=ver_margin)
-    print("crop = ", ix1, ix2, iy1, iy2)
+    #print("crop = ", ix1, ix2, iy1, iy2)
     return image[iy1:iy2, ix1:ix2]
 
 

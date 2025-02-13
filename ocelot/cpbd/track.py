@@ -434,6 +434,7 @@ def track(
         bounds=None,
         return_df=False,
         overwrite_progress=True,
+        slice=None
         ) -> Tuple[Union[List[Twiss], pd.DataFrame], ParticleArray]:
 
     """
@@ -451,15 +452,13 @@ def track(
         navi = Navigator(lattice)
     if navi.lat is not lattice:
         _logger.warning("MagneticLattice is not the same in lattice argument and in Navigator")
-    tw0 = get_envelope(p_array, bounds=bounds) if calc_tws else Twiss()
+    tw0 = get_envelope(p_array, bounds=bounds, slice=slice) if calc_tws else Twiss()
     tws_track = [tw0]
     L = 0.
 
     for t_maps, dz, proc_list, phys_steps in navi.get_next_step():
         for tm in t_maps:
-            start = time()
             tm.apply(p_array)
-            time_delta = time() - start
             _logger.debug("tracking_step -> tm.class: %s  l = %s", tm.__class__.__name__, tm.length)
 
         #part = p_array[0]
@@ -470,7 +469,7 @@ def track(
         if p_array.n == 0:
             _logger.debug(" Tracking stop: p_array.n = 0")
             return tws_track, p_array
-        tw = get_envelope(p_array, bounds=bounds) if calc_tws else Twiss()
+        tw = get_envelope(p_array, bounds=bounds, slice=slice) if calc_tws else Twiss()
         L += dz
         tw.s += L
         tws_track.append(tw)

@@ -316,7 +316,7 @@ def weights_default(val):
 
 
 def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, method='simplex', weights=weights_default,
-               vary_bend_angle=False, min_i5=False, bounds=None):
+               vary_bend_angle=False, min_i5=False, bounds=None, slice=None):
     """
     Function to match twiss parameters
 
@@ -348,7 +348,7 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
     run_number = 1
     def errf(x):
         p_array0 = deepcopy(p_array)
-        tws = get_envelope(p_array0, bounds=bounds)
+        tws = get_envelope(p_array0, bounds=bounds, slice=slice)
         tw_loc = deepcopy(tws)
         tw0 = deepcopy(tws)
         nonlocal run_number
@@ -411,7 +411,7 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
         # tw_loc.s = 0
         # print("start = ", get_envelope(p_array0))
         navi.go_to_start()
-        tws_list, p_array0 = track(lat, p_array0, navi, print_progress=False, bounds=bounds)
+        tws_list, p_array0 = track(lat, p_array0, navi, print_progress=False, bounds=bounds, slice=slice)
         s = np.array([tw.s for tw in tws_list])
         # print("stop = ", tws_list[-1])
         L = 0.
@@ -651,17 +651,19 @@ def closed_orbit(lattice, eps_xy=1.e-7, eps_angle=1.e-7, energy=0):
     return Particle(x=res[0], px=res[1], y=res[2], py=res[3])
 
 
-def inverse_lattice(lat):
+def inverse_lattice(lat, phase=180):
     """
     Inverts a MagneticLattice for backtracking purposes.
 
     :param lat: MagneticLattice - the lattice to be inverted.
     :return: MagneticLattice - the inverted lattice.
     """
+    if abs(phase) != 180:
+        raise ValueError("phase must be +180 or -180")
     lat_inv = MagneticLattice(lat.sequence[::-1], method=lat.method)
     for elem in lat_inv.sequence:
         if isinstance(elem, Cavity):
-            elem.phi += 180  # Adjust cavity phase for inversion
+            elem.phi += phase  # Adjust cavity phase for inversion
     return lat_inv
 
 
@@ -718,10 +720,10 @@ def beam_matching(parray, navi, tws_end, vars, iter=3):
         tws_end_tmp = get_envelope(parray_track, bounds=[-2, 2])
 
         # Backtrack Twiss parameters using the inverted lattice
-        lat_inv = inverse_lattice(lat)
+        lat_inv = inverse_lattice(lat, phase=+180)
         tws_end_inv = inverse_twiss(tws_end_tmp)
         tws = twiss(lat_inv, tws_end_inv)
         tws_tmp = inverse_twiss(tws[-1])
-        lat = inverse_lattice(lat_inv)
+        lat = inverse_lattice(lat_inv, phase=-180)
 
     return vars

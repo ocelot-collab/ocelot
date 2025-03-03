@@ -489,22 +489,27 @@ class SpontanRadEffects(PhysProc):
     energy loss and quantum diffusion
     """
 
-    def __init__(self, K=0.0, lperiod=0.0, type="planar"):
+    def __init__(self, K=0.0, lperiod=0.0, type="planar", **kwargs):
         """
+        Initialize spontaneous radiation effects.
 
-        :param Kx: Undulator deflection parameter
-        :param lperiod: undulator period in [m]
+        :param K: Undulator deflection parameter
+        :param lperiod: Undulator period in meters
         :param type: "planar"/"helical" undulator or "dipole"
-        :param radius: np.inf,  in case of type = "dipole", one must specify a dipole radius
+        :param kwargs: Additional keyword arguments for customization
         """
-        PhysProc.__init__(self)
+        super().__init__(**kwargs)  # Pass any extra arguments to the parent class
+
+        # Explicitly defined parameters
         self.K = K
         self.lperiod = lperiod
         self.type = type
-        self.energy_loss = True
-        self.quant_diff = True
-        self.filling_coeff = 1.0
-        self.radius = np.inf
+
+        # Optional parameters with default values, can be overridden by kwargs
+        self.energy_loss = kwargs.get("energy_loss", True)
+        self.quant_diff = kwargs.get("quant_diff", True)
+        self.filling_coeff = kwargs.get("filling_coeff", 1.0)
+        self.radius = kwargs.get("radius", np.inf)
 
     def apply(self, p_array, dz):
         _logger.debug("SpontanRadEffects: apply")

@@ -98,6 +98,19 @@ class Twiss:
 
         self.id = kwargs.get("id", "")
 
+        if self.beta_x:
+            # Only update if gamma_x is not provided (or is zero)
+            if not self.gamma_x:
+                self.gamma_x = (1 + self.alpha_x**2) / self.beta_x
+        else:
+            self.gamma_x = 0
+
+        if self.beta_y:
+            if not self.gamma_y:
+                self.gamma_y = (1 + self.alpha_y**2) / self.beta_y
+        else:
+            self.gamma_y = 0
+
         if isinstance(beam, (Twiss, Beam)):
 
             self.emit_x = beam.emit_x

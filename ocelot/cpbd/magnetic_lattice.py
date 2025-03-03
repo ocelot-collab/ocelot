@@ -351,7 +351,9 @@ class MagneticLattice:
 
     def survey(self, x0=0, y0=0, z0=0, ang_x=0.0, ang_y=0.0):
         """
-        Function calculates coordinates in rectangular coordinates system at the beginning of each element in lattice
+        Function calculates coordinates in rectangular coordinates system at the beginning of each element in lattice.
+        we use convention from MAD8 where "a positive bend angle represents a bend to the right,
+        i.e. towards negative x vales" https://project-madwindows.web.cern.ch/MAD-resources/MAD8.13%20User%20Reference%20Manual.pdf
         :param x0: 0, initial offset in x direction
         :param y0: 0, initial offset in y direction
         :param z0: 0, initial offset in z direction
@@ -366,14 +368,14 @@ class MagneticLattice:
         a_y = [ang_y]
         for e in self.sequence:
             if e.__class__ in [Bend, SBend, RBend] and e.angle != 0.:
-                ang_x += e.angle * 0.5 * np.cos(e.tilt)
-                ang_y += e.angle * 0.5 * np.sin(e.tilt)
+                ang_x += -e.angle * 0.5 * np.cos(e.tilt)
+                ang_y += -e.angle * 0.5 * np.sin(e.tilt)
                 s = 2 * e.l * np.sin(e.angle * 0.5) / e.angle
                 x0 += s * np.sin(ang_x)
                 y0 += s * np.sin(ang_y)
                 z0 += s * np.cos(np.sqrt(ang_x ** 2 + ang_y ** 2))
-                ang_x += e.angle * 0.5 * np.cos(e.tilt)
-                ang_y += e.angle * 0.5 * np.sin(e.tilt)
+                ang_x += -e.angle * 0.5 * np.cos(e.tilt)
+                ang_y += -e.angle * 0.5 * np.sin(e.tilt)
             else:
                 x0 += e.l * np.sin(ang_x)
                 y0 += e.l * np.sin(ang_y)

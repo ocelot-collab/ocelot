@@ -116,12 +116,17 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                     vars[i].k1 = x[i]
             if isinstance(vars[i], list):
                 if isinstance(vars[i][0], Twiss) and isinstance(vars[i][1], str):
-
                     k = vars[i][1]
                     tw_loc.__dict__[k] = x[i]
-            if isinstance(vars[i], tuple):  # all quads strength in tuple varied simultaneously
+            if isinstance(vars[i], tuple):
+            # all quads strength in tuple varied simultaneously
                 for v in vars[i]:
                     v.k1 = x[i]
+            if isinstance(vars[i], dict):
+            # all quads strength in dict keys varied simultaneously
+            # with coupling parameters given as values.
+                for q in vars[i].keys():
+                    q.k1 = vars[i][q] * x[i]
 
         err = 0.0
         if "periodic" in constr.keys():

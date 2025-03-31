@@ -73,7 +73,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                 to the same value, e.g. vars = [(QF1, QF2), (QD1, QD2)].
                 A dictionary with quadrupoles as keys and their relative strengths as values
                 can be used for more flexible constraints, 
-                e.g. vars = [{QF: 1.0, QD: -1.0}], would constrain QD.k1 = -QF.k1.
+                e.g. vars = [{QF: 1.0, QD: -1.0}], constrains QD and QF to have opposite strengths.
     :param tw: initial Twiss
     :param verbose: allow print output of minimization procedure
     :param max_iter:

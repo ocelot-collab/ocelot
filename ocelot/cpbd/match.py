@@ -268,7 +268,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
             x[i] = vars[i][0].k1
         if vars[i].__class__ == dict:
             q = list(vars[i].keys())[0]
-            x[i] = q.k1
+            x[i] = q.k1 / vars[i][q]
         if vars[i].__class__ == Quadrupole:
             x[i] = vars[i].k1
         if vars[i].__class__ == Drift:

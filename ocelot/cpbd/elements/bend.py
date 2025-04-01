@@ -9,7 +9,8 @@ class Bend(OpticElement):
     """
     bending magnet
     l - length of magnet in [m],
-    angle - angle of bend in [rad],
+    angle - angle of bend in [rad], we use convention from MAD8 where "a positive bend angle represents a bend to the right,
+        i.e. towards negative x vales"
     k1 - strength of quadrupole lens in [1/m^2],
     k2 - strength of sextupole lens in [1/m^3],
     tilt - tilt of lens in [rad],

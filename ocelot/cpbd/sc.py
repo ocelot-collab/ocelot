@@ -87,16 +87,16 @@ class SpaceCharge(PhysProc):
     The convolution equation is solved with the help of the Fast Fourier Transform (FFT). The same algorithm for
     solution of the 3D Poisson equation is used, for example, in ASTRA
     """
-    def __init__(self, step=1):
+    def __init__(self, step=1, **kwargs):
         PhysProc.__init__(self)
         self.step = step # in unit step
-        self.nmesh_xyz = [63, 63, 63]
-        self.low_order_kick = True
+        self.nmesh_xyz = kwargs.get("nmesh_xyz", [63, 63, 63])
+        self.low_order_kick = kwargs.get("low_order_kick", True)
 
         self.start_elem = None
         self.end_elem = None
         self.debug = False
-        self.random_mesh = False  # random mesh if True
+        self.random_mesh = kwargs.get("random_mesh", False)  # if True mesh is shifted slightly on each step in order to reduce numerical noise
         self.random_seed = 10     # random seeding number. if None seeding is random
 
     def prepare(self, lat):
@@ -264,7 +264,6 @@ class LSC(PhysProc):
         PhysProc.__init__(self, step)
         self.smooth_param = 0.1
         self.step_profile = False
-        self.napply = 0
 
     def imp_lsc(self, gamma, sigma, w, dz):
         """

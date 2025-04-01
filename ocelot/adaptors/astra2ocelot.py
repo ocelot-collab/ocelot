@@ -240,10 +240,11 @@ def emittance_analysis(fileprefix="Exfel", trace_space=True, s_offset=None):
 
     The phase space is (x, px, y, py, z, pz)
     The trace space is (x, x’, y, y’, z, z’)
-    :param fileprefix: file prefix to read files:   fileprefix + '.Xemit.001',
-                                                    fileprefix + '.Yemit.001',
-                                                    fileprefix + '.Zemit.001',
-                                                    fileprefix + '.TRemit.001'
+    :param fileprefix: file prefix to read files:
+    - fileprefix + '.Xemit.001',
+    - fileprefix + '.Yemit.001',
+    - fileprefix + '.Zemit.001',
+    - fileprefix + '.TRemit.001'
     :param trace_space: True, to calculate emittance in the trace space
     :param s_offset: None, if None use s coordinates from a file, if not None the s coordinate starts from "s_offset"
     :return: list of the twiss objects

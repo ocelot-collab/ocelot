@@ -69,11 +69,11 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
 
     :param vars: list of elements e.g. vars = [QF, QD] or it can be initial twiss parameters:
                 vars = [[tws0, 'beta_x'], [tws0, 'beta_y'], [tws0, 'alpha_x'], [tws0, 'alpha_y']].
-                A tuple of quadrupoles can be passed as variable to constrain their strength
-                to the same value, e.g. vars = [(QF, QD)].
+                A tuple of quadrupoles can be passed as a variable to constrain their strengths
+                to the same value, e.g., vars = [(QF, QD)].
                 A dictionary with quadrupoles as keys and their relative strengths as values
-                can be used for more flexible constraints, 
-                e.g. vars = [{QF: 1.0, QD: -1.0}], constrains QD and QF to have opposite strengths.
+                can be used for more flexible constraints, e.g., vars = [{QF: 1.0, QD: -1.0}],
+                which constrains QD and QF to have equal strengths with opposite signs.
     :param tw: initial Twiss
     :param verbose: allow print output of minimization procedure
     :param max_iter:

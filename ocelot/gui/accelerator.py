@@ -857,7 +857,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
                 title=None, figsize=None, grid=True,
                 filename=None, headtail=True,
                 filter_base=2, filter_iter=2,
-                tau_units="mm", cmap="my_rainbow", **kwargs
+                tau_units="mm", p_units=None, cmap="my_rainbow", **kwargs
                 ):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
@@ -881,7 +881,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     :param headtail: True, shows where is the beam head is.
     :param filter_base: support of rectangle filter is 2*p+1
     :param filter_iter: the number of the filter iterations
-    :param tau_units: unints of longitudinal coordinate tau - 'm', 'mm' or 'um'
+    :param tau_units: unints of longitudinal coordinate tau - 'm', 'mm', 'um', "ps", "fs
     :param cmap: color map
     :return:
     """
@@ -891,9 +891,25 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     elif tau_units == "um":
         tau_factor = 1e6  # um
         tau_label = r"$s\,[\mathrm{\mu{}m}]$"
+    elif tau_units == "ps":
+        tau_factor = 1e12/speed_of_light  # pm
+        tau_label = r"$t\,[\mathrm{ps}]$"
+    elif tau_units == "fs":
+        tau_factor = 1e15/speed_of_light  # fm
+        tau_label = r"$t\,[\mathrm{fs}]$"
     else:
         tau_factor = 1e3  # mm
         tau_label = r"$s\,[\mathrm{mm}]$"
+
+    if p_units == "MeV":
+        pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
+        #Enew = p_array.p()[0] * pref + p_array.E
+        p_factor = pref*1e3
+        p_label = r'$E\,[MeV]$'
+    else:
+        p_factor = 1e2
+        p_label = r'$\delta_E\,[\%]$'
+
 
     p_array_copy = deepcopy(p_array)
     if inverse_tau:
@@ -963,8 +979,8 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
 
     ax_ps = plt.subplot(322, sharex=ax_sp)
 
-    show_density(p_array_copy.tau() * tau_factor, p_array_copy.p() * 1e2, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, ylabel=r'$\delta_E\,[\%]$',
+    show_density(p_array_copy.tau() * tau_factor, p_array_copy.p() * p_factor, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
+                 interpolation=interpolation, ylabel=p_label,
                  title="Longitudinal phase space", grid=grid, show_xtick_label=False, cmap=cmap)
 
     if inverse_tau:

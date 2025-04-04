@@ -99,3 +99,23 @@ plt.ylabel("X, m")
 plt.plot(s, x1,'r', s, x2,'b')
 plt.legend(["R", "R+T"])
 plt.show()
+
+# trajectory with transverse offset
+init_coordinates = [-0.01, -0.005, 0, 0.005, 0.01]
+p_list = [Particle(x=q) for q in init_coordinates]
+P = [copy.deepcopy(p_list)]
+navi2 = Navigator(lat2)
+dz = 0.01
+
+for i in range(int(lat1.totalLen/dz)):
+    tracking_step(lat2, p_list, dz=dz, navi=navi2)  # R + T
+    P.append(copy.deepcopy(p_list))
+
+fig, ax_xy = plot_API(lat2, fig_name="Trajectories with X offsets")
+for i in range(len(init_coordinates)):
+    s = [p[i].s for p in P]
+    x = [p[i].x for p in P]
+    ax_xy.plot(s, x)
+ax_xy.set_xlabel("S [m]")
+ax_xy.set_ylabel("X [m]")
+plt.show()

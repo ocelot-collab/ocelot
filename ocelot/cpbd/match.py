@@ -66,6 +66,8 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                 constr = {"delta": {ELEM1: ["muy", 0],  ELEM2: ["muy", 0], "val":  3*np.pi/2, "weight": 100007}}
                         - try to satisfy: tws.muy at ELEM2 - tws.muy at ELEM1 == 'val'
                         - difference between ELEM1 and ELEM2 of twiss parameter "muy" (can be any) == "val"
+                        - ELEM1: ["muy", 0] - 0 here means nothing it is just place to store value of muy
+                        - pay attantion to order of elements. since val is sensitive to sign. SO element
 
     :param vars: list of elements e.g. vars = [QF, QD] or it can be initial twiss parameters:
                 vars = [[tws0, 'beta_x'], [tws0, 'beta_y'], [tws0, 'alpha_x'], [tws0, 'alpha_y']].
@@ -228,7 +230,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
             for e in delta_dict.keys():
                 if isinstance(e, OpticElement):
                     elems.append(e)
-            delta_err = delta_dict["weight"] * (delta_dict[elems[0]][1] - delta_dict[elems[1]][1] - delta_dict["val"])**2
+            delta_err = delta_dict["weight"] * (delta_dict[elems[1]][1] - delta_dict[elems[0]][1] - delta_dict["val"])**2
             err = err + delta_err
 
         if min_i5:
@@ -298,8 +300,6 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                 tw.__dict__[k] = res[i]
 
     # update MagneticLattice total length in case a Drift length was in list of variables
-
-    lat.totalLen = np.sum([e.l for e in lat.sequence])
 
     return res
 
@@ -575,7 +575,6 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
 
     # update MagneticLattice total length in case a Drift length was in list of variables
 
-    lat.totalLen = np.sum([e.l for e in lat.sequence])
 
     return res
 

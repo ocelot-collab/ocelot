@@ -111,6 +111,37 @@ def test_quad_match(lattice, lattice_inj=None, update_ref_values=False):
     result = check_dict(tws, tws_ref, TOL, 'absotute', assert_info=' tws after matching - ')
     assert check_result(result)
 
+def test_quad_match_with_dict(lattice, lattice_inj=None, update_ref_values=False):
+    """After matching R maxtrix calculcation test"""
+    tws0 = Twiss()
+    tws0.beta_x = 8.4
+    tws0.beta_y = 8.4
+    tws0.alpha_x = -55.8
+    tws0.alpha_y = -55.8
+    tws0.E = 0.005071
+    q1_k1 = q1.k1
+    q2_k1 = q2.k1
+    print(q1_k1)
+    # match beta functions at the end
+    constr = {end: {"beta_x": 10, "beta_y": 10}}
+    vars = [{q1: 1, q2: -1}]
+
+    match(lattice, constr, vars, tws0, verbose=False)
+
+    tws = twiss(lattice, tws0, nPoints=20)
+
+    tws = obj2dict(tws)
+    q1.k1 = q1_k1
+    q2.k1 = q2_k1
+    lattice.update_transfer_maps()
+    if update_ref_values:
+        return tws
+
+    tws_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+
+    result = check_dict(tws, tws_ref, TOL, 'absotute', assert_info=' tws after matching - ')
+    assert check_result(result)
+
 def test_drift_match(lattice, lattice_inj=None, update_ref_values=False):
     """After matching R maxtrix calculcation test"""
     d = Drift(l=1)
@@ -326,6 +357,7 @@ def test_update_ref_values(lattice, lattice_inj, cmdopt):
     update_functions.append('test_twiss')
     update_functions.append('test_solenoid_match')
     update_functions.append('test_quad_match')
+    update_functions.append('test_quad_match_with_dict')
     update_functions.append('test_bend_k_match')
     update_functions.append('test_bend_angle_match')
     update_functions.append('test_inj_lattice')

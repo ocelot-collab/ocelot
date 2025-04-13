@@ -68,7 +68,12 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                         - difference between ELEM1 and ELEM2 of twiss parameter "muy" (can be any) == "val"
 
     :param vars: list of elements e.g. vars = [QF, QD] or it can be initial twiss parameters:
-                vars = [[tws0, 'beta_x'], [tws0, 'beta_y'], [tws0, 'alpha_x'], [tws0, 'alpha_y']]
+                vars = [[tws0, 'beta_x'], [tws0, 'beta_y'], [tws0, 'alpha_x'], [tws0, 'alpha_y']].
+                A tuple of quadrupoles can be passed as a variable to constrain their strengths
+                to the same value, e.g., vars = [(QF, QD)].
+                A dictionary with quadrupoles as keys and their relative strengths as values
+                can be used for more flexible constraints, e.g., vars = [{QF: 1.0, QD: -1.0}],
+                which constrains QD and QF to have equal strengths with opposite signs.
     :param tw: initial Twiss
     :param verbose: allow print output of minimization procedure
     :param max_iter:
@@ -116,12 +121,17 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                     vars[i].k1 = x[i]
             if isinstance(vars[i], list):
                 if isinstance(vars[i][0], Twiss) and isinstance(vars[i][1], str):
-
                     k = vars[i][1]
                     tw_loc.__dict__[k] = x[i]
-            if isinstance(vars[i], tuple):  # all quads strength in tuple varied simultaneously
+            if isinstance(vars[i], tuple):
+            # all quads strength in tuple varied simultaneously
                 for v in vars[i]:
                     v.k1 = x[i]
+            if isinstance(vars[i], dict):
+            # all quads strength in dict keys varied simultaneously
+            # with coupling parameters given as values.
+                for q in vars[i].keys():
+                    q.k1 = vars[i][q] * x[i]
 
         err = 0.0
         if "periodic" in constr.keys():
@@ -256,6 +266,9 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
                 #     x[i] = 0.0
         if vars[i].__class__ == tuple:
             x[i] = vars[i][0].k1
+        if vars[i].__class__ == dict:
+            q = list(vars[i].keys())[0]
+            x[i] = q.k1 / vars[i][q]
         if vars[i].__class__ == Quadrupole:
             x[i] = vars[i].k1
         if vars[i].__class__ == Drift:

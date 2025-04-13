@@ -208,14 +208,15 @@ class MagneticLattice:
         self.sequence = list(flatten(sequence))
         self.sequence = self.get_sequence_part(start, stop)
 
-        # create transfer map and calculate lattice length
-        self.totalLen = 0
-
         self.update_transfer_maps()
 
         self.__hash__ = {}
         for e in self.sequence:
             self.__hash__[e] = e
+
+    @property
+    def totalLen(self):
+        return sum([e.l for e in self.sequence])
 
     def get_sequence_part(self, start: E, stop: E):
         try:
@@ -240,7 +241,6 @@ class MagneticLattice:
             return None
 
     def update_transfer_maps(self):
-        self.totalLen = 0
         for i, element in enumerate(self.sequence):
             # TODO: This belongs to the Element Undulator
             if element.__class__ == Undulator:
@@ -248,7 +248,6 @@ class MagneticLattice:
                     element.l = element.field_map.l * element.field_map.field_file_rep
                     if element.field_map.units == "mm":
                         element.l = element.l * 0.001
-            self.totalLen += element.l
 
             tm_class_type = self.method.get(element.__class__)
             if tm_class_type:

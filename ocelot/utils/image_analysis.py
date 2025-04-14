@@ -202,7 +202,6 @@ def get_slice_parameters(image, gauss_fit_enabled=True):
     proj_y = np.sum(image, axis=1)
     total_intensity = np.sum(proj_y)
     x_mean = np.sum(x * proj_x) / total_intensity
-    print("X_MEAN = ", x_mean)
     x_variance = np.sum((x - x_mean) ** 2 * proj_x) / total_intensity
     x_sigma = np.sqrt(x_variance)
 

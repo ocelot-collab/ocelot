@@ -540,47 +540,71 @@ def plot_xy(ax, S, X, Y, font_size):
     leg.get_frame().set_alpha(0.5)
 
 
-def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12, excld_legend=None, figsize=None):
+def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12,
+             excld_legend=None, figsize=None, add_extra_subplot=False):
     """
-    Function creates a picture with lattice on the bottom part of the picture and top part of the picture can be
-    plot arbitrary lines.
+    Creates a figure with a main plot area (ax_xy) and beamline (ax_el).
+    Optionally adds an extra subplot (ax_extra) above ax_xy.
 
     :param lat: MagneticLattice
-    :param legend: True - displaying legend of element types in bottom section,
-    :param fig_name: None - name of figure,
-    :param grid: True - grid
-    :param font_size: 16 - font size for any element of plot
-    :param excld_legend: None, exclude type of element from the legend, e.g. excld_legend=[Hcor, Vcor]
-    :param figsize: None or e.g. (8, 6)
-    :return: fig, ax
+    :param legend: Show legend on beamline
+    :param fig_name: ID for the matplotlib figure
+    :param grid: Enable grid on plots
+    :param font_size: Font size for axis labels
+    :param excld_legend: Element types to exclude from beamline legend
+    :param figsize: Custom figure size
+    :param add_extra_subplot: If True, includes an additional subplot above ax_xy
+    :return: fig, axes (ax_xy, or (ax_extra, ax_xy))
     """
+
+    import matplotlib.pyplot as plt
 
     fig = plt.figure(fig_name, figsize=figsize)
     plt.rc('axes', grid=grid)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
+
     left, width = 0.1, 0.85
-    rect2 = [left, 0.19, width, 0.69]
-    rect3 = [left, 0.07, width, 0.12]
 
-    ax_xy = fig.add_axes(rect2)  # left, bottom, width, height
-    ax_el = fig.add_axes(rect3, sharex=ax_xy)
+    if add_extra_subplot:
+        rect1 = [left, 0.52, width, 0.27]  # ax_extra
+        rect2 = [left, 0.19, width, 0.27]  # ax_xy
+        rect3 = [left, 0.07, width, 0.10]  # ax_el
+        ax_extra = fig.add_axes(rect1)
+        ax_xy = fig.add_axes(rect2, sharex=ax_extra)
+        ax_el = fig.add_axes(rect3, sharex=ax_extra)
 
-    for ax in ax_xy, ax_el:
-        if ax != ax_el:
+        for ax in [ax_extra, ax_xy]:
             for label in ax.get_xticklabels():
                 label.set_visible(False)
 
-    ax_xy.grid(grid)
+        axes = (ax_extra, ax_xy)
+
+    else:
+        rect2 = [left, 0.19, width, 0.69]  # ax_xy
+        rect3 = [left, 0.07, width, 0.10]  # ax_el
+        ax_xy = fig.add_axes(rect2)
+        ax_el = fig.add_axes(rect3, sharex=ax_xy)
+
+        for label in ax_xy.get_xticklabels():
+            label.set_visible(False)
+
+        axes = ax_xy
+
+    # General settings
+    for ax in ([ax_extra, ax_xy] if add_extra_subplot else [ax_xy]):
+        ax.grid(grid)
+        ax.tick_params(axis='both', labelsize=font_size)
+
     ax_el.set_yticks([])
     ax_el.grid(grid)
-
-    ax_xy.tick_params(axis='both', labelsize=font_size)
+    ax_el.tick_params(axis='both', labelsize=font_size)
 
     fig.subplots_adjust(hspace=0)
 
+    # Plot beamline (always present)
     plot_elems(fig, ax_el, lat, legend=legend, y_scale=0.8, font_size=font_size, excld_legend=excld_legend)
 
-    return fig, ax_xy
+    return fig, axes
 
 
 def compare_betas(lat, tws1, tws2, prefix1="beam1", prefix2="beam2", legend=True, fig_name=None, grid=True,

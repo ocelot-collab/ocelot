@@ -557,8 +557,6 @@ def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12,
     :return: fig, axes (ax_xy, or (ax_extra, ax_xy))
     """
 
-    import matplotlib.pyplot as plt
-
     fig = plt.figure(fig_name, figsize=figsize)
     plt.rc('axes', grid=grid)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
@@ -566,8 +564,8 @@ def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12,
     left, width = 0.1, 0.85
 
     if add_extra_subplot:
-        rect1 = [left, 0.52, width, 0.27]  # ax_extra
-        rect2 = [left, 0.19, width, 0.27]  # ax_xy
+        rect1 = [left, 0.59, width, 0.34]  # ax_extra
+        rect2 = [left, 0.2, width, 0.34]  # ax_xy
         rect3 = [left, 0.07, width, 0.10]  # ax_el
         ax_extra = fig.add_axes(rect1)
         ax_xy = fig.add_axes(rect2, sharex=ax_extra)
@@ -603,7 +601,6 @@ def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12,
 
     # Plot beamline (always present)
     plot_elems(fig, ax_el, lat, legend=legend, y_scale=0.8, font_size=font_size, excld_legend=excld_legend)
-
     return fig, axes
 
 

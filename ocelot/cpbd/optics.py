@@ -174,10 +174,8 @@ def periodic_twiss(tws, R):
 
     tws.alpha_x = (R[0, 0] - R[1, 1]) / (2. * sinmx)  # X[0,0]
 
-    tws.gamma_x = (1. + tws.alpha_x * tws.alpha_x) / tws.beta_x  # X[1,0]
 
     tws.alpha_y = (R[2, 2] - R[3, 3]) / (2 * sinmy)  # Y[0,0]
-    tws.gamma_y = (1. + tws.alpha_y * tws.alpha_y) / tws.beta_y  # Y[1,0]
 
     Hx = np.array([[R[0, 0] - 1, R[0, 1]], [R[1, 0], R[1, 1] - 1]])
     Hhx = np.array([[R[0, 5]], [R[1, 5]]])
@@ -213,9 +211,6 @@ def twiss(lattice, tws0=None, nPoints=None, return_df=False, attach2elem=False):
             if tws0 is None:
                 _logger.info(' twiss: Twiss: no periodic solution')
                 return None
-        else:
-            tws0.gamma_x = (1. + tws0.alpha_x ** 2) / tws0.beta_x
-            tws0.gamma_y = (1. + tws0.alpha_y ** 2) / tws0.beta_y
 
         twiss_list = trace_obj(lattice, tws0, nPoints, attach2elem)
 
@@ -245,9 +240,6 @@ def twiss_fast(lattice, tws0=None):
             if tws0 is None:
                 _logger.warning(' twiss_fast: Twiss: no periodic solution')
                 return None
-        else:
-            tws0.gamma_x = (1. + tws0.alpha_x ** 2) / tws0.beta_x
-            tws0.gamma_y = (1. + tws0.alpha_y ** 2) / tws0.beta_y
 
         obj_list = [tws0]
         for e in lattice.fast_seq:

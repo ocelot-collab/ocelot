@@ -50,18 +50,17 @@ class Twiss:
 
     def __init__(self, beam=None, **kwargs):
 
-        self.emit_x = kwargs.get("emit_x", 0.)
-        self.emit_y = kwargs.get("emit_y", 0.)
-        self.emit_xn = kwargs.get("emit_xn", 0.)
-        self.emit_yn = kwargs.get("emit_yn", 0.)
+        self._emit_xn = kwargs.get("emit_xn", 0.)
+        self._emit_yn = kwargs.get("emit_yn", 0.)
+        self._pending_emit_x = None
+        self._pending_emit_y = None
+
         self.eigemit_1 = 0.
         self.eigemit_2 = 0.
-        self.beta_x = kwargs.get("beta_x", 0.)
-        self.beta_y = kwargs.get("beta_y", 0.)
-        self.alpha_x = kwargs.get("alpha_x", 0.)
-        self.alpha_y = kwargs.get("alpha_y", 0.)
-        self.gamma_x = kwargs.get("gamma_x", 0.)
-        self.gamma_y = kwargs.get("gamma_y", 0.)
+        self._beta_x = kwargs.get("beta_x", 0.)
+        self._beta_y = kwargs.get("beta_y", 0.)
+        self._alpha_x = kwargs.get("alpha_x", 0.)
+        self._alpha_y = kwargs.get("alpha_y", 0.)
         self.Dx = kwargs.get("Dx", 0.)
         self.Dy = kwargs.get("Dy", 0.)
         self.Dxp = kwargs.get("Dxp", 0.)
@@ -72,7 +71,7 @@ class Twiss:
         # parameters below in the most cases are calculated from the ParticleArray object
         # during tracking (see func 'get_envelop()')
 
-        self.E = kwargs.get("E", 0.0)  # ref the beam energy in [GeV]
+        self._E = kwargs.get("E", 0.0)  # ref the beam energy in [GeV]
         self.s = kwargs.get("s", 0.0)  # position along the reference trajectory [m]
         self.q = kwargs.get("q", 0.0)  # charge of the whole beam [C]
 
@@ -98,30 +97,15 @@ class Twiss:
 
         self.id = kwargs.get("id", "")
 
-        if self.beta_x:
-            # Only update if gamma_x is not provided (or is zero)
-            if not self.gamma_x:
-                self.gamma_x = (1 + self.alpha_x**2) / self.beta_x
-        else:
-            self.gamma_x = 0
-
-        if self.beta_y:
-            if not self.gamma_y:
-                self.gamma_y = (1 + self.alpha_y**2) / self.beta_y
-        else:
-            self.gamma_y = 0
-
         if isinstance(beam, (Twiss, Beam)):
 
-            self.emit_x = beam.emit_x
-            self.emit_y = beam.emit_y
-            self.emit_xn = beam.emit_xn
-            self.emit_yn = beam.emit_yn
+            self._emit_xn = beam.emit_xn
+            self._emit_yn = beam.emit_yn
 
-            self.beta_x = beam.beta_x
-            self.beta_y = beam.beta_y
-            self.alpha_x = beam.alpha_x
-            self.alpha_y = beam.alpha_y
+            self._beta_x = beam.beta_x
+            self._beta_y = beam.beta_y
+            self._alpha_x = beam.alpha_x
+            self._alpha_y = beam.alpha_y
             self.Dx = beam.Dx
             self.Dy = beam.Dy
             self.Dxp = beam.Dxp
@@ -130,13 +114,119 @@ class Twiss:
             self.y = beam.y
             self.xp = beam.xp
             self.yp = beam.yp
-            if beam.beta_x == 0.0 or beam.beta_y == 0.0:
-                self.gamma_x = 0.0
-                self.gamma_y = 0.0
-            else:
-                self.gamma_x = (1 + beam.alpha_x * beam.alpha_x) / beam.beta_x
-                self.gamma_y = (1 + beam.alpha_y * beam.alpha_y) / beam.beta_y
             self.E = beam.E
+
+    @property
+    def beta_x(self):
+        return self._beta_x
+
+    @beta_x.setter
+    def beta_x(self, value):
+        self._beta_x = value
+
+    @property
+    def alpha_x(self):
+        return self._alpha_x
+
+    @alpha_x.setter
+    def alpha_x(self, value):
+        self._alpha_x = value
+
+    @property
+    def gamma_x(self):
+        if self._beta_x != 0:
+            return (1 + self._alpha_x ** 2) / self._beta_x
+        return 0
+
+    @property
+    def beta_y(self):
+        return self._beta_y
+
+    @beta_y.setter
+    def beta_y(self, value):
+        self._beta_y = value
+
+    @property
+    def alpha_y(self):
+        return self._alpha_y
+
+    @alpha_y.setter
+    def alpha_y(self, value):
+        self._alpha_y = value
+
+    @property
+    def gamma_y(self):
+        if self._beta_y != 0:
+            return (1 + self._alpha_y ** 2) / self._beta_y
+        return 0
+
+    @property
+    def E(self):
+        return self._E
+
+    @E.setter
+    def E(self, value):
+        self._E = value
+        # If emit_x or emit_y were set before E, now recompute their xn versions
+        if self._pending_emit_x is not None:
+            self.emit_x = self._pending_emit_x  # triggers recompute
+            self._pending_emit_x = None
+        if self._pending_emit_y is not None:
+            self.emit_y = self._pending_emit_y
+            self._pending_emit_y = None
+
+    @property
+    def relgamma(self):
+        return self.E / m_e_GeV if self.E != 0 else 0.
+
+    @property
+    def relbeta(self):
+        g = self.relgamma
+        return np.sqrt(1 - g ** -2) if g > 0 else 1.
+
+    # --- X Plane ---
+    @property
+    def emit_xn(self):
+        return self._emit_xn
+
+    @emit_xn.setter
+    def emit_xn(self, value):
+        self._emit_xn = value
+
+    @property
+    def emit_x(self):
+        rb = self.relbeta * self.relgamma
+        return self._emit_xn / rb if rb != 0 else 0.
+
+    @emit_x.setter
+    def emit_x(self, value):
+        rb = self.relbeta * self.relgamma
+        if rb == 0:
+            self._pending_emit_x = value
+        else:
+            self._emit_xn = value * rb
+
+    # --- Y Plane ---
+    @property
+    def emit_yn(self):
+        return self._emit_yn
+
+    @emit_yn.setter
+    def emit_yn(self, value):
+        self._emit_yn = value
+
+    @property
+    def emit_y(self):
+        rb = self.relbeta * self.relgamma
+        return self._emit_yn / rb if rb != 0 else 0.
+
+    @emit_y.setter
+    def emit_y(self, value):
+        rb = self.relbeta * self.relgamma
+        if rb == 0:
+            self._pending_emit_y = value
+        else:
+            self._emit_yn = value * rb
 
     def multiply_with_tm(self, tm: 'TransferMap', length):
         tws = self.map_x_twiss(tm)
@@ -160,8 +250,6 @@ class Twiss:
             2, 3] * R[
                           3, 3] * tws0.gamma_y
 
-        tws.gamma_x = (1. + tws.alpha_x * tws.alpha_x) / tws.beta_x
-        tws.gamma_y = (1. + tws.alpha_y * tws.alpha_y) / tws.beta_y
 
         tws.Dx = R[0, 0] * tws0.Dx + R[0, 1] * tws0.Dxp + R[0, 5]
         tws.Dy = R[2, 2] * tws0.Dy + R[2, 3] * tws0.Dyp + R[2, 5]
@@ -233,7 +321,20 @@ class Twiss:
 
     def to_series(self) -> pd.Series:
         """Return this Twiss instance as an equivalent Pandas Series instance."""
-        return pd.Series(vars(self))
+        keys = [
+            'emit_x', 'emit_y', 'emit_xn', 'emit_yn', 'eigemit_1', 'eigemit_2',
+            'beta_x', 'beta_y', 'alpha_x', 'alpha_y',
+            'Dx', 'Dy', 'Dxp', 'Dyp',
+            'mux', 'muy',
+            'E', 's', 'q',
+            'x', 'y', 'xp', 'yp', 'p', 'tau',
+            'xx', 'xpx', 'pxpx',
+            'yy', 'ypy', 'pypy',
+            'tautau', 'xy', 'xpy', 'ypx', 'pxpy', 'pp',
+            'id'
+        ]
+        data = {k: getattr(self, k) for k in keys if hasattr(self, k)}
+        return pd.Series(data)
 
     @classmethod
     def from_series(cls, series: pd.Series):
@@ -1085,16 +1186,8 @@ class ParticleArray:
         tws.alpha_x = slice_params.alpha_x[ind0]
         tws.beta_y = slice_params.beta_y[ind0]
         tws.alpha_y = slice_params.alpha_y[ind0]
-        tws.gamma_y = slice_params.gamma_y[ind0]
-        tws.gamma_x = slice_params.gamma_x[ind0]
         tws.emit_x = slice_params.ex[ind0]
         tws.emit_y = slice_params.ey[ind0]
-
-        relgamma = self.E / m_e_GeV
-        relbeta = np.sqrt(1 - relgamma ** -2) if relgamma != 0 else 1.
-
-        tws.emit_xn = tws.emit_x * relgamma * relbeta
-        tws.emit_yn = tws.emit_y * relgamma * relbeta
         tws.pp = (slice_params.se[ind0] * 1e-9 / self.E) ** 2
         tws.E = self.E
         tws.s = self.s
@@ -1300,8 +1393,6 @@ def get_envelope(p_array, tws_i=None, bounds=None, slice=None):
     tws.beta_y = tws.yy / tws.emit_y
     tws.alpha_x = -tws.xpx / tws.emit_x
     tws.alpha_y = -tws.ypy / tws.emit_y
-    tws.gamma_x = (1 + tws.alpha_x ** 2) / tws.beta_x
-    tws.gamma_y = (1 + tws.alpha_y ** 2) / tws.beta_y
 
     return tws
 
@@ -2149,13 +2240,13 @@ def optics_from_moments(mean, cov_matrix, energy=None):
     r.x, r.xp, r.y, r.yp, r.tau, r.p = mean
     r.Dx, r.Dxp, r.Dy, r.Dyp = _dispersions_from_cov_matrix(cov_matrix)
     sigp2 = cov_matrix[5, 5]
-    r.emit_x, r.alpha_x, r.beta_x, r.gamma_x = _dispersionless_twiss_parameters(
+    r.emit_x, r.alpha_x, r.beta_x, _ = _dispersionless_twiss_parameters(
         cov_matrix[0:2, 0:2],
         r.Dx,
         r.Dxp,
         sigp2
     )
-    r.emit_y, r.alpha_y, r.beta_y, r.gamma_y = _dispersionless_twiss_parameters(
+    r.emit_y, r.alpha_y, r.beta_y, _ = _dispersionless_twiss_parameters(
         cov_matrix[2:4, 2:4],
         r.Dy,
         r.Dyp,
@@ -2164,8 +2255,6 @@ def optics_from_moments(mean, cov_matrix, energy=None):
 
     if energy is not None:
         r.E = energy
-        r.emit_xn = r.emit_x * energy / m_e_GeV
-        r.emit_yn = r.emit_y * energy / m_e_GeV
 
     return r
 

@@ -124,7 +124,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
             if isinstance(vars[i], list):
                 if isinstance(vars[i][0], Twiss) and isinstance(vars[i][1], str):
                     k = vars[i][1]
-                    tw_loc.__dict__[k] = x[i]
+                    setattr(tw_loc, k, x[i])
             if isinstance(vars[i], tuple):
             # all quads strength in tuple varied simultaneously
                 for v in vars[i]:
@@ -163,63 +163,66 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
 
         for e in lat.sequence:
             for tm in e.first_order_tms:
-                tw_loc = tm * tw_loc
+                tw_loc = tm * tw_loc  # apply transfer map
 
-                if 'global' in constr.keys():
-                    for c in constr['global'].keys():
-                        if isinstance(constr['global'][c], list):
-                            v1 = constr['global'][c][1]
-                            if constr['global'][c][0] == '<':
-                                if tw_loc.__dict__[c] > v1:
-                                    err = err + weights(k) * (tw_loc.__dict__[c] - v1) ** 2
-                            if constr['global'][c][0] == '>':
-                                if tw_loc.__dict__[c] < v1:
-                                    err = err + weights(k) * (tw_loc.__dict__[c] - v1) ** 2
-                if 'delta' in constr.keys():
-                    if e in constr['delta'].keys():
-                        tw_k = constr['delta'][e][0]
-                        constr['delta'][e][1] = tw_loc.__dict__[tw_k]
-                if e in ref_hsh.keys():
+                # --- Global constraints ---
+                if 'global' in constr:
+                    for c, rule in constr['global'].items():
+                        if isinstance(rule, list):
+                            op, v1 = rule[0], rule[1]
+                            val = getattr(tw_loc, c)
+
+                            if op == '<' and val > v1:
+                                err += weights(c) * (val - v1) ** 2
+                            elif op == '>' and val < v1:
+                                err += weights(c) * (val - v1) ** 2
+
+                # --- Delta constraint update ---
+                if 'delta' in constr and e in constr['delta']:
+                    tw_k = constr['delta'][e][0]
+                    constr['delta'][e][1] = getattr(tw_loc, tw_k)
+
+                # --- Update reference hash if needed ---
+                if e in ref_hsh:
                     ref_hsh[e] = deepcopy(tw_loc)
 
-                if e in constr.keys():
+                # --- Local constraints ---
+                if e in constr:
+                    for k, rule in constr[e].items():
+                        val = getattr(tw_loc, k)
 
-                    for k in constr[e].keys():
-                        if isinstance(constr[e][k], list):
-                            v1 = constr[e][k][1]
+                        if isinstance(rule, list):
+                            op = rule[0]
+                            v1 = rule[1]
 
-                            if constr[e][k][0] == '<':
-                                if tw_loc.__dict__[k] > v1:
-                                    err = err + weights(k) * (tw_loc.__dict__[k] - v1) ** 2
-                            if constr[e][k][0] == '>':
-                                if tw_loc.__dict__[k] < v1:
-                                    err = err + weights(k) * (tw_loc.__dict__[k] - v1) ** 2
-                            if constr[e][k][0] == 'a<':
-                                if np.abs(tw_loc.__dict__[k]) > v1:
-                                    err = err + weights(k) * (tw_loc.__dict__[k] - v1) ** 2
-                            if constr[e][k][0] == 'a>':
-                                if np.abs(tw_loc.__dict__[k]) < v1:
-                                    err = err + weights(k) * (tw_loc.__dict__[k] - v1) ** 2
-
-                            if constr[e][k][0] == '->':
+                            if op == '<' and val > v1:
+                                err += weights(k) * (val - v1) ** 2
+                            elif op == '>' and val < v1:
+                                err += weights(k) * (val - v1) ** 2
+                            elif op == 'a<' and abs(val) > v1:
+                                err += weights(k) * (abs(val) - v1) ** 2
+                            elif op == 'a>' and abs(val) < v1:
+                                err += weights(k) * (abs(val) - v1) ** 2
+                            elif op == '->':
                                 try:
-                                    if len(constr[e][k]) > 2:
-                                        dv1 = float(constr[e][k][2])
-                                    else:
-                                        dv1 = 0.0
-                                    err += (tw_loc.__dict__[k] - (ref_hsh[v1].__dict__[k] + dv1)) ** 2
+                                    dv1 = float(rule[2]) if len(rule) > 2 else 0.0
+                                    ref_val = getattr(ref_hsh[v1], k)
+                                    err += (val - (ref_val + dv1)) ** 2
+                                    if val < v1:
+                                        err += (val - v1) ** 2
+                                except Exception as ex:
+                                    print(f'Constraint error: rval should precede lval in lattice ({ex})')
 
-                                    if tw_loc.__dict__[k] < v1:
-                                        err = err + (tw_loc.__dict__[k] - v1) ** 2
-                                except:
-                                    print('constraint error: rval should precede lval in lattice')
+                            if val < 0:
+                                err += (val - v1) ** 2
 
-                            if tw_loc.__dict__[k] < 0:
-                                err += (tw_loc.__dict__[k] - v1) ** 2
-                        elif isinstance(constr[e][k], str):
+                        elif isinstance(rule, str):
+                            # handle symbolic constraints if any
                             pass
                         else:
-                            err = err + weights(k) * (constr[e][k] - tw_loc.__dict__[k]) ** 2
+                            # direct comparison
+                            ref_val = rule
+                            err += weights(k) * (ref_val - val) ** 2
         if "total_len" in constr.keys():
             total_len = constr["total_len"]
             err = err + weights('total_len') * (tw_loc.s - total_len) ** 2
@@ -261,7 +264,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
         if vars[i].__class__ == list:
             if vars[i][0].__class__ == Twiss and vars[i][1].__class__ == str:
                 k = vars[i][1]
-                x[i] = tw.__dict__[k]
+                x[i] = getattr(tw, k)
                 # if k in ['beta_x', 'beta_y']:
                 #     x[i] = 10
                 # else:
@@ -297,7 +300,7 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
         if vars[i].__class__ == list:
             if vars[i][0].__class__ == Twiss and vars[i][1].__class__ == str:
                 k = vars[i][1]
-                tw.__dict__[k] = res[i]
+                setattr(tw, k, res[i])
 
     # update MagneticLattice total length in case a Drift length was in list of variables
 
@@ -388,7 +391,7 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
             if vars[i].__class__ == list:
                 if vars[i][0].__class__ == Twiss and vars[i][1].__class__ == str:
                     k = vars[i][1]
-                    tw_loc.__dict__[k] = x[i]
+                    setattr(tw_loc, k, x[i])
             if vars[i].__class__ == tuple:  # all quads strength in tuple varied simultaneously
                 for v in vars[i]:
                     v.k1 = x[i]
@@ -430,71 +433,57 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
         L = 0.
         for e in lat.sequence:
             indx = (np.abs(s - L)).argmin()
-
             L += e.l
             tw_loc = tws_list[indx]
-            if 'global' in constr.keys():
-                # print 'there is a global constraint', constr['global'].keys()
-                for c in constr['global'].keys():
-                    if constr['global'][c].__class__ == list:
-                        # print 'list'
-                        v1 = constr['global'][c][1]
-                        if constr['global'][c][0] == '<':
-                            if tw_loc.__dict__[c] > v1:
-                                err = err + weights(k) * (tw_loc.__dict__[c] - v1) ** 2
-                        if constr['global'][c][0] == '>':
-                            # print '> constr'
-                            if tw_loc.__dict__[c] < v1:
-                                err = err + weights(k) * (tw_loc.__dict__[c] - v1) ** 2
 
-            if e in ref_hsh.keys():
-                # print 'saving twiss for', e.id
+            # --- Global constraints ---
+            if 'global' in constr:
+                for c, rule in constr['global'].items():
+                    if isinstance(rule, list):
+                        op, v1 = rule[0], rule[1]
+                        val = getattr(tw_loc, c)
+
+                        if op == '<' and val > v1:
+                            err += weights(c) * (val - v1) ** 2
+                        elif op == '>' and val < v1:
+                            err += weights(c) * (val - v1) ** 2
+
+            # --- Store reference ---
+            if e in ref_hsh:
                 ref_hsh[e] = deepcopy(tw_loc)
 
-            if e in constr.keys():
+            # --- Local constraints ---
+            if e in constr:
+                for k, rule in constr[e].items():
+                    val = getattr(tw_loc, k)
 
-                for k in constr[e].keys():
-                    # print(k)
-                    if constr[e][k].__class__ == list:
-                        v1 = constr[e][k][1]
+                    if isinstance(rule, list):
+                        op = rule[0]
+                        v1 = rule[1]
 
-                        if constr[e][k][0] == '<':
-                            if tw_loc.__dict__[k] > v1:
-                                err = err + weights(k) * (tw_loc.__dict__[k] - v1) ** 2
-                        if constr[e][k][0] == '>':
-                            if tw_loc.__dict__[k] < v1:
-                                err = err + weights(k) * (tw_loc.__dict__[k] - v1) ** 2
-                        if constr[e][k][0] == 'a<':
-                            if np.abs(tw_loc.__dict__[k]) > v1:
-                                err = err + weights(k) * (tw_loc.__dict__[k] - v1) ** 2
-                        if constr[e][k][0] == 'a>':
-                            if np.abs(tw_loc.__dict__[k]) < v1:
-                                err = err + weights(k) * (tw_loc.__dict__[k] - v1) ** 2
-
-                        if constr[e][k][0] == '->':
+                        if op == '<' and val > v1:
+                            err += weights(k) * (val - v1) ** 2
+                        elif op == '>' and val < v1:
+                            err += weights(k) * (val - v1) ** 2
+                        elif op == 'a<' and abs(val) > v1:
+                            err += weights(k) * (abs(val) - v1) ** 2
+                        elif op == 'a>' and abs(val) < v1:
+                            err += weights(k) * (abs(val) - v1) ** 2
+                        elif op == '->':
                             try:
-                                # print 'huh', k, e.id, float(constr[e][k][2])
+                                dv1 = float(rule[2]) if len(rule) > 2 else 0.0
+                                ref_val = getattr(ref_hsh[v1], k)
+                                err += (val - (ref_val + dv1)) ** 2
+                                if val < v1:
+                                    err += (val - v1) ** 2
+                            except Exception as ex:
+                                print(f'Constraint error: rval should precede lval in lattice ({ex})')
 
-                                if len(constr[e][k]) > 2:
-                                    dv1 = float(constr[e][k][2])
-                                else:
-                                    dv1 = 0.0
-                                # print 'weiter'
-                                err += (tw_loc.__dict__[k] - (ref_hsh[v1].__dict__[k] + dv1)) ** 2
-
-                                if tw_loc.__dict__[k] < v1:
-                                    err = err + (tw_loc.__dict__[k] - v1) ** 2
-                            except:
-                                print('constraint error: rval should precede lval in lattice')
-
-                        if tw_loc.__dict__[k] < 0:
-                            # print 'negative constr (???)'
-                            err += (tw_loc.__dict__[k] - v1) ** 2
+                        if val < 0:
+                            err += (val - v1) ** 2
 
                     else:
-                        # print "safaf", constr[e][k] , tw_loc.__dict__[k], k, e.id, x
-                        err = err + weights(k) * (constr[e][k] - tw_loc.__dict__[k]) ** 2
-                        # print err
+                        err += weights(k) * (rule - val) ** 2
         for v in vars:
             print(v.id, v.k1)
         if "total_len" in constr.keys():

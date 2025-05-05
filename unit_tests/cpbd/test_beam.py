@@ -67,8 +67,8 @@ def test_optics_from_moments():
 
 @pytest.fixture
 def a_twiss_dictionary():
-    optics_dict = {'emit_x': 0.34763928534510036,
-                   'emit_y': 0.6790349802898668,
+    optics_dict = {'emit_x': 0.00010074980830453777,
+                   'emit_y': 0.00022293607387113872,
                    'emit_xn': 0.10046549579167263,
                    'emit_yn': 0.22230695589625382,
                    'eigemit_1': 0.4896032635908605,
@@ -77,8 +77,6 @@ def a_twiss_dictionary():
                    'beta_y': 0.09036354359497034,
                    'alpha_x': 0.9597776593035088,
                    'alpha_y': 0.8390564421996655,
-                   'gamma_x': 0.14540121338731515,
-                   'gamma_y': 0.7244156996636956,
                    'Dx': 0.010293384598673794,
                    'Dy': 0.8162183638949975,
                    'Dxp': 0.4672056535332062,
@@ -150,8 +148,6 @@ def test_get_twiss_from_slice():
     tws0.beta_y = 15
     tws0.alpha_x = 5
     tws0.alpha_y = 2
-    tws0.gamma_x = (1 + tws0.alpha_x ** 2) / tws0.beta_x
-    tws0.gamma_y = (1 + tws0.alpha_y ** 2) / tws0.beta_y
     tws0.emit_x = 1e-6 / gamma
     tws0.emit_y = 0.7e-6 / gamma
 
@@ -159,8 +155,8 @@ def test_get_twiss_from_slice():
                                   chirp=0, tws=tws0, nparticles=1000000)
     tws1 = parray_init.get_twiss_from_slice(slice='Imax')
 
-    assert np.isclose([tws0.beta_x, tws0.beta_y, tws0.alpha_x, tws0.alpha_y, tws0.gamma_x, tws0.gamma_y, tws0.emit_x, tws0.emit_y, tws0.E],
-                      [tws1.beta_x, tws1.beta_y, tws1.alpha_x, tws1.alpha_y, tws1.gamma_x, tws1.gamma_y, tws1.emit_x, tws1.emit_y, tws1.E],
+    assert np.isclose([tws0.beta_x, tws0.beta_y, tws0.alpha_x, tws0.alpha_y,  tws0.emit_x, tws0.emit_y, tws0.E],
+                      [tws1.beta_x, tws1.beta_y, tws1.alpha_x, tws1.alpha_y,  tws1.emit_x, tws1.emit_y, tws1.E],
                       rtol=1e-01, atol=1e-05).all()
 
 def test_parray_I():
@@ -171,8 +167,6 @@ def test_parray_I():
     tws0.beta_y = 15
     tws0.alpha_x = 5
     tws0.alpha_y = 2
-    tws0.gamma_x = (1 + tws0.alpha_x ** 2) / tws0.beta_x
-    tws0.gamma_y = (1 + tws0.alpha_y ** 2) / tws0.beta_y
     tws0.emit_x = 1e-6 / gamma
     tws0.emit_y = 0.7e-6 / gamma
 

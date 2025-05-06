@@ -29,8 +29,6 @@ def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     tw2m.beta_y = betaMax[0]
     tw2m.alpha_x = 0.0
     tw2m.alpha_y = 0.0
-    tw2m.gamma_x = (1 + tw2m.alpha_x * tw2m.alpha_x) / tw2m.beta_x
-    tw2m.gamma_y = (1 + tw2m.alpha_y * tw2m.alpha_y) / tw2m.beta_y
 
     
     #k1 += 0.5

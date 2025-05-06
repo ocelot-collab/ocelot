@@ -95,7 +95,6 @@ for elem in lat.sequence:
         elem.tilt = 0
     if elem.__class__ == Quadrupole:
         elem.k1 *= -1
-lat.update_transfer_maps()
 
 axs[0, 1].set(title="Sext ON. Bend in X plane. X plane", xlabel=r"$x$, $\mu m$", ylabel=r"$p_x$, $\mu rad$")
 axs[1, 1].set(title="Sext ON. Bend in X plane. Y plane", xlabel=r"$y$, $\mu m$", ylabel=r"$p_y$, $\mu rad$")
@@ -108,8 +107,6 @@ for i in range(3):
     tws0.beta_y = dl.tws0.beta_x
     tws0.alpha_x =dl.tws0.alpha_y
     tws0.alpha_y =dl.tws0.alpha_x
-    tws0.gamma_x =dl.tws0.gamma_y
-    tws0.gamma_y =dl.tws0.gamma_x
 
 
     tws = track_though_dl(emitt=3.9308e-09, energy_shift=energy_shift, tws0=tws0, energy=0.13, nparticles=100000)
@@ -131,7 +128,6 @@ for i in range(3):
 for elem in lat.sequence:
     if elem.__class__ == Sextupole:
         elem.k2 = 0
-lat.update_transfer_maps()
 
 axs[0, 2].set(title="Sext OFF. Bend in X plane. X plane", xlabel=r"$x$, $\mu m$", ylabel=r"$p_x$, $\mu rad$")
 axs[1, 2].set(title="Sext OFF. Bend in X plane. Y plane", xlabel=r"$y$, $\mu m$", ylabel=r"$p_y$, $\mu rad$")
@@ -142,10 +138,8 @@ for i in range(3):
     tws0 = Twiss()
     tws0.beta_x = dl.tws0.beta_y
     tws0.beta_y = dl.tws0.beta_x
-    tws0.alpha_x =dl.tws0.alpha_y
-    tws0.alpha_y =dl.tws0.alpha_x
-    tws0.gamma_x =dl.tws0.gamma_y
-    tws0.gamma_y =dl.tws0.gamma_x
+    tws0.alpha_x = dl.tws0.alpha_y
+    tws0.alpha_y = dl.tws0.alpha_x
 
 
     tws = track_though_dl(emitt=3.9308e-09, energy_shift=energy_shift, tws0=tws0, energy=0.13, nparticles=100000)

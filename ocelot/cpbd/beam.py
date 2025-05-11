@@ -228,6 +228,19 @@ class Twiss:
         else:
             self._emit_yn = value * rb
 
+    @property
+    def sigma_x(self):
+        if self.emit_x <= 0 or self.beta_x <= 0:
+            return 0
+        return float(np.sqrt(self.emit_x * self.beta_x))
+
+    @property
+    def sigma_y(self):
+        if self.emit_y <= 0 or self.beta_y <= 0:
+            return 0
+        return float(np.sqrt(self.emit_y * self.beta_y))
+
+
     def multiply_with_tm(self, tm: 'TransferMap', length):
         tws = self.map_x_twiss(tm)
         tws.s = self.s + length
@@ -1158,6 +1171,31 @@ class ParticleArray:
     def copy(self) -> TypeParticleArray:
         """Return a copy of this ParticleArray instance."""
         return deepcopy(self)
+
+    def get_twiss(self, tws_i=None, bounds=None, slice=None):
+        """
+        Calculate Twiss parameters from the ParticleArray.
+
+        This method computes the statistical beam parameters (Twiss) from the particle distribution,
+        optionally using dispersion correction, bounding filters, and a reference slice definition.
+
+        Parameters:
+        - tws_i : Twiss, optional
+            Design Twiss parameters used for dispersion correction. Defaults to None (no correction).
+        - bounds : list, optional
+            Specifies the region of interest as [left_bound, right_bound], in units of std(tau).
+            Only particles within these longitudinal bounds are considered.
+        - slice : str or None, optional
+            Defines how to choose the reference slice when `bounds` is used:
+            - None (default): Uses the central slice at z0 = mean(tau).
+            - "Imax": Uses the slice where the current is maximal.
+
+        Returns:
+        - Twiss
+            The Twiss parameters computed from the filtered particle array.
+        """
+        tws = get_envelope(self, tws_i=tws_i, bounds=bounds, slice=slice)
+        return tws
 
     def get_twiss_from_slice(self, slice="Imax", nparts_in_slice=5000, smooth_param=0.05, filter_base=2, filter_iter=2):
         """

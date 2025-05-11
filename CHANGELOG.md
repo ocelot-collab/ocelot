@@ -56,13 +56,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - New wake table for the wakefields of parallel plate structure based on analytical results, `WakeTableParallelPlate_origin`, `WakeTableParallelPlate`, 
   `WakeTableParallelPlate3_origin`, `WakeTableParallelPlate3`. The waketables with `origin` use point charge wake at the vicinity of the drive particle, which is the upper limit for wake. 
   The other two waketables contain exponential decay term. The waketables with `3` provide third order Taylor expansion and should be used with `Wake3`.
-  
+
+- added ParticleArray.get_twiss() method which calls get_envelop()
+- Twiss recalculates gamma_x/y and emit_x/y automatically
+- added link between quads to match function, e.g. vars = [{QF: 1.0, QD: -1.0}],
   
 >>>>>>> 6fdd98a24d013057498abd8e9ccf734939ef30e7
 
 ### Fixed
 
 - fixed bugs in matching function if Drift length is in list of variables. 
+- fixed bug with match function delta constrain 
+- 
 
 ### Removed
 

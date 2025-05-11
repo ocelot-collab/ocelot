@@ -186,6 +186,7 @@ def extrapolation_low(new_frequencies, sorted_frequencies, sorted_formfactors, s
     #scan to fnd the first time 3 smaller 0.8
     n_hits = 0
     i = 1
+    #print(channels, sorted_formfactors, ff_value)
     while n_hits < 2:
         if smallff_channels[i] == smallff_channels[i - 1] + 1:
             #print(smallff_channels[i])

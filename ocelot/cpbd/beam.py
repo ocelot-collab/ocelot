@@ -54,6 +54,18 @@ class Twiss:
         self._emit_yn = kwargs.get("emit_yn", 0.)
         self._pending_emit_x = None
         self._pending_emit_y = None
+        self._E = kwargs.get("E", 0.0)  # ref the beam energy in [GeV]
+
+        # Apply emit_x and emit_y properly (only if present!)
+        if "emit_x" in kwargs:
+            self.emit_x = kwargs["emit_x"]
+        if "emit_y" in kwargs:
+            self.emit_y = kwargs["emit_y"]
+
+        if "emit_xn" in kwargs:
+            self._emit_xn = kwargs["emit_xn"]
+        if "emit_yn" in kwargs:
+            self._emit_yn = kwargs["emit_yn"]
 
         self.eigemit_1 = 0.
         self.eigemit_2 = 0.
@@ -71,7 +83,7 @@ class Twiss:
         # parameters below in the most cases are calculated from the ParticleArray object
         # during tracking (see func 'get_envelop()')
 
-        self._E = kwargs.get("E", 0.0)  # ref the beam energy in [GeV]
+
         self.s = kwargs.get("s", 0.0)  # position along the reference trajectory [m]
         self.q = kwargs.get("q", 0.0)  # charge of the whole beam [C]
 
@@ -314,6 +326,8 @@ class Twiss:
         val = ""
         val += "emit_x  = " + str(self.emit_x) + "\n"
         val += "emit_y  = " + str(self.emit_y) + "\n"
+        val += "emit_xn  = " + str(self.emit_xn) + "\n"
+        val += "emit_yn  = " + str(self.emit_yn) + "\n"
         val += "beta_x  = " + str(self.beta_x) + "\n"
         val += "beta_y  = " + str(self.beta_y) + "\n"
         val += "alpha_x = " + str(self.alpha_x) + "\n"

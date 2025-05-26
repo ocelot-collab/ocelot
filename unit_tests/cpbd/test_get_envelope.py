@@ -32,6 +32,8 @@ def test_twiss_dispersion_correction():
     # Assert that tracked Twiss parameters are close to reference (dispersion-corrected)
     np.testing.assert_allclose(tws_track_end.beta_x, tws_ref.beta_x, rtol=0.01)
     np.testing.assert_allclose(tws_track_end.beta_y, tws_ref.beta_y, rtol=0.01)
+    np.testing.assert_allclose(tws_track_end.Dx, tws_ref.Dx, rtol=0.01)
+    np.testing.assert_allclose(tws_track_end.Dxp, tws_ref.Dxp, rtol=0.01)
     np.testing.assert_allclose(tws_track_end.emit_xn, tws_ref.emit_xn, rtol=0.02)
     np.testing.assert_allclose(tws_track_end.emit_yn, tws_ref.emit_yn, rtol=0.02)
 

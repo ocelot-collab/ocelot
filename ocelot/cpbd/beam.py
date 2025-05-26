@@ -1331,18 +1331,20 @@ def get_envelope(p_array, tws_i=None, bounds=None, slice=None, auto_disp=False):
             mean_y, mean_py = np.mean(y), np.mean(py)
             mean_p = tws.p
             var_p = np.var(p)
-            Dx = np.mean((p - mean_p) * (x - mean_x)) / var_p
-            Dxp = np.mean((p - mean_p) * (px - mean_px)) / var_p
-            Dy = np.mean((p - mean_p) * (y - mean_y)) / var_p
-            Dyp = np.mean((p - mean_p) * (py - mean_py)) / var_p
-            tws_i = Twiss(Dx=Dx, Dy=Dy, Dxp=Dxp, Dyp=Dyp)
-        else:
-            tws_i = Twiss()
+            tws.Dx = np.mean((p - mean_p) * (x - mean_x)) / var_p
+            tws.Dxp = np.mean((p - mean_p) * (px - mean_px)) / var_p
+            tws.Dy = np.mean((p - mean_p) * (y - mean_y)) / var_p
+            tws.Dyp = np.mean((p - mean_p) * (py - mean_py)) / var_p
+    else:
+        tws.Dx = tws_i.Dx
+        tws.Dxp = tws_i.Dxp
+        tws.Dy = tws_i.Dy
+        tws.Dyp = tws_i.Dyp
 
-    dx = tws_i.Dx * p
-    dy = tws_i.Dy * p
-    dpx = tws_i.Dxp * p
-    dpy = tws_i.Dyp * p
+    dx = tws.Dx * p
+    dy = tws.Dy * p
+    dpx = tws.Dxp * p
+    dpy = tws.Dyp * p
 
     x = x - dx
     px = px - dpx

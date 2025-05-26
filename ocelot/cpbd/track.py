@@ -434,7 +434,8 @@ def track(
         bounds=None,
         return_df=False,
         overwrite_progress=True,
-        slice=None
+        slice=None,
+        twiss_disp_correction=False
         ) -> Tuple[Union[List[Twiss], pd.DataFrame], ParticleArray]:
 
     """
@@ -446,13 +447,14 @@ def track(
     :param print_progress: True, print tracking progress
     :param calc_tws: True, during the tracking twiss parameters are calculated from the beam distribution
     :param bounds: None, optional, [left_bound, right_bound] - bounds in units of std(p_array.tau())
+    :param twiss_disp_correction: bool, optional, If True, estimate and subtract linear dispersion from the statistics of the particle array. Default is False.
     :return: twiss_list, ParticleArray. In case calc_tws=False, twiss_list is list of empty Twiss classes.
     """
     if navi is None:
         navi = Navigator(lattice)
     if navi.lat is not lattice:
         _logger.warning("MagneticLattice is not the same in lattice argument and in Navigator")
-    tw0 = get_envelope(p_array, bounds=bounds, slice=slice) if calc_tws else Twiss()
+    tw0 = get_envelope(p_array, bounds=bounds, slice=slice, auto_disp=twiss_disp_correction) if calc_tws else Twiss()
     tws_track = [tw0]
     L = 0.
 
@@ -469,7 +471,7 @@ def track(
         if p_array.n == 0:
             _logger.debug(" Tracking stop: p_array.n = 0")
             return tws_track, p_array
-        tw = get_envelope(p_array, bounds=bounds, slice=slice) if calc_tws else Twiss()
+        tw = get_envelope(p_array, bounds=bounds, slice=slice, auto_disp=twiss_disp_correction) if calc_tws else Twiss()
         L += dz
         tw.s += L
         tws_track.append(tw)

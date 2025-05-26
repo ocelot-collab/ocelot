@@ -260,44 +260,32 @@ class Twiss:
 
     @staticmethod
     def track(R, tws0):
+        R00, R01, R10, R11 = R[0, 0], R[0, 1], R[1, 0], R[1, 1]
+        R22, R23, R32, R33 = R[2, 2], R[2, 3], R[3, 2], R[3, 3]
+        R05, R15, R25, R35 = R[0, 5], R[1, 5], R[2, 5], R[3, 5]
+
         tws = Twiss(tws0)
         tws.p = tws0.p
-        tws.beta_x = R[0, 0] * R[0, 0] * tws0.beta_x - 2 * R[0, 1] * R[0, 0] * tws0.alpha_x + R[0, 1] * R[
-            0, 1] * tws0.gamma_x
-        # tws.beta_x = ((M[0,0]*tws.beta_x - M[0,1]*self.alpha_x)**2 + M[0,1]*M[0,1])/self.beta_x
-        tws.beta_y = R[2, 2] * R[2, 2] * tws0.beta_y - 2 * R[2, 3] * R[2, 2] * tws0.alpha_y + R[2, 3] * R[
-            2, 3] * tws0.gamma_y
-        # tws.beta_y = ((M[2,2]*tws.beta_y - M[2,3]*self.alpha_y)**2 + M[2,3]*M[2,3])/self.beta_y
-        tws.alpha_x = -R[0, 0] * R[1, 0] * tws0.beta_x + (R[0, 1] * R[1, 0] + R[1, 1] * R[0, 0]) * tws0.alpha_x - R[
-            0, 1] * R[
-                          1, 1] * tws0.gamma_x
-        tws.alpha_y = -R[2, 2] * R[3, 2] * tws0.beta_y + (R[2, 3] * R[3, 2] + R[3, 3] * R[2, 2]) * tws0.alpha_y - R[
-            2, 3] * R[
-                          3, 3] * tws0.gamma_y
 
+        tws.beta_x = R00 ** 2 * tws0.beta_x - 2 * R00 * R01 * tws0.alpha_x + R01 ** 2 * tws0.gamma_x
+        tws.beta_y = R22 ** 2 * tws0.beta_y - 2 * R22 * R23 * tws0.alpha_y + R23 ** 2 * tws0.gamma_y
 
-        tws.Dx = R[0, 0] * tws0.Dx + R[0, 1] * tws0.Dxp + R[0, 5]
-        tws.Dy = R[2, 2] * tws0.Dy + R[2, 3] * tws0.Dyp + R[2, 5]
+        tws.alpha_x = -R00 * R10 * tws0.beta_x + (R01 * R10 + R11 * R00) * tws0.alpha_x - R01 * R11 * tws0.gamma_x
+        tws.alpha_y = -R22 * R32 * tws0.beta_y + (R23 * R32 + R33 * R22) * tws0.alpha_y - R23 * R33 * tws0.gamma_y
 
-        tws.Dxp = R[1, 0] * tws0.Dx + R[1, 1] * tws0.Dxp + R[1, 5]
-        tws.Dyp = R[3, 2] * tws0.Dy + R[3, 3] * tws0.Dyp + R[3, 5]
-        denom_x = R[0, 0] * tws0.beta_x - R[0, 1] * tws0.alpha_x
-        if denom_x == 0.:
-            d_mux = np.pi / 2. * R[0, 1] / np.abs(R[0, 1])
-        else:
-            d_mux = np.arctan(R[0, 1] / denom_x)
+        tws.Dx = R00 * tws0.Dx + R01 * tws0.Dxp + R05
+        tws.Dxp = R10 * tws0.Dx + R11 * tws0.Dxp + R15
+        tws.Dy = R22 * tws0.Dy + R23 * tws0.Dyp + R25
+        tws.Dyp = R32 * tws0.Dy + R33 * tws0.Dyp + R35
 
-        if d_mux < 0:
-            d_mux += np.pi
+        d_mux = np.arctan2(R01, R00 * tws0.beta_x - R01 * tws0.alpha_x)
+        if d_mux < 0: d_mux += np.pi
         tws.mux = tws0.mux + d_mux
-        denom_y = R[2, 2] * tws0.beta_y - R[2, 3] * tws0.alpha_y
-        if denom_y == 0.:
-            d_muy = np.pi / 2. * R[2, 3] / np.abs(R[2, 3])
-        else:
-            d_muy = np.arctan(R[2, 3] / denom_y)
-        if d_muy < 0:
-            d_muy += np.pi
+
+        d_muy = np.arctan2(R23, R22 * tws0.beta_y - R23 * tws0.alpha_y)
+        if d_muy < 0: d_muy += np.pi
         tws.muy = tws0.muy + d_muy
+
         return tws
 
     def map_x_twiss(self, tm):
@@ -332,8 +320,6 @@ class Twiss:
         val += "beta_y  = " + str(self.beta_y) + "\n"
         val += "alpha_x = " + str(self.alpha_x) + "\n"
         val += "alpha_y = " + str(self.alpha_y) + "\n"
-        val += "gamma_x = " + str(self.gamma_x) + "\n"
-        val += "gamma_y = " + str(self.gamma_y) + "\n"
         val += "Dx      = " + str(self.Dx) + "\n"
         val += "Dy      = " + str(self.Dy) + "\n"
         val += "Dxp     = " + str(self.Dxp) + "\n"
@@ -1186,7 +1172,7 @@ class ParticleArray:
         """Return a copy of this ParticleArray instance."""
         return deepcopy(self)
 
-    def get_twiss(self, tws_i=None, bounds=None, slice=None):
+    def get_twiss(self, tws_i=None, bounds=None, slice=None, auto_disp=False):
         """
         Calculate Twiss parameters from the ParticleArray.
 
@@ -1203,12 +1189,15 @@ class ParticleArray:
             Defines how to choose the reference slice when `bounds` is used:
             - None (default): Uses the central slice at z0 = mean(tau).
             - "Imax": Uses the slice where the current is maximal.
+         - auto_disp : bool, optional
+            If True and tws_i is None, estimate and subtract linear dispersion from the statistics of the particle array.
+            Default is False.
 
         Returns:
         - Twiss
             The Twiss parameters computed from the filtered particle array.
         """
-        tws = get_envelope(self, tws_i=tws_i, bounds=bounds, slice=slice)
+        tws = get_envelope(self, tws_i=tws_i, bounds=bounds, slice=slice, auto_disp=auto_disp)
         return tws
 
     def get_twiss_from_slice(self, slice="Imax", nparts_in_slice=5000, smooth_param=0.05, filter_base=2, filter_iter=2):
@@ -1275,26 +1264,32 @@ def recalculate_ref_particle(p_array):
     return p_array
 
 
-def get_envelope(p_array, tws_i=None, bounds=None, slice=None):
+def get_envelope(p_array, tws_i=None, bounds=None, slice=None, auto_disp=False):
     """
     Calculate Twiss parameters from a ParticleArray.
 
-    This function processes particle data to compute Twiss parameters, optionally considering bounds
-    based on standard deviations of the particle distribution and a reference slice for calculations.
+    This function processes particle data to compute Twiss parameters, with optional dispersion correction
+    and selection of a particle subset.
 
-    :param p_array: ParticleArray
-        The input particle array containing particle properties such as position and momentum.
-    :param tws_i: Twiss (optional)
-        Design Twiss parameters for dispersion correction. Defaults to None.
-    :param bounds: list (optional)
-        A list specifying bounds as `[left_bound, right_bound]` in units of std(p_array.tau()).
-        If provided, only particles within these bounds are considered.
-    :param slice: str or None (optional)
-        Reference slice definition when `bounds` is specified:
-        - None (default): Takes the central slice with z0 = np.mean(tau).
-        - "Imax": Defines the reference slice at the position of maximum beam current.
-    :return: Twiss
-        Computed Twiss parameters for the filtered particle array.
+    Parameters
+    ----------
+    p_array : ParticleArray
+        Input particle array containing phase-space coordinates.
+    tws_i : Twiss, optional
+        Reference Twiss parameters for dispersion correction. If None and auto_disp is True,
+        dispersion is estimated from the particle data. Default is None.
+    bounds : list, optional
+        Bounds as [left, right] in units of std(p_array.tau()) for selecting particles. Default is None.
+    slice : str or None, optional
+        Reference slice when bounds is set. If None, uses mean(tau). If 'Imax', uses maximum current slice.
+    auto_disp : bool, optional
+        If True and tws_i is None, estimate and subtract linear dispersion from the statistics of the particle array.
+        Default is False.
+
+    Returns
+    -------
+    Twiss
+        Computed Twiss parameters for the (optionally filtered and corrected) particle array.
     """
 
     tau = p_array.tau()
@@ -1323,6 +1318,7 @@ def get_envelope(p_array, tws_i=None, bounds=None, slice=None):
     tws = Twiss()
     tws.E = np.copy(p_array.E)
     tws.q = np.sum(p_array.q_array)
+    tws.p = np.mean(p)
 
     # if less than 3 particles are left in the ParticleArray - return default (zero) Twiss()
     if len(x) < 3:
@@ -1330,7 +1326,18 @@ def get_envelope(p_array, tws_i=None, bounds=None, slice=None):
         return tws
 
     if tws_i is None:
-        tws_i = Twiss()
+        if auto_disp:
+            mean_x, mean_px = np.mean(x), np.mean(px)
+            mean_y, mean_py = np.mean(y), np.mean(py)
+            mean_p = tws.p
+            var_p = np.var(p)
+            Dx = np.mean((p - mean_p) * (x - mean_x)) / var_p
+            Dxp = np.mean((p - mean_p) * (px - mean_px)) / var_p
+            Dy = np.mean((p - mean_p) * (y - mean_y)) / var_p
+            Dyp = np.mean((p - mean_p) * (py - mean_py)) / var_p
+            tws_i = Twiss(Dx=Dx, Dy=Dy, Dxp=Dxp, Dyp=Dyp)
+        else:
+            tws_i = Twiss()
 
     dx = tws_i.Dx * p
     dy = tws_i.Dy * p
@@ -1354,7 +1361,7 @@ def get_envelope(p_array, tws_i=None, bounds=None, slice=None):
     tws.px = np.mean(px)
     tws.py = np.mean(py)
     tws.tau = np.mean(tau)
-    tws.p = np.mean(p)
+
 
     if ne_flag:
         tw_x = tws.x

@@ -13,6 +13,9 @@ from ocelot.common.globals import *
 from ocelot.cpbd.beam import s_to_cur, generate_parray
 from ocelot.cpbd.wake3D import Wake, WakeTableDechirperOffAxis
 import ocelot.utils.image_analysis as oim
+from ocelot.cpbd.beam import interp1, slice_analysis, simple_filter
+import matplotlib.pyplot as plt
+from ocelot.gui import *
 
 
 def image2distrib(image, n_particles=200000):
@@ -73,8 +76,6 @@ def image2distrib_v2(image, n_particles=200000):
     return x_distr, y_distr
 
 
-
-
 def current_processing(x, y, nbins=250, threshold=0.01, normilize=True):
     """
     The function processes the beam current (or density distribution or screen projection).
@@ -103,7 +104,7 @@ def current_processing(x, y, nbins=250, threshold=0.01, normilize=True):
     y_proj[0] = 0
     y_proj[-1] = 0
     if normilize:
-        y_proj = y_proj / np.trapz(y_proj, x_proj)
+        y_proj = y_proj / np.trapezoid(y_proj, x_proj)
 
     x_proj -= x_proj[0]
     return x_proj, y_proj
@@ -278,6 +279,7 @@ def dchirper_recon_RK(img, t_crisp, y_crisp, img_mask_thresh=0.03, img_sigma=3, 
     :return: (x_distrib_transformed, y_distrib), (x_crisp, y_crisp), image_processed, (x_transf_curve, y_transf_curve)
     """
     if not is_image_processed:
+
         img = oim.simple_filter_and_mask(img, sigma=img_sigma, threshold=img_mask_thresh)
 
         img = oim.crop_2d(img, threshold=img_crop_thresh, hor_margin=[5, 5], ver_margin=[5, 5])
@@ -354,6 +356,59 @@ def get_img_from_distr(x, y, nbins_x=800, nbins_y=500):
     y_px_size = (yedges[-1] - yedges[0]) / nbins_y
     x_px_size = (xedges[-1] - xedges[0]) / nbins_x
     return img, x_px_size, y_px_size
+
+
+def slice_energy_analysis(z, p, nparts_in_slice=500, filter_base=2, filter_iter=2):
+    """
+    Perform slice-based energy analysis on a particle distribution.
+
+    This function calculates the slice mean energy and energy spread from
+    longitudinal positions `z` and momenta `p`. It applies a smoothing filter
+    to the results and interpolates them to a regular grid.
+
+    Parameters:
+    -----------
+    z : array-like
+        Longitudinal positions of particles (in meters).
+    p : array-like
+        Momenta of particles (in MeV/c).
+    nparts_in_slice : int, optional
+        Number of particles per slice for slice analysis. Default is 500.
+    filter_base : int, optional
+        Base of the simple smoothing filter. Default is 2.
+    filter_iter : int, optional
+        Number of iterations for the smoothing filter. Default is 2.
+
+    Returns:
+    --------
+    s : ndarray
+        Uniformly spaced longitudinal positions for the output (in meters).
+    se : ndarray
+        Slice energy spread (in MeV) interpolated and smoothed.
+    me : ndarray
+        Slice mean energy (in MeV) interpolated and smoothed.
+    """
+    n = 100
+    pc_1 = np.sqrt(p**2 - m_e_MeV**2)  # Convert p to kinetic energy [MeV/c]
+
+    # Perform slice analysis (energy in eV)
+    _, mEs, _, _, mEsEs, _ = slice_analysis(z, pc_1 * 1e6, nparts_in_slice)
+
+    # Unique z positions
+    z = np.unique(z)
+    s = np.linspace(z.min(), z.max(), num=n)
+
+    # Compute mean energy and energy spread
+    mE = mEs  # mean energy in eV
+    sE = np.sqrt(mEsEs)  # energy spread in eV
+
+    # Interpolate to regular grid and convert to MeV
+    se = interp1(z, sE, s)
+    me = interp1(z, mE, s)
+    se = simple_filter(se, filter_base, filter_iter) * 1e-6
+    me = simple_filter(me, filter_base, filter_iter) * 1e-6
+
+    return s, se, me
 
 
 def track_1D(distance, R34, s_coord, y_scr_arr, charge=250e-12, energy=14, beta_y=5, emit=1e-6):
@@ -442,13 +497,11 @@ def track_6D(distance, R, s_coord, p_coord, tws_ws, y_scr_arr, charge):
     B = s_to_cur(s_coord, sigma=0.1 * np.std(s_coord), q0=charge, v=speed_of_light)
 
     x, Wd = ws.get_dipole_wake(current_profile=B)
-
     p_array = generate_parray(tws=tws_ws, charge=charge, nparticles=len(s_coord), chirp=0.0, energy=tws_ws.E,
                               sigma_tau=np.std(s_coord))
 
     p_array.tau()[:] = s_coord[:]
     p_array.p()[:] = p_coord[:] / (tws_ws.E * 1000)
-
     f_transform = interpolate.interp1d(x, Wd / (tws_ws.E * 1e9), fill_value="extrapolate")
     p_array.py()[:] += f_transform(s_coord)[:]
     a = np.dot(R, p_array.rparticles)
@@ -458,13 +511,13 @@ def track_6D(distance, R, s_coord, p_coord, tws_ws, y_scr_arr, charge):
 
     # normalization
     g_track = interpolate.interp1d(bin_edges - bin_edges[0], hist, fill_value=(0, 0), bounds_error=False)
-    g_tr = g_track(y_scr_arr) / np.trapz(g_track(y_scr_arr), y_scr_arr)
+    g_tr = g_track(y_scr_arr) / np.trapezoid(g_track(y_scr_arr), y_scr_arr)
 
     return g_tr
 
 
 def find_distance_to_corrugated_plate_6D(s_coord, p_coord, img_proc,
-                                         x_px_size, tws_ws_start, R, charge=250e-12, align_peaks=False):
+                                         x_px_size, tws_ws_start, R, charge=250e-12, align_peaks=False, init_dist=500e-6):
     """
 
     :param s_coord: s coordinates of the beam before corrugated plate [m]
@@ -475,6 +528,7 @@ def find_distance_to_corrugated_plate_6D(s_coord, p_coord, img_proc,
     :param R:
     :param charge:
     :param align_peaks:
+    :param init_dist: initial distance
     :return:
     """
     img_proj = oim.get_image_proj(img_proc)
@@ -487,7 +541,7 @@ def find_distance_to_corrugated_plate_6D(s_coord, p_coord, img_proc,
             return 100000
         proj = oim.get_image_proj(img_proc)
         g_img = interpolate.interp1d(np.arange(len(proj)) * x_px_size, proj, fill_value=(0, 0), bounds_error=False)
-        g_img_n = g_img(y_scr_arr) / np.trapz(g_img(y_scr_arr), y_scr_arr)
+        g_img_n = g_img(y_scr_arr) / np.trapezoid(g_img(y_scr_arr), y_scr_arr)
 
         g_track = track_6D(distance, R=R, s_coord=s_coord, p_coord=p_coord, tws_ws=tws_ws_start,
                            y_scr_arr=y_scr_array, charge=charge)
@@ -509,7 +563,7 @@ def find_distance_to_corrugated_plate_6D(s_coord, p_coord, img_proc,
         res = np.sqrt(np.sum((g_track - g_img_n) ** 2))  #+ 10000*np.abs(max(g_track) - max(g_img_n))
         return res
 
-    res = fmin(err_func, x0=800e-6, args=(img_proc, x_px_size, y_scr_array), xtol=0.1, ftol=0.1, maxiter=50)
+    res = fmin(err_func, x0=init_dist, args=(img_proc, x_px_size, y_scr_array), xtol=0.1, ftol=0.1, maxiter=50)
 
     return res[0]
 
@@ -613,9 +667,79 @@ def subtract_long_wake(s_coord, p_coord, dist):
     """
 
     (x, I), (x_w, Wl) = calculate_long_wake(s_coord, dist)
-
     energy_kick = interpolate.interp1d(x_w, Wl * 1e-6, fill_value="extrapolate")  # wake originally is in [eV]
     y = p_coord - energy_kick(s_coord)
 
     return s_coord, y
 
+# plotting
+def plot_image_reconst_and_slice(img_proc, y_px_size, e_px_size_in_MeV,
+                                      img_x_tran, img_y_tran,
+                                      t_crisp, y_crisp,
+                                      s_slice=None, me_slice=None,
+                                      colormap="nipy_spectral"):
+    """
+    Plots processed image, transformed density, and overlay of mean slice energy and CRISP current.
+
+    Parameters:
+    -----------
+    img_proc : np.ndarray
+        2D image (processed).
+    y_px_size : float
+        Vertical pixel size [m].
+    e_px_size_in_MeV : float
+        Conversion factor from vertical pixels to energy [MeV/pixel].
+    img_x_tran : np.ndarray
+        Transformed x-coordinates (s) [μm].
+    img_y_tran : np.ndarray
+        Transformed y-coordinates (E) [MeV].
+    s_slice : np.ndarray
+        Slice positions for mean energy plot [μm].
+    me_slice : np.ndarray
+        Mean slice energy [MeV].
+    t_crisp : np.ndarray
+        Time array from CRISP [fs].
+    y_crisp : np.ndarray
+        Current array from CRISP [A].
+    colormap : str
+        Colormap name for plotting.
+    """
+    import matplotlib.pyplot as plt
+    from ocelot.gui.accelerator import show_density
+    from ocelot.common.globals import speed_of_light
+
+    fig, axs = plt.subplots(1, 2, figsize=(14, 5))
+
+    # --- Processed image ---
+    axs[0].imshow(img_proc, origin='lower', aspect='auto',
+                  cmap=plt.get_cmap(colormap),
+                  extent=[0, img_proc.shape[1] * y_px_size * 1e3,
+                          0, img_proc.shape[0] * e_px_size_in_MeV])
+    axs[0].set_title("Processed Image")
+    axs[0].set_xlabel(r"$y_{scr}$ [mm]")
+    axs[0].set_ylabel("E [MeV]")
+
+    # --- Transformed density ---
+    show_density(img_x_tran, img_y_tran, ax=axs[1], grid=False, figsize=(6, 4),
+                 xlabel="s [$\mu$m]", ylabel="E [MeV]", cmap=colormap)
+
+    # --- Overlay mean energy ---
+    if s_slice is not None and me_slice is not None:
+        axs[1].plot(s_slice, me_slice, "C0", lw=2)
+        axs[1].set_title("Mean Slice Energy")
+        axs[1].set_xlabel("s [$\mu$m]")
+        axs[1].set_ylabel("E [MeV]")
+
+    # --- Twin axis: CRISP current ---
+    ax2 = axs[1].twinx()
+    x_crisp, y_crisp_proc = current_processing(
+        t_crisp * 1e-15 * speed_of_light * 1e6, y_crisp,
+        nbins=500, threshold=0.01, normilize=False
+    )
+    ax2.plot(x_crisp, y_crisp_proc, "C1", label="CRISP")
+    ax2.set_ylabel("I [A]", color="C1")
+    ax2.tick_params(axis='y', colors='C1')
+    ax2.spines['right'].set_color('C1')
+
+    plt.tight_layout()
+    plt.show()

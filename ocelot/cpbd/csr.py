@@ -22,6 +22,7 @@ from ocelot.cpbd.elements.xyquadruple import XYQuadrupole
 from ocelot.cpbd.high_order import arcline, rk_track_in_field
 from ocelot.cpbd.physics_proc import PhysProc
 
+
 # matplotlib may or may not be on the HPC nodes at DESY.
 #try:
 #    import matplotlib.pyplot as plt
@@ -438,6 +439,7 @@ class K0_fin_anf:
             logger.debug("K0_fin_anf: NUMBA")
             self.K0_1 = nb.jit(nopython=True)(self.K0_1_jit)
             self.K0_0 = nb.jit(nopython=True)(self.K0_0_jit)
+            self.integrate_kernel = nb.njit(self.integrate_kernel_jit)
             self.eval = self.K0_fin_anf_opt
         elif ne_flag:
             logger.debug("K0_fin_anf: NumExpr")
@@ -445,6 +447,30 @@ class K0_fin_anf:
         else:
             logger.debug("K0_fin_anf: Python")
             self.eval = self.K0_fin_anf_np
+
+    @staticmethod
+    def integrate_kernel_np(K, s):
+        N = K.shape[0]
+        a = np.empty(N, dtype=K.dtype)
+        a[:-1] = 0.5 * (K[:-1] + K[1:]) * np.diff(s)
+        a[-1] = 0.5 * K[-1] * s[-1]
+        KS = np.cumsum(a[::-1])[::-1]
+        return KS
+
+    @staticmethod
+    def integrate_kernel_jit(K, s):
+        N = K.shape[0]
+        a = np.empty(N, dtype=K.dtype)
+        for k in range(N-1):
+            a[k] = 0.5 * (K[k] + K[k+1]) * (s[k+1] - s[k])
+        a[N-1] = 0.5 * K[N-1] * s[N-1]
+        # Cumulative sum in reverse order
+        KS = np.empty(N, dtype=K.dtype)
+        total = 0.0
+        for k in range(N-1, -1, -1):
+            total += a[k]
+            KS[k] = total
+        return KS
 
     @staticmethod
     def K0_1_jit(indx, j, R, n, traj4, traj5, traj6, w, gamma):
@@ -475,9 +501,7 @@ class K0_fin_anf:
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-
         i_0 = 0
-
         traj0i = traj0[i]
         traj1i = traj1[i]
         traj2i = traj2[i]
@@ -517,131 +541,92 @@ class K0_fin_anf:
         w = w[j:]
 
         K = self.K0_1(i, j, R, n, traj[4], traj[5], traj[6], w, gamma)
-
         if len(K) > 1:
-            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
-            KS = np.cumsum(a[::-1])[::-1]
-            # KS = cumsum_inv_jit(a)
-            # KS = cumulative_trapezoid(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+            KS = self.integrate_kernel(K, s)
         else:
             KS = 0.5 * K[-1] * s[-1]
         return w, KS
 
     def K0_fin_anf_np(self, i, traj, wmin, gamma):
-        # function [ w,KS ] = K0_inf_anf( i,traj,wmin,gamma )
-
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-
         i_0 = self.estimate_start_index(i, traj, wmin, beta)
-
-        s = traj[0, i_0:i] - traj[0, i]
-        n0 = traj[1, i] - traj[1, i_0:i]
-        n1 = traj[2, i] - traj[2, i_0:i]
-        n2 = traj[3, i] - traj[3, i_0:i]
-        R = np.sqrt(n0*n0 + n1*n1 + n2*n2)
+        idx = np.arange(i_0, i)
+        s = traj[0, idx] - traj[0, i]
+        n = traj[1:4, i, None] - traj[1:4, idx]
+        R = np.linalg.norm(n, axis=0)
         w = s + beta * R
-
         j = np.where(w <= wmin)[0]
         if len(j) > 0:
             j = j[-1]
-            w = w[j:]
+            idx = idx[j:]
             s = s[j:]
-            n0 = n0[j:]
-            n1 = n1[j:]
-            n2 = n2[j:]
+            n = n[:, j:]
             R = R[j:]
-            j += i_0
+            w = w[j:]
         else:
             j = i_0
-
         R_inv = 1 / R
-        n0 *= R_inv
-        n1 *= R_inv
-        n2 *= R_inv
-
-        # kernel
-        t4 = traj[4, j:i]
-        t5 = traj[5, j:i]
-        t6 = traj[6, j:i]
-
-        t4_i = traj[4, i]
-        t5_i = traj[5, i]
-        t6_i = traj[6, i]
-
-        x = n0 * t4 + n1 * t5 + n2 * t6
-        K = ((beta * (x - n0 * t4_i - n1 * t5_i - n2 * t6_i) -
-              b2 * (1. - t4 * t4_i - t5 * t5_i - t6 * t6_i) -
-              g2i) * R_inv -
-             (1. - beta * x) / w * g2i)
-
-        # integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
-
+        n *= R_inv
+        t4 = traj[4, idx]
+        t5 = traj[5, idx]
+        t6 = traj[6, idx]
+        t_i = traj[4:7, i]
+        x = n[0] * t4 + n[1] * t5 + n[2] * t6
+        K = ((beta * (x - (n[0] * t_i[0] + n[1] * t_i[1] + n[2] * t_i[2]))
+              - b2 * (1. - (t4 * t_i[0] + t5 * t_i[1] + t6 * t_i[2]))
+              - g2i) * R_inv
+             - (1. - beta * x) / w * g2i)
         if len(K) > 1:
-            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
-            KS = np.cumsum(a[::-1])[::-1]
-            # KS = cumulative_trapezoid(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+            KS = self.integrate_kernel_np(K, s)
         else:
             KS = 0.5 * K[-1] * s[-1]
-
         return w, KS
 
     def K0_fin_anf_numexpr(self, i, traj, wmin, gamma):
-        # function [ w,KS ] = K0_inf_anf( i,traj,wmin,gamma )
-
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-
         i_0 = self.estimate_start_index(i, traj, wmin, beta)
-
-        s = traj[0, i_0:i] - traj[0, i]
-        n0 = traj[1, i] - traj[1, i_0:i]
-        n1 = traj[2, i] - traj[2, i_0:i]
-        n2 = traj[3, i] - traj[3, i_0:i]
+        idx = np.arange(i_0, i)
+        s = traj[0, idx] - traj[0, i]
+        n0 = traj[1, i] - traj[1, idx]
+        n1 = traj[2, i] - traj[2, idx]
+        n2 = traj[3, i] - traj[3, idx]
         R = ne.evaluate("sqrt(n0**2 + n1**2 + n2**2)")
-
         w = ne.evaluate('s + beta*R')
         j = np.where(w <= wmin)[0]
         if len(j) > 0:
             j = j[-1]
-            w = w[j:]
+            idx = idx[j:]
             s = s[j:]
             n0 = n0[j:]
             n1 = n1[j:]
             n2 = n2[j:]
             R = R[j:]
-            j += i_0
+            w = w[j:]
         else:
             j = i_0
         R_inv = 1 / R
-        n0 *= R_inv
-        n1 *= R_inv
-        n2 *= R_inv
-
-        # kernel
-        t4 = traj[4, j:i]
-        t5 = traj[5, j:i]
-        t6 = traj[6, j:i]
-
-        x = ne.evaluate('n0*t4 + n1*t5 + n2*t6')
-
+        n0 = n0 * R_inv
+        n1 = n1 * R_inv
+        n2 = n2 * R_inv
+        t4 = traj[4, idx]
+        t5 = traj[5, idx]
+        t6 = traj[6, idx]
         t4i = traj[4, i]
         t5i = traj[5, i]
         t6i = traj[6, i]
+        x = ne.evaluate('n0*t4 + n1*t5 + n2*t6')
         K = ne.evaluate(
-            '((beta*(x - n0*t4i- n1*t5i - n2*t6i) -'
+            '((beta*(x - n0*t4i - n1*t5i - n2*t6i) -'
             '  b2*(1. - t4*t4i - t5*t5i - t6*t6i) - g2i)/R -'
             ' (1. - beta*x)/w*g2i)')
-
         if len(K) > 1:
-            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
-            KS = np.cumsum(a[::-1])[::-1]
-            # KS = cumulative_trapezoid(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+            KS = self.integrate_kernel_np(K, s)
         else:
             KS = 0.5 * K[-1] * s[-1]
-
         return w, KS
 
     def estimate_start_index(self, i, traj, w_min, beta, i_min=1000, n_test=10):
@@ -1114,6 +1099,7 @@ class CSR(PhysProc):
         return self.csr_traj
 
     def apply(self, p_array, delta_s):
+        import matplotlib.pyplot as plt
         if delta_s < self.traj_step:
             logger.debug("CSR delta_s < self.traj_step")
             return
@@ -1121,15 +1107,19 @@ class CSR(PhysProc):
         z = -p_array.tau()
 
         ind_z_sort = np.argsort(z)
+        print(min(p_array.tau()), max(p_array.tau()), max(p_array.tau()) - min(p_array.tau()))
         #SBINB, NBIN = subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
         #B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
         #s1, s2, Ns, lam_ds = Q2EQUI(p_array.q_array[ind_z_sort], B_params, SBINB, NBIN)
         SBINB, NBIN = self.sub_bin.subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
+
         B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
         s1, s2, Ns, lam_ds = self.bin_smoth.Q2EQUI(p_array.q_array[ind_z_sort], B_params, SBINB, NBIN)
+
         st = (s2 - s1) / Ns
         sa = s1 + st / 2.
         Ndw = [Ns - 1, st]
+
         #print(Ndw, z[ind_z_sort][-1] - z[ind_z_sort][0], len(lam_ds), z[ind_z_sort].max() - z[ind_z_sort].min(), s1, s2)
         #plt.plot(lam_ds)
         #plt.show()
@@ -1140,10 +1130,14 @@ class CSR(PhysProc):
         h = max(1., self.apply_step/self.traj_step)
 
         itr_ra = np.unique(-np.round(np.arange(-indx, -indx_prev, h))).astype(int)
-
+        #print(s1, s2, Ns, Ndw, itr_ra)
         K1 = 0
         for it in itr_ra:
             K1 += self.CSR_K1(it, self.csr_traj, Ndw, gamma=gamma)
+            #plt.plot(np.linspace(s1, s2, num=int(Ns)), K1*st)
+            #plt.show()
+
+
         #x = np.arange(Ndw[0] + 1) * Ndw[1]
         #xp = np.arange(self.kernel_Ndw[0] + 1) * self.kernel_Ndw[1]
         #for it in itr_ra:

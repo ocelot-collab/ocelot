@@ -60,6 +60,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - added ParticleArray.get_twiss() method which calls get_envelop()
 - Twiss recalculates gamma_x/y and emit_x/y automatically
 - added link between quads to match function, e.g. vars = [{QF: 1.0, QD: -1.0}],
+- Added dispersion auto correction in get_envelope function, it calculates dispersion from statistics and correct it if needed
+- added image analysis functions to utils 
   
 >>>>>>> 6fdd98a24d013057498abd8e9ccf734939ef30e7
 

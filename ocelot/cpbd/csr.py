@@ -1107,7 +1107,6 @@ class CSR(PhysProc):
         z = -p_array.tau()
 
         ind_z_sort = np.argsort(z)
-        print(min(p_array.tau()), max(p_array.tau()), max(p_array.tau()) - min(p_array.tau()))
         #SBINB, NBIN = subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
         #B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
         #s1, s2, Ns, lam_ds = Q2EQUI(p_array.q_array[ind_z_sort], B_params, SBINB, NBIN)

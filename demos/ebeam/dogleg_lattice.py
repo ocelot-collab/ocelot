@@ -1,6 +1,8 @@
 from ocelot import * 
 
 tws0 = Twiss()
+tws0.emit_xn = 0.5e-6
+tws0.emit_yn = 0.5e-6
 tws0.beta_x  = 3.7650634043210496
 tws0.beta_y  = 0.8380337780945593
 tws0.alpha_x = 2.071053894766802

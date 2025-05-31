@@ -447,6 +447,7 @@ def track(
     :param print_progress: True, print tracking progress
     :param calc_tws: True, during the tracking twiss parameters are calculated from the beam distribution
     :param bounds: None, optional, [left_bound, right_bound] - bounds in units of std(p_array.tau())
+    :param slice: str or None, optional. Reference slice when bounds is set. If None, uses mean(tau). If 'Imax', uses maximum current slice.
     :param twiss_disp_correction: bool, optional, If True, estimate and subtract linear dispersion from the statistics of the particle array. Default is False.
     :return: twiss_list, ParticleArray. In case calc_tws=False, twiss_list is list of empty Twiss classes.
     """

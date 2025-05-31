@@ -1345,19 +1345,20 @@ def get_envelope(p_array, tws_i=None, bounds=None, slice=None, auto_disp=False):
     dy = tws.Dy * p
     dpx = tws.Dxp * p
     dpy = tws.Dyp * p
-
     x = x - dx
+
     px = px - dpx
 
     y = y - dy
     py = py - dpy
 
     if ne_flag:
-        px = ne.evaluate('px * (1. - 0.5 * px * px - 0.5 * py * py)')
-        py = ne.evaluate('py * (1. - 0.5 * px * px - 0.5 * py * py)')
+        px = ne.evaluate('px * (1. - p - 0.5 * p * p + 0.5 * px * px + 0.5 * py * py)')
+        py = ne.evaluate('py * (1. - p - 0.5 * p * p + 0.5 * px * px + 0.5 * py * py)')
     else:
-        px = px * (1. - 0.5 * px * px - 0.5 * py * py)
-        py = py * (1. - 0.5 * px * px - 0.5 * py * py)
+        px = px * (1. - p - 0.5 * p * p + 0.5 * px * px + 0.5 * py * py )
+        py = py * (1. - p - 0.5 * p * p + 0.5 * px * px + 0.5 * py * py)
+
     tws.x = np.mean(x)
     tws.y = np.mean(y)
     tws.px = np.mean(px)

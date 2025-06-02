@@ -68,8 +68,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Fixed
 
 - fixed bugs in matching function if Drift length is in list of variables. 
-- fixed bug with match function delta constrain 
-- 
+- fixed bug with match function delta constrain
+- fixed geometrical angle approximation in get_envelope function 
 
 ### Removed
 

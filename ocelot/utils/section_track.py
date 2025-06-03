@@ -111,6 +111,8 @@ class SectionLattice:
 
                 if "tds.phi" in conf.keys() and "tds.v" in conf.keys():
                     sec.update_tds(phi=conf["tds.phi"], v=conf["tds.v"])
+                if "save_output_files" in conf.keys():
+                    sec.save_output_files = conf["save_output_files"]
 
             sec.lattice.update_transfer_maps()
             new_sections.append(sec)
@@ -189,6 +191,7 @@ class SectionTrack:
         self.print_progress = True
         self.calc_tws = True
         self.kill_track = False
+        self.save_output_files = True
 
     def remove_coupler_kicks(self):
         print("REMOVE Coupler kick")
@@ -442,7 +445,7 @@ class SectionTrack:
                                      print_progress=self.print_progress, calc_tws=self.calc_tws)
         self.tws_track = tws_track
         # save tracking results
-        if self.output_beam_file is not None and not self.kill_track:
+        if self.output_beam_file is not None and self.save_output_files and not self.kill_track:
             self.save_beam_file(particles)
             self.save_twiss_file(tws_track)
 

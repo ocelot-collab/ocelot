@@ -449,6 +449,7 @@ def track(
     :param calc_tws: True, during the tracking twiss parameters are calculated from the beam distribution
     :param bounds: None, optional, [left_bound, right_bound] - bounds in units of std(p_array.tau())
     :param twiss_disp_correction: bool, optional, If True, estimate and subtract linear dispersion from the statistics of the particle array. Default is False.
+    :param get_twiss: function, optional, function for twiss calculation. Default is `get_envelope`
     :return: twiss_list, ParticleArray. In case calc_tws=False, twiss_list is list of empty Twiss classes.
     """
     if navi is None:

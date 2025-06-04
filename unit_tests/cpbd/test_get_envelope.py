@@ -157,3 +157,5 @@ def test_twiss_with_custom_function():
 if __name__ == "__main__":
     test_twiss_dispersion_correction()
     print("Twiss dispersion correction test passed.")
+    test_twiss_with_custom_function()
+    print("Custom get_twiss function test passed.")

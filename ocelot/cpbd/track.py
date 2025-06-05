@@ -469,11 +469,10 @@ def track(
             tm.apply(p_array)
             _logger.debug("tracking_step -> tm.class: %s  l = %s", tm.__class__.__name__, tm.length)
 
-        #part = p_array[0]
         for p, z_step in zip(proc_list, phys_steps):
             p.z0 = navi.z0
             p.apply(p_array, z_step)
-        #p_array[0] = part
+
         if p_array.n == 0:
             _logger.debug(" Tracking stop: p_array.n = 0")
             return tws_track, p_array

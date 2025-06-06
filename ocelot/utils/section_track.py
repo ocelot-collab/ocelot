@@ -21,38 +21,54 @@ class SectionLattice:
     """
     High level class to work with SectionTrack()
     """
-    def __init__(self, sequence, tws0=None, data_dir=".", *args, **kwargs):
+    def __init__(self, sequence, tws0=None, data_dir=".", main_config=None, *args, **kwargs): # Added main_config
         """
-
         :param sequence: list of SectionTrack()
+        :param main_config: The main configuration dictionary from the script
         """
         self.sec_seq = sequence
         self.elem_seq = None
         self.tws = None
         self.tws0 = tws0
-        self.tws_track = None
         self.tws_current = None
         self.data_dir = data_dir
+        self.main_config = main_config  # Store the main config
+        # Pass *args and **kwargs (like coupler_kick) to initialize
         self.initialize(*args, **kwargs)
 
-    def initialize(self, *args, **kwargs):
-        self.init_sections(*args, **kwargs)
+    def initialize(self, *args, **kwargs): # Accepts *args, **kwargs from __init__
+        # Pass main_config and other args/kwargs to init_sections
+        self.init_sections(self.main_config, *args, **kwargs)
         self.tws = self.calculate_twiss(self.tws0)
 
-    def init_sections(self, *args, **kwargs):
+    def init_sections(self, main_config=None, *args, **kwargs_from_sl_init): # Accepts main_config and *args,**kwargs
         """
         Method initiates section and return dictionary with initialized sections
-
+        :param main_config: The main configuration dictionary
+        :param args: additional args for section constructors
+        :param kwargs_from_sl_init: additional kwargs (like coupler_kick) for section constructors
         :return: self.dict_sections - dictionary
         """
         self.dict_sections = {}
         self.elem_seq = []
-        for sec in self.sec_seq:
-            s = sec(self.data_dir, *args, **kwargs)
-            if "coupler_kick" in kwargs and kwargs["coupler_kick"] is False:
+        for sec_class in self.sec_seq:
+            # Prepare specific initialization parameters for this section class
+            sec_init_params = {}
+            if main_config and sec_class in main_config:
+                sec_init_params = main_config[sec_class].get("init_params", {})
+
+            # Merge kwargs: kwargs_from_sl_init are general, sec_init_params are specific.
+            # Specific params can override general ones if keys conflict.
+            # The section constructor will receive data_dir, *args, and merged kwargs.
+            current_sec_kwargs = {**kwargs_from_sl_init, **sec_init_params}
+            s = sec_class(self.data_dir, *args, **current_sec_kwargs)
+
+            # Existing coupler_kick logic (example, adapt if it was different)
+            # This relies on 'coupler_kick' being in kwargs_from_sl_init
+            if "coupler_kick" in kwargs_from_sl_init and kwargs_from_sl_init["coupler_kick"] is False:
                 s.remove_coupler_kicks()
 
-            self.dict_sections[sec] = s
+            self.dict_sections[sec_class] = s
             self.elem_seq.append(s.lattice.sequence)
         return self.dict_sections
 
@@ -161,6 +177,10 @@ class SectionLattice:
 
 class SectionTrack:
     def __init__(self, data_dir, *args, **kwargs):
+        # Store all kwargs passed during instantiation.
+        # These will include both parameters from SectionLattice's direct pass-through
+        # and specific init_params for this section.
+        self.init_parameters = kwargs # Store kwargs
 
         self.lattice_name = ""
         self.lattice = None
@@ -188,7 +208,6 @@ class SectionTrack:
         self.bt_flag = True
         self.smooth_flag = True
 
-        self.print_progress = True
         self.calc_tws = True
         self.kill_track = False
         self.save_output_files = True

@@ -2391,9 +2391,9 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
 
     f = lambda x:  A1*np.exp(-(x - mu1) ** 2 / (2. * sigma1 ** 2)) + A2*np.exp(-(x - mu2) ** 2 / (2. * sigma2 ** 2)) + A3*np.exp(-(x - mu3) ** 2 / (2. * sigma3 ** 2))
 
-    s = np.linspace(-5*sigma_tau, 5*sigma_tau, num=200)
+    tau = np.linspace(-5*sigma_tau, 5*sigma_tau, num=200)
 
-    shape = [s, f(s)]
+    shape = [tau, f(tau)]
 
     parray = generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
                         sigma_tau=sigma_tau, sigma_p=1e-4, chirp=0.01, charge=250e-12, nparticles=500000, energy=0.13,
@@ -2415,7 +2415,7 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     :param tau_trunc: None, if not [float] - truncated gauss distribution in "tau" direction.
     :param tws: None, if Twiss obj - the beam is matched to twiss params.
     :param shape: "gauss", "tri" - triangular, "rect" - shape of the beam current profile. Gaussian distribution by default.
-                  Current profile also can be arbitrary with shap=[s, f(s)] - shape
+                  Current profile also can be arbitrary with shap=[tau, f(tau)] - shape
     :return: ParticleArray
     """
 

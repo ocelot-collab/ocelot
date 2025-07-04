@@ -22,6 +22,8 @@ class PhysProc:
     :attribute indx1: - number of stop element in lattice.sequence - assigned in navigator.add_physics_proc()
     :attribute s_start: - position of start element in lattice - assigned in navigator.add_physics_proc()
     :attribute s_stop: - position of stop element in lattice.sequence - assigned in navigator.add_physics_proc()
+    :attribute start_elem: -  start element in lattice - assigned in navigator.add_physics_proc()
+    :attribute end_elem: -  stop element in lattice.sequence - assigned in navigator.add_physics_proc()
     :attribute z0: - current position of navigator - assigned in track.track() before p.apply()
     """
 
@@ -32,11 +34,13 @@ class PhysProc:
         self.indx1 = None
         self.s_start = None
         self.s_stop = None
+        self.start_elem = None
+        self.end_elem = None
         self.z0 = None
 
     def check_step(self):
-        if not (self.step*1.).is_integer():
-            raise ValueError('step must be an integer number')
+        if not isinstance(self.step, (int, float)) and float(self.step).is_integer():
+            raise ValueError(f'step must be an integer number, instead {self.step}')
 
     def prepare(self, lat):
         """
@@ -46,7 +50,6 @@ class PhysProc:
         :return:
         """
         self.check_step()
-
 
     def apply(self, p_array, dz):
         """

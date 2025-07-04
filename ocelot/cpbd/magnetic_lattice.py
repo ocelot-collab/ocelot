@@ -319,10 +319,13 @@ class MagneticLattice:
     def transfer_maps(self, energy, output_at_each_step: bool = False, start: E = None,
                       stop: E = None):
         """
-        Function calculates transfer maps, the first and second orders (R, T), for the whole lattice.
+        Calculates the zero, first- and second-order transfer maps for the lattice.
 
-        :param start:
-        :param stop:
+        This method computes the full transfer maps (B, R, T) across the lattice or a specified segment.
+        If `output_at_each_step` is set to `True`, it also returns the intermediate transfer maps after each element.
+
+        :param start: (Element, optional): Element from which to start the transfer map calculation. Defaults to beginning.
+        :param stop: Element at which to stop the transfer map calculation. Defaults to end.
         :param energy: the initial electron beam energy [GeV]
         :param output_at_each_step: [Bs], [Rs], [Ts], [S] return three list of matrices [Bs], [Rs], [Ts] after each element in the line
                                     and [S] position at the end of each transfer map.

@@ -62,6 +62,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - added link between quads to match function, e.g. vars = [{QF: 1.0, QD: -1.0}],
 - Added dispersion auto correction in get_envelope function, it calculates dispersion from statistics and correct it if needed
 - added image analysis functions to utils 
+- added LSC for undulators 
+- added in LSC feature to control size of the slice for transverse beam sizes calculation
+- added new feature to show_density(). now it can plot particles with scatter plot and color of the individual particle will correspond to density - slower but maybe can be visual pleasing for presentations
   
 >>>>>>> 6fdd98a24d013057498abd8e9ccf734939ef30e7
 
@@ -70,6 +73,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - fixed bugs in matching function if Drift length is in list of variables. 
 - fixed bug with match function delta constrain
 - fixed geometrical angle approximation in get_envelope function 
+- fixed bug with navigator reset_position() method. now it also call physics process .prepare() method
 
 ### Removed
 

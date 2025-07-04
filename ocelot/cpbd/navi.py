@@ -101,6 +101,10 @@ class Navigator:
         self.process_table = deepcopy(self.ref_process_table)
         self.process_table.lat = self.lat
         self.inactive_processes = []
+        self._update_references()
+        for i, physics_proc in enumerate(self.process_table.proc_list):
+            physics_proc.prepare(self.lat)
+
 
     def go_to_start(self):
         self.reset_position()

@@ -124,6 +124,8 @@ class SectionLattice:
                     sec.smooth_flag = conf["smooth"]
                 if "wake" in conf.keys():
                     sec.wake_flag = conf["wake"]
+                if "IBS" in conf.keys():
+                    sec.ibs_flag = conf["IBS"]
 
                 if "tds.phi" in conf.keys() and "tds.v" in conf.keys():
                     sec.update_tds(phi=conf["tds.phi"], v=conf["tds.v"])
@@ -141,7 +143,8 @@ class SectionLattice:
         self.lat_current = MagneticLattice(copy.deepcopy(seq_current), method={'global': SecondTM})
         return new_sections
 
-    def track_sections(self, sections, p_array, config=None, force_ext_p_array=False, coupler_kick=False, verbose=True):
+    def track_sections(self, sections, p_array, config=None, force_ext_p_array=False, coupler_kick=False, verbose=True,
+                       twiss_disp_correction=False):
         self.tws_track = []
         L = 0.
         self.update_sections(sections, config=config, coupler_kick=coupler_kick)
@@ -150,7 +153,7 @@ class SectionLattice:
             if i == 0 and sec.__class__ != self.sec_seq[0] and not force_ext_p_array:
                 p_array = None
             sec.print_progress = verbose
-            p_array = sec.tracking(particles=p_array)
+            p_array = sec.tracking(particles=p_array, twiss_disp_correction=twiss_disp_correction)
             tws_track = copy.deepcopy(sec.tws_track)
             for tws in tws_track:
                 tws.s += L
@@ -207,6 +210,7 @@ class SectionTrack:
         self.wake_flag = True
         self.bt_flag = True
         self.smooth_flag = True
+        self.ibs_flag = True
 
         self.calc_tws = True
         self.kill_track = False
@@ -364,6 +368,9 @@ class SectionTrack:
             if physics_process[0].__class__ == CSR and self.csr_flag:
                 self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
 
+            if physics_process[0].__class__ == IBS and self.ibs_flag:
+                self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
+
             if (physics_process[0].__class__ == Wake or physics_process[0].__class__ == WakeKick) and self.wake_flag:
                 self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
 
@@ -373,7 +380,7 @@ class SectionTrack:
             if physics_process[0].__class__ == SmoothBeam and self.smooth_flag:
                 self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
 
-            if physics_process[0].__class__ not in [SpaceCharge, CSR, Wake, WakeKick, BeamTransform, SmoothBeam, LSC]:
+            if physics_process[0].__class__ not in [SpaceCharge, CSR, Wake, WakeKick, BeamTransform, SmoothBeam, LSC, IBS]:
                 self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
 
     def add_physics_process(self, physics_process, start, stop):
@@ -445,7 +452,7 @@ class SectionTrack:
 
         return tws_list
 
-    def tracking(self, particles=None):
+    def tracking(self, particles=None, twiss_disp_correction=False):
 
         # read beam file
         if particles is None:
@@ -461,7 +468,8 @@ class SectionTrack:
         print(self.lattice_name + ' TRACKING')
         # print("std1 = ", np.std(particles.tau()))
         tws_track, particles = track(self.lattice, particles, self.navigator,
-                                     print_progress=self.print_progress, calc_tws=self.calc_tws)
+                                     print_progress=self.print_progress, calc_tws=self.calc_tws,
+                                     twiss_disp_correction=twiss_disp_correction)
         self.tws_track = tws_track
         # save tracking results
         if self.output_beam_file is not None and self.save_output_files and not self.kill_track:

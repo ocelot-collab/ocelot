@@ -101,24 +101,47 @@ def find_widest_peak_region(y, threshold=0.05):
     return regions[np.argmax([r[1] - r[0] for r in regions])]
 
 
-def roi_1d(y, threshold=0.05, lmargin=0, rmargin=0, **kwargs):
+def roi_1d(y, threshold=0.05, base_threshold=0.0, lmargin=0, rmargin=0):
     """
     Returns region of interest (ROI) from a 1D signal using peak detection.
 
     Parameters:
         y (np.ndarray): 1D signal.
-        **kwargs: Additional arguments passed to `find_peaks_regions`.
+        threshold (float): Prominence threshold for peak detection.
+        base_threshold (float): Cutoff (relative to peak height) to trim shoulders.
+        lmargin (int): Extra margin to the left.
+        rmargin (int): Extra margin to the right.
 
     Returns:
-        tuple: Indices defining the ROI.
+        tuple: (start_index, end_index) of ROI.
     """
     indx1, indx2 = find_widest_peak_region(y, threshold=threshold)
+
+    if base_threshold > 0:
+        # Find peak inside this region
+        peak_idx = np.argmax(y[indx1:indx2]) + indx1
+        peak_height = y[peak_idx]
+        cutoff = base_threshold * peak_height
+
+        # Refine left
+        for i in range(peak_idx, indx1 - 1, -1):
+            if y[i] < cutoff:
+                indx1 = i
+                break
+
+        # Refine right
+        for i in range(peak_idx, indx2):
+            if i >= len(y) or y[i] < cutoff:
+                indx2 = i
+                break
+
+    # Apply margins
     indx1 = max(0, indx1 - lmargin)
     indx2 = min(len(y), indx2 + 1 + rmargin)
     return indx1, indx2
 
 
-def crop_1d(x, y, threshold=0.01, lmargin=0, rmargin=0):
+def crop_1d(x, y, threshold=0.01, base_threshold=0, lmargin=0, rmargin=0):
     """
     Crops 1D data based on signal region of interest.
 
@@ -126,23 +149,25 @@ def crop_1d(x, y, threshold=0.01, lmargin=0, rmargin=0):
         x (np.ndarray): X-axis values.
         y (np.ndarray): Y-axis values (signal).
         threshold (float): Threshold for ROI detection.
+        base_threshold (float): Cutoff (relative to peak height) to trim shoulders.
         lmargin (int): Left margin to extend ROI.
         rmargin (int): Right margin to extend ROI.
 
     Returns:
         tuple: Cropped (x, y) arrays.
     """
-    indx1, indx2 = roi_1d(y, threshold=threshold, lmargin=lmargin, rmargin=rmargin)
+    indx1, indx2 = roi_1d(y, threshold=threshold, base_threshold=base_threshold, lmargin=lmargin, rmargin=rmargin)
     return x[indx1:indx2], y[indx1:indx2]
 
 
-def roi_2d(image, threshold=0.01, hor_margin=None, ver_margin=None, gauss_filter_sigma=2):
+def roi_2d(image, threshold=0.01, base_threshold=0, hor_margin=None, ver_margin=None, gauss_filter_sigma=2):
     """
     Computes 2D region of interest using horizontal and vertical projections.
 
     Parameters:
         image (np.ndarray): 2D input image.
         threshold (float): Threshold for ROI detection.
+        base_threshold (float): Cutoff (relative to peak height) to trim shoulders.
         hor_margin (list or tuple): [left, right] horizontal margins. Default [5, 5].
         ver_margin (list or tuple): [top, bottom] vertical margins. Default [5, 5].
         gauss_filter_sigma (float): Standard deviation for Gaussian smoothing of projections.
@@ -158,29 +183,30 @@ def roi_2d(image, threshold=0.01, hor_margin=None, ver_margin=None, gauss_filter
     h_proj = get_image_proj(image)
     if gauss_filter_sigma:
         h_proj = gaussian_filter(h_proj, sigma=gauss_filter_sigma)
-    ix1, ix2 = roi_1d(h_proj, threshold=threshold, lmargin=hor_margin[0], rmargin=hor_margin[1])
+    ix1, ix2 = roi_1d(h_proj, threshold=threshold, base_threshold=base_threshold, lmargin=hor_margin[0], rmargin=hor_margin[1])
     v_proj = get_image_proj(image.T)
     if gauss_filter_sigma:
         v_proj = gaussian_filter(v_proj, sigma=gauss_filter_sigma)
-    iy1, iy2 = roi_1d(v_proj, threshold=threshold, lmargin=ver_margin[0], rmargin=ver_margin[1])
+    iy1, iy2 = roi_1d(v_proj, threshold=threshold, base_threshold=base_threshold, lmargin=ver_margin[0], rmargin=ver_margin[1])
 
     return ix1, ix2, iy1, iy2
 
 
-def crop_2d(image, threshold=0.01, hor_margin=[5, 5], ver_margin=[5, 5], gauss_filter_sigma=2):
+def crop_2d(image, threshold=0.01, base_threshold=0, hor_margin=[5, 5], ver_margin=[5, 5], gauss_filter_sigma=2):
     """
     Crops 2D image to region of interest based on projections.
 
     Parameters:
         image (np.ndarray): Input image.
         threshold (float): Threshold for ROI detection.
+        base_threshold (float): Cutoff (relative to peak height) to trim shoulders.
         hor_margin (list): Horizontal margins for cropping.
         ver_margin (list): Vertical margins for cropping.
 
     Returns:
         np.ndarray: Cropped image.
     """
-    ix1, ix2, iy1, iy2 = roi_2d(image, threshold=threshold, hor_margin=hor_margin, ver_margin=ver_margin, gauss_filter_sigma=gauss_filter_sigma)
+    ix1, ix2, iy1, iy2 = roi_2d(image, threshold=threshold, base_threshold=base_threshold, hor_margin=hor_margin, ver_margin=ver_margin, gauss_filter_sigma=gauss_filter_sigma)
     return image[iy1:iy2, ix1:ix2]
 
 

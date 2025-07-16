@@ -279,13 +279,9 @@ def dchirper_recon_RK(img, t_crisp, y_crisp, img_mask_thresh=0.03, img_sigma=3, 
     :return: (x_distrib_transformed, y_distrib), (x_crisp, y_crisp), image_processed, (x_transf_curve, y_transf_curve)
     """
     if not is_image_processed:
-
         img = oim.simple_filter_and_mask(img, sigma=img_sigma, threshold=img_mask_thresh)
-
-        img = oim.crop_2d(img, threshold=img_crop_thresh, hor_margin=[5, 5], ver_margin=[5, 5])
-
+        img = oim.crop_2d(img, threshold=0.1, base_threshold=img_crop_thresh, hor_margin=[5, 5], ver_margin=[5, 5])
     proj = oim.get_image_proj(img)
-
     x_proj_img, y_proj_img = current_processing(x=np.arange(len(proj)), y=proj, nbins=750, threshold=0)
 
     x_crisp, y_crisp = current_processing(x=t_crisp * 1e-15 * speed_of_light * 1e6, y=y_crisp, nbins=250,
@@ -599,7 +595,6 @@ def find_distance_to_corrugated_plate(s_coord, img_proc, x_px_size, R34=35.33, c
         g_track = track_1D(distance, R34=R34, s_coord=s_coord * 1e-6, y_scr_arr=y_scr_array, charge=charge,
                            energy=energy,
                            beta_y=beta_y, emit=emit)
-        print(distance, np.sqrt(np.sum((g_track - g_img_n) ** 2)), 1000 * np.abs(max(g_track) - max(g_img_n)))
         if align_peaks:
             # Find peaks
             peak_im = np.argmax(g_img_n)

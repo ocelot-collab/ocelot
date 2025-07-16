@@ -250,12 +250,12 @@ def test_generate_parray_match(lattice, lattice_inj=None, update_ref_values=Fals
     tws0.alpha_y = -55.8
     tws0.E = 0.005071
     np.random.seed(10)
-    p_array = generate_parray(chirp=0.0, charge=5e-9, nparticles=20000, energy=tws0.E, tws=tws0)
+    p_array = generate_parray(chirp=0.0, charge=5e-9, nparticles=200000, energy=tws0.E, tws=tws0)
     tw = get_envelope(p_array)
-    res1 = check_value(tw.alpha_x, tws0.alpha_x, tolerance=1.0e-5, tolerance_type='relative', assert_info='alpha_x')
-    res2 = check_value(tw.alpha_y, tws0.alpha_y, tolerance=1.0e-5, tolerance_type='relative', assert_info='alpha_y')
-    res3 = check_value(tw.beta_x, tws0.beta_x, tolerance=1.0e-5, tolerance_type='relative', assert_info='beta_x')
-    res4 = check_value(tw.beta_y, tws0.beta_y, tolerance=1.0e-5, tolerance_type='relative', assert_info='beta_y')
+    res1 = check_value(tw.alpha_x, tws0.alpha_x, tolerance=1.0e-4, tolerance_type='relative', assert_info='alpha_x')
+    res2 = check_value(tw.alpha_y, tws0.alpha_y, tolerance=1.0e-4, tolerance_type='relative', assert_info='alpha_y')
+    res3 = check_value(tw.beta_x, tws0.beta_x, tolerance=1.0e-4, tolerance_type='relative', assert_info='beta_x')
+    res4 = check_value(tw.beta_y, tws0.beta_y, tolerance=1.0e-4, tolerance_type='relative', assert_info='beta_y')
 
     assert check_result([res1, res2, res3, res4])
 

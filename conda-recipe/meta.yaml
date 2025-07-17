@@ -1,26 +1,38 @@
 package:
   name: ocelot
-  version: '25.06.0'
+  version: "25.07.0"
 
 source:
-  git_rev: 25.06.0
   git_url: https://github.com/ocelot-collab/ocelot.git
+  git_tag: v25.07.0
+
+build:
+  noarch: python
+  script: python -m pip install . --no-deps -vv
 
 requirements:
-  build:
-    - python
+  host:
+    - python >=3.9
+    - pip
     - setuptools
-    - numpy >=1.9
+  run:
+    - python >=3.9
+    - numpy
     - scipy
     - matplotlib
     - pandas
-  run:
-    - python
-    - numpy >=1.9
-    - scipy
-
+    - h5py
 
 about:
   home: https://github.com/ocelot-collab/ocelot
-  license: GNU General Public License v3.0
+  license: GPL-3.0
   license_file: LICENSE
+  summary: "Accelerator, radiation, and x-ray optics simulation framework"
+  description: |
+    OCELOT is a simulation toolkit for modeling beam dynamics and synchrotron radiation in accelerators.
+  doc_url: https://ocelot-collab.github.io
+  dev_url: https://github.com/ocelot-collab/ocelot
+
+extra:
+  recipe-maintainers:
+    - sergey-tomin

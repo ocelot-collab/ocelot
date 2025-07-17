@@ -1,9 +1,9 @@
 package:
   name: ocelot
-  version: '24.03.0'
+  version: '25.06.0'
 
 source:
-  git_rev: 24.03.0
+  git_rev: 25.06.0
   git_url: https://github.com/ocelot-collab/ocelot.git
 
 requirements:
@@ -14,9 +14,6 @@ requirements:
     - scipy
     - matplotlib
     - pandas
-    - alabaster==0.7.12
-    - Sphinx==3.2.1
-    - sphinxcontrib-jsmath==1.0.1
   run:
     - python
     - numpy >=1.9

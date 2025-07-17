@@ -68,7 +68,7 @@ def p_array():
     sigma_px =0.000204206874319
     sigma_y = 0.000231583942392
     sigma_py =0.000204272734636
-    n = 20000
+    n = 10000
     x = np.random.randn(n) * sigma_x
     px = np.random.randn(n) * sigma_px
     y = np.random.randn(n) * sigma_y

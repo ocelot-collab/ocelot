@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='ocelot',
-    version='25.06.0',
+    version='25.07.0',
     description='Accelerator, radiation and x-ray optics simulation framework',
     author='ocelot-collab',
     author_email='sergey.tomin@desy.de',

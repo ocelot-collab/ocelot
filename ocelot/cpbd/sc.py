@@ -292,6 +292,7 @@ class LSC(PhysProc):
     """
     def __init__(self, step=1, **kwargs):
         PhysProc.__init__(self, step)
+        self.K_s_func = None
         self.step_profile = kwargs.get("step_profile", False)
         self.smooth_param = kwargs.get("smooth_param", 0.1)
         self.bounds = kwargs.get("bounds", [-0.4, 0.4])

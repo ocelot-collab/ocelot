@@ -74,6 +74,10 @@ class StructureConverter:
             self.longlist_matrix['MARK'] = {}
             self.longlist_matrix['MARK']['MARK'] = {'type': Marker}
 
+        if "VACUUM" in self.types:
+            self.longlist_matrix['VACUUM'] = {}
+            self.longlist_matrix['VACUUM']['VACSTEP'] = {'type': Marker}
+
         self.longlist_matrix['UNDU'] = {}
         self.longlist_matrix['UNDU']['UNDULATOR'] = {'type': Undulator}
 

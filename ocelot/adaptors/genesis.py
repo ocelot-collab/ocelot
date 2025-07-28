@@ -887,7 +887,9 @@ class GenesisElectronDist:
         return tws
 
 
-def parray2edist(p_array):
+def parray2edist(p_array): #TODO: move to beam
+    
+    _logger.info('converting parray to edist')
     
     _logger.info('converting parray to edist')
     
@@ -909,7 +911,7 @@ def parray2edist(p_array):
         
     return edist
     
-def edist2parray(edist):
+def edist2parray(edist): #TODO: move to beam
 
     _logger.info('converting edist to parray')
     

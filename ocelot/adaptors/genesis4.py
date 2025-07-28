@@ -907,10 +907,9 @@ def gen4_lat_elem2str(element, element_num):
     else:
         # Unknown element type, replace by drift to get cell length right (while ignoring l=0 elements)
         if element.l==0:
-            _logger.warning('Unknown element {} with length {}'.format(str(element), element.l))
-            return (None,None) # signal to caller that no line is to be written to lattice file
-        #
-        _logger.warning('Unknown element {} with length {}\n replacing with drift'.format(str(element), element.l))
+            #_logger.warning('Unknown element {} with length {}'.format(str(element), element.l))
+            #return (None,None) # signal to caller that no line is to be written to lattice file
+            _logger.warning('Unknown element {} with length {}\n replacing with drift'.format(str(element), element.l))
         element_name = element_num + 'UNKNOWN'
         s = '{:}: DRIFT = {{l={:}}};'.format(element_name, element.l)
 
@@ -932,21 +931,20 @@ def gen4_lat_str(lat, line_name='LINE', zstop=np.inf, cb_latline=None):
     for element in lat.sequence:
         if location >= zstop:
             break
-
+        
         element_prefix = line_name + '_' + str(len(beamline) + 1).zfill(3)
-
+        
         if hasattr(element, 'l'):
             location += element.l
         else:
-            _logging.warning('[beta] element had no length: {:}'.format(str(element)))
-
+            _logger.warning('[beta] element had no length: {:}'.format(str(element)))
+        
         got_info = False
         if (cb_latline is not None) and callable(cb_latline):
             ele_repr = cb_latline(lat, element, len(beamline), element_prefix)
             if ele_repr!=(None,None):
                 (element_name,s) = ele_repr
                 got_info = True
-
         if not got_info:
             # either callback function not defined, or callback function does not override default behavior
             ele_repr = gen4_lat_elem2str(element, element_prefix)
@@ -957,7 +955,6 @@ def gen4_lat_str(lat, line_name='LINE', zstop=np.inf, cb_latline=None):
         elif isinstance(element, Drift):
             element_name = element_num + 'DR'
             s = '{:}: DRIFT = {{l={:}}};'.format(element_name, element.l)
-
         elif isinstance(element, Quadrupole):
             # TODO: add dx and dy
             if element.k1 >= 0:
@@ -965,13 +962,11 @@ def gen4_lat_str(lat, line_name='LINE', zstop=np.inf, cb_latline=None):
             else:
                 element_name = element_num + 'QD'
             s = '{:}: QUADRUPOLE = {{l = {:}, k1 = {:.6f} }};'.format(element_name, element.l, element.k1)
-
         elif isinstance(element, Chicane):
             element_name = element_num + 'CH'
             s = '{:}: CHICANE = {{l = {:}, lb = {:}, ld = {}, delay = {:.5e} }};'.format(element_name, element.l,
                                                                                          element.lb, element.ld,
                                                                                          element.delay)
-
         elif isinstance(element, Marker):
             element_name = element_num + 'M'
             m_dumpfield = getattr(element, 'dumpfield', 0)
@@ -982,27 +977,26 @@ def gen4_lat_str(lat, line_name='LINE', zstop=np.inf, cb_latline=None):
                                                                                                      m_dumpfield,
                                                                                                      m_dumpbeam, m_sort,
                                                                                                      m_stop)
-
         elif isinstance(element, Phaseshifter):
             element_name = element_num + 'PH'
             s = '{:}: PHASESHIFTER = {{l = {:}, phi = {:}}};'.format(element_name, element.l, element.phi)
-
+        
         elif isinstance(element, Hcor):
             element_name = element_num + 'CORR'
             s = '{:}: CORRECTOR = {{l = {:}, cx = {:}, cy = 0}};'.format(element_name, element.l, element.angle) #turn angle to gamma beta_x
-
+        
         elif isinstance(element, Vcor):
             element_name = element_num + 'CORR'
             s = '{:}: CORRECTOR = {{l = {:}, cx = 0, cy = {:}}};'.format(element_name, element.l, element.angle) #turn angle to gamma beta_x
-
+        
         else:
             _logger.warning('Unknown element {} with length {}\n replacing with drift'.format(str(element), element.l))
             element_name = element_num + 'UNKNOWN'
             s = '{:}: DRIFT = {{l={:}}};'.format(element_name, element.l)
-            continue
         beamline.append(element_name)
+        _logger.debug(ind_str + 'lattice appended with ' + s)
         lat_str.append(s)
-
+        
     lat_str.append('')
     lat_str.append('{:}: LINE = {{{:}}};'.format(line_name, ','.join(beamline)))
     lat_str.append('')  # some white space before the following beamline description (if any)
@@ -1097,7 +1091,11 @@ class Genesis4Output:
         return self.h5['Beam/current'][0]
         
     def Iz(self,idx=0):
-        return self.h5['Beam/current'][idx]
+        if len(self.h5['Beam/current']) > 1:
+            return self.h5['Beam/current'][idx]
+        else:
+            _logger.warn('genesis4 is not compiled to yield I=f(z)')
+            return self.h5['Beam/current'][0]
 
     @property
     def beam_charge(self):

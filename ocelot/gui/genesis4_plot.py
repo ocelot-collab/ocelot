@@ -111,7 +111,7 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
         savefig = 'png'
 
     if choice == 'all':
-        choice = (1, 1, 0, 0, 6, 1, 1, 1, 1, 1, 1, 6, 0)
+        choice = (1, 1, 0, 0, 6, 1, 1, 1, 1, 0, 1, 6, 0)
     elif choice == 'gen':
         choice = (1, 1, 1, 1, 10, 0, 0, 0, 0, 0, 0, 0, 0)
     elif choice == 'dfl':
@@ -168,8 +168,8 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
                     pass
                 
             elif handle.endswith('par.h5'):
-                try:            
-                    handle = read_dpa4(handle, partskip=1)#TODO: fix partskip reading, then may switch back to 100
+                try:
+                    handle = read_dpa4(handle, partskip=10)#TODO: fix partskip reading, then may switch back to 100
                 except (IOError, ValueError):
                     _logger.debug('could not read ' + str(handle))
                     pass
@@ -885,11 +885,9 @@ def subfig_evo_und(ax_und, out, legend):
     number_ticks = 6
     aw = out.h5['Lattice/aw'][:]
     z = out.h5['Lattice/z'][:]
-
     ax_und.step(z, aw, 'b-', where='post', linewidth=1.5)
     ax_und.set_ylabel('K (rms)')
     ax_und.grid(True)
-
     ax_und.yaxis.major.locator.set_params(nbins=number_ticks)
 
     if np.amax(aw) != 0:
@@ -959,7 +957,7 @@ def subfig_evo_el_energy(ax_energy, out, legend):
     # Plot debugging data? May require specific GENESIS input file parameters to generate needed data.
     do_plot_dbg=False
     number_ticks = 6
-
+    
     ### Prepare weight matrix/vector ###
     # Organisation of current (if computed at every int. step,
     # which is controlled by exclude_current_output=False in &setup
@@ -969,14 +967,14 @@ def subfig_evo_el_energy(ax_energy, out, legend):
     el_current = out.h5['Beam/current'][()]
     s_el_current = np.sum(el_current,axis=1) # w/o beam losses, this should not change
     w_el = (el_current.T/s_el_current).T # transpose operation to make broadcasting work
-
+    
     # Note CL, 28.12.2023: this code works also for simulation output not containing the current data for every integration step
-
+    
     # Obtain raw data from GENESIS .out.h5 file
-    el_energy = out.h5['Beam/energy'][()]
+    el_energy = out.h5['Beam/energy'][()] #TODO: calculate as weighted average of slice energy over current
     z = out.h5['Lattice/zplot'][()]
     el_energy_spread = out.h5['Beam/energyspread'][()]
-
+    
     # prepare data for the plot    
     Menergy = w_el*el_energy
     Menergy_spread = w_el*el_energy_spread
@@ -1008,11 +1006,10 @@ def subfig_evo_el_energy(ax_energy, out, legend):
     if do_plot_dbg:
         ax_energy.plot(z, m_e_MeV*(out.h5['Beam/Global/energy'][()])-y_energy_offset,'r+',label='/Beam/Global/energy')
         ax_spread.plot(z, m_e_MeV*(out.h5['Beam/Global/energyspread'][()]),'k--',label='Beam/Global/energyspread')
-
-
+    
     ax_energy.yaxis.major.locator.set_params(nbins=number_ticks)
     ax_spread.yaxis.major.locator.set_params(nbins=number_ticks)
-
+    
     ax_energy.tick_params(axis='y', which='both', colors='b')
     ax_energy.yaxis.label.set_color('b')
     ax_spread.tick_params(axis='y', which='both', colors='r')

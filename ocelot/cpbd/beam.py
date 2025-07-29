@@ -1353,11 +1353,14 @@ def get_envelope(p_array, tws_i=None, bounds=None, slice=None, auto_disp=False):
     py = py - dpy
 
     if ne_flag:
-        px = ne.evaluate('px * (1. - p - 0.5 * p * p + 0.5 * px * px + 0.5 * py * py)')
-        py = ne.evaluate('py * (1. - p - 0.5 * p * p + 0.5 * px * px + 0.5 * py * py)')
+        local = {'px': px, 'py': py, 'p': p}
+        factor = ne.evaluate('1. - p - 0.5 * p**2 + 0.5 * px**2 + 0.5 * py**2', local_dict=local)
+        px = ne.evaluate('px * factor', local_dict={'px': px, 'factor': factor})
+        py = ne.evaluate('py * factor', local_dict={'py': py, 'factor': factor})
     else:
-        px = px * (1. - p - 0.5 * p * p + 0.5 * px * px + 0.5 * py * py )
-        py = py * (1. - p - 0.5 * p * p + 0.5 * px * px + 0.5 * py * py)
+        factor = 1. - p - 0.5 * p * p + 0.5 * px * px + 0.5 * py * py
+        px = px * factor
+        py = py * factor
 
     tws.x = np.mean(x)
     tws.y = np.mean(y)

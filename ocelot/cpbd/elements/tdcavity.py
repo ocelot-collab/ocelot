@@ -8,7 +8,7 @@ class TDCavity(OpticElement):
     """
     Transverse deflecting cavity - by default kick in horizontal plane
     l - length [m]
-    v - voltage [GV/m]
+    v - total peak voltage for the full nominal length l [GV]
     freq - frequency [Hz]
     phi - phase in [deg]
     tilt - tilt of cavity in [rad]

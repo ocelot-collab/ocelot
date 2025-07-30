@@ -1,6 +1,6 @@
 from ocelot.cpbd.io import save_particle_array
-from ocelot.common.globals import h_eV_s, m_e_eV, m_e_GeV, ro_e, speed_of_light
-from ocelot.cpbd.beam import Twiss, beam_matching
+from ocelot.common.globals import h_eV_s, m_e_eV, m_e_GeV, ro_e, speed_of_light, q_e
+from ocelot.cpbd.beam import Twiss, beam_matching, global_slice_analysis, s_to_cur, get_envelope
 from ocelot.utils.acc_utils import slice_bunching
 from ocelot.common.ocelog import *
 from ocelot.cpbd.beam import ParticleArray
@@ -22,6 +22,8 @@ class PhysProc:
     :attribute indx1: - number of stop element in lattice.sequence - assigned in navigator.add_physics_proc()
     :attribute s_start: - position of start element in lattice - assigned in navigator.add_physics_proc()
     :attribute s_stop: - position of stop element in lattice.sequence - assigned in navigator.add_physics_proc()
+    :attribute start_elem: -  start element in lattice - assigned in navigator.add_physics_proc()
+    :attribute end_elem: -  stop element in lattice.sequence - assigned in navigator.add_physics_proc()
     :attribute z0: - current position of navigator - assigned in track.track() before p.apply()
     """
 
@@ -32,7 +34,13 @@ class PhysProc:
         self.indx1 = None
         self.s_start = None
         self.s_stop = None
+        self.start_elem = None
+        self.end_elem = None
         self.z0 = None
+
+    def check_step(self):
+        if not isinstance(self.step, (int, float)) and float(self.step).is_integer():
+            raise ValueError(f'step must be an integer number, instead {self.step}')
 
     def prepare(self, lat):
         """
@@ -41,7 +49,7 @@ class PhysProc:
         :param lat:
         :return:
         """
-        pass
+        self.check_step()
 
     def apply(self, p_array, dz):
         """
@@ -116,9 +124,9 @@ class SmoothBeam(PhysProc):
 
     """
 
-    def __init__(self):
+    def __init__(self, mslice=1000):
         PhysProc.__init__(self)
-        self.mslice = 1000
+        self.mslice = mslice
 
     def apply(self, p_array, dz):
         """
@@ -158,21 +166,29 @@ class SmoothBeam(PhysProc):
 
 
 class LaserModulator(PhysProc):
-    def __init__(self, step=1):
-        PhysProc.__init__(self, step)
-        # amplitude of energy modulation on axis
-        self.dE = 12500e-9  # GeV
-        self.Ku = 1.294  # undulator parameter
-        self.Lu = 0.8  # [m] - undulator length
-        self.lperiod = 0.074  # [m] - undulator period length
-        self.sigma_l = 300e-6  # [m]
-        self.sigma_x = self.sigma_l
-        self.sigma_y = self.sigma_l
-        self.x_mean = 0
-        self.y_mean = 0
-        self.z_waist = None  # center of the undulator
-        self.include_r56 = False
-        self.laser_peak_pos = 0  # relative to the beam center, if 0 laser_peak_pos == mean(p_array.tau()) - laser_peak_pos
+    def __init__(self, **kwargs):
+        # Extract 'step' if provided, otherwise default to 1
+        step = kwargs.pop('step', 1)
+        super().__init__(step)
+
+        # Pull out known parameters with defaults
+        self.dE           = kwargs.pop('dE',           12500e-9)  # GeV
+        self.Ku           = kwargs.pop('Ku',           1.294)     # Undulator parameter
+        self.Lu           = kwargs.pop('Lu',           0.8)       # [m] - Undulator length
+        self.lperiod      = kwargs.pop('lperiod',      0.074)     # [m] - Undulator period length
+        self.sigma_l      = kwargs.pop('sigma_l',      300e-6)    # [m]
+        self.sigma_x      = kwargs.pop('sigma_x',      self.sigma_l)
+        self.sigma_y      = kwargs.pop('sigma_y',      self.sigma_l)
+        self.x_mean       = kwargs.pop('x_mean',       0)
+        self.y_mean       = kwargs.pop('y_mean',       0)
+        self.z_waist      = kwargs.pop('z_waist',      None)       # Center of the undulator
+        self.include_r56  = kwargs.pop('include_r56',  False)
+        self.laser_peak_pos = kwargs.pop('laser_peak_pos', 0)
+        # relative to the beam center; if 0, laser_peak_pos == mean(p_array.tau()) - laser_peak_pos
+
+        # If there are any additional kwargs left, you can set them as attributes:
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     def lambda_ph(self, energy):
         """
@@ -263,20 +279,20 @@ class PhaseSpaceAperture(PhysProc):
     :param ymax: 5 vertical plane in [rms] from center of mass
     """
 
-    def __init__(self, step=1):
+    def __init__(self, step=1, **kwargs):
         PhysProc.__init__(self, step)
-        self.longitudinal = True
-        self.vertical = False
-        self.horizontal = False
+        self.longitudinal = kwargs.get("longitudinal", True)
+        self.vertical = kwargs.get("vertical", False)
+        self.horizontal = kwargs.get("horizontal", False)
 
-        self.taumin = -5  # in simgas
-        self.taumax = 5  # in simgas
+        self.taumin = kwargs.get("taumin", -5)  # in simgas
+        self.taumax = kwargs.get("taumax", 5)  # in simgas
 
-        self.xmin = -5  # in simgas
-        self.xmax = 5  # in simgas
+        self.xmin = kwargs.get("xmin", -5)  # in simgas
+        self.xmax = kwargs.get("xmax", 5)  # in simgas
 
-        self.ymin = -5  # in simgas
-        self.ymax = 5  # in simgas
+        self.ymin = kwargs.get("ymin", -5)  # in simgas
+        self.ymax = kwargs.get("ymax", 5)  # in simgas
 
     def apply(self, p_array, dz):
         _logger.debug(" Aperture applied")
@@ -476,22 +492,27 @@ class SpontanRadEffects(PhysProc):
     energy loss and quantum diffusion
     """
 
-    def __init__(self, K=0.0, lperiod=0.0, type="planar"):
+    def __init__(self, K=0.0, lperiod=0.0, type="planar", **kwargs):
         """
+        Initialize spontaneous radiation effects.
 
-        :param Kx: Undulator deflection parameter
-        :param lperiod: undulator period in [m]
+        :param K: Undulator deflection parameter
+        :param lperiod: Undulator period in meters
         :param type: "planar"/"helical" undulator or "dipole"
-        :param radius: np.inf,  in case of type = "dipole", one must specify a dipole radius
+        :param kwargs: Additional keyword arguments for customization
         """
-        PhysProc.__init__(self)
+        super().__init__(**kwargs)  # Pass any extra arguments to the parent class
+
+        # Explicitly defined parameters
         self.K = K
         self.lperiod = lperiod
         self.type = type
-        self.energy_loss = True
-        self.quant_diff = True
-        self.filling_coeff = 1.0
-        self.radius = np.inf
+
+        # Optional parameters with default values, can be overridden by kwargs
+        self.energy_loss = kwargs.get("energy_loss", True)
+        self.quant_diff = kwargs.get("quant_diff", True)
+        self.filling_coeff = kwargs.get("filling_coeff", 1.0)
+        self.radius = kwargs.get("radius", np.inf)
 
     def apply(self, p_array, dz):
         _logger.debug("SpontanRadEffects: apply")
@@ -632,4 +653,125 @@ class LatticeEnergyProfile(PhysProc):
         p_new = (p_old * p0c_old + Eref_old - self.Eref) / p0c_new
         p_array.E = self.Eref
         p_array.p()[:] = p_new[:]
+
+
+class IBS(PhysProc):
+    """
+    Intrabeam Scattering (IBS) Physics Process.
+
+    This class models the intrabeam scattering process in particle beams. Two methods are implemented based on different formulations:
+
+    1. **Huang Method:** Based on Z. Huang's work: *Intrabeam Scattering in an X-ray FEL Driver* (LCLS-TN-02-8, 2002).
+       URL: https://www-ssrl.slac.stanford.edu/lcls/technotes/LCLS-TN-02-8.pdf
+    2. **Nagaitsev Method:** Based on S. Nagaitsev's work: *Intrabeam scattering formulas for fast numerical evaluation*
+       (PRAB 8, 064403, 2005). URL: https://journals.aps.org/prab/abstract/10.1103/PhysRevSTAB.8.064403
+
+    The methods can be selected using `self.method`, which accepts "Huang" or "Nagaitsev".
+
+    Key assumptions and features:
+    - A **round beam approximation** is used, where `sigma_xy = (sigma_x + sigma_y) / 2`.
+    - Beam parameters are calculated within a slice of width ±0.5 `sigma_tau` relative to the slice with maximum current
+      (`self.slice = "Imax"` by default).
+    - The Coulomb logarithm (`self.Clog`) is a configurable parameter, defaulting to 8 (based on Z. Huang's work).
+    - A factor of 2 is applied to the Nagaitsev formula to align high-energy results with the Huang formula.
+
+    Attributes:
+    - `method` (str): Selected method for IBS calculation ("Huang" or "Nagaitsev").
+    - `Clog` (float): Coulomb logarithm (default: 8) is used constant if update_Clog = False
+    - `update_Clog` (bool): recalculate Clog on each step using Huang's formula without cut off.
+    - `bounds` (list): Range of bounds for slice analysis in units of `sigma_tau` (default: `[-0.5, 0.5]`).
+    - `slice` (str): Reference slice ("Imax" for maximum current by default).
+
+    Methods:
+    - `get_beam_params(p_array)`: Computes beam parameters such as `sigma_xy`, `sigma_z`, and normalized emittance.
+    - `apply(p_array, dz)`: Applies the IBS process to a particle array over a specified distance.
+
+    Raises:
+    - `ValueError`: If an invalid method is specified.
+    """
+
+    def __init__(self, step=1, **kwargs):
+        PhysProc.__init__(self)
+        self.step = step  # in unit step
+        self.method = kwargs.get("method", "Huang")
+        self.Clog = kwargs.get("Clog", 8)
+        self.update_Clog = kwargs.get("update_Clog", True)
+        self.bounds = kwargs.get("bounds", [-0.5, 0.5])
+        self.slice = kwargs.get("slice", "Imax")
+
+        self.emit_n = None
+        self.sigma_xy = None
+        self.sigma_z = None
+        self.sigma_dgamma0 = None
+
+    def get_beam_params(self, p_array):
+        """
+        Compute beam parameters such as sigma_xy, sigma_z, and normalized emittance.
+
+        :param p_array: ParticleArray
+            Input particle array containing particle properties.
+        """
+        tws = get_envelope(p_array, bounds=self.bounds, slice=self.slice)
+        self.sigma_z = np.std(p_array.tau())
+        self.sigma_xy = (np.sqrt(tws.xx) + np.sqrt(tws.yy)) / 2.
+        self.emit_n = (tws.emit_xn + tws.emit_yn) / 2.
+        pc = np.sqrt(p_array.E ** 2 - m_e_GeV ** 2)
+        self.sigma_dgamma0 = np.sqrt(tws.pp)*pc / m_e_GeV
+
+    def estimate_Clog(self):
+        """
+        Used formula from Hunag's paper without cut offs
+
+        :return: float - Coulomb logarithm
+        """
+        Clog = np.log(self.emit_n * self.emit_n / (ro_e * self.sigma_xy))
+        return Clog
+
+    def apply(self, p_array, dz):
+        """
+        Apply the IBS process to a particle array over a given path length.
+
+        :param p_array: ParticleArray
+            The particle array to be processed.
+        :param dz: float
+            The path length over which the IBS process is applied.
+
+        Raises:
+        - ValueError: If an invalid method is specified.
+        """
+        # Number of particles
+        Nb = np.sum(p_array.q_array) / q_e
+
+        # Update beam parameters
+        self.get_beam_params(p_array)
+
+        # estimate C log
+        if self.update_Clog:
+            Clog = self.estimate_Clog()
+        else:
+            Clog = self.Clog
+
+        # Particle energy and momentum
+        gamma = p_array.E / m_e_GeV
+
+        igamma2 = 1. / (gamma * gamma)
+
+        beta = np.sqrt(1. - igamma2)
+
+        pc = np.sqrt(p_array.E**2 - m_e_GeV**2)
+
+        # Calculate sigma_gamma based on the selected method
+        if self.method == "Huang":
+            sigma_gamma = np.sqrt(Clog * ro_e**2 * Nb / (beta**3 * self.sigma_xy * self.emit_n * self.sigma_z) * dz / 4)
+
+        elif self.method == "Nagaitsev":
+            xi = (self.sigma_dgamma0 * self.sigma_xy / (gamma * self.emit_n))**2
+            F = (1 - xi**0.25) * np.log(xi + 1) / xi
+            sigma_gamma = np.sqrt(Clog / 4 * ro_e**2 * Nb / (beta**3 * self.sigma_xy * self.emit_n * self.sigma_z) * F * dz)
+        else:
+            raise ValueError(f"Invalid method '{self.method}'. Choose 'Huang' or 'Nagaitsev'.")
+
+        # Energy spread and update particle momenta
+        sigma_e = sigma_gamma * m_e_GeV / pc
+        p_array.p()[:] += np.random.randn(p_array.n) * sigma_e
 

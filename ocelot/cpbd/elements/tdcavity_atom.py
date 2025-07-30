@@ -13,7 +13,7 @@ class TDCavityAtom(Element):
     Transverse deflecting cavity - by default kick in horizontal plane
 
     l - length [m]
-    v - voltage [GV/m]
+    v - voltage [GV]
     freq - frequency [Hz]
     phi - phase in [deg]
     tilt - tilt of cavity in [rad]
@@ -45,16 +45,12 @@ class TDCavityAtom(Element):
         return FirstOrderParams(R, B, self.tilt)
 
     def R_main_matrix(self, energy, length):
-        """
-         R - matrix for TDS - NOT TESTED
-         """
-
         def tds_R_z(z, energy, freq, v, phi):
             """
 
             :param z:  length [m]
             :param freq: freq [Hz]
-            :param v: voltage in [GeV]
+            :param v: voltage in [GV]
             :param phi: phase [deg]
             :param energy: Energy in [GeV]
             :return:

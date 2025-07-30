@@ -2,27 +2,27 @@
 @ authors Martin Dohlus DESY, 2015, Sergey Tomin XFEL, 2016
 """
 
-import time
 import copy
 import importlib
 import logging
+import time
 
 import numpy as np
-from scipy.integrate import cumtrapz
+from scipy.integrate import cumulative_trapezoid
 
-from ocelot.common.globals import pi, speed_of_light, m_e_eV, m_e_GeV
 from ocelot.common import math_op
+from ocelot.common.globals import m_e_eV, m_e_GeV, pi, speed_of_light
 from ocelot.cpbd.beam import Particle, s_to_cur
-from ocelot.cpbd.high_order import arcline, rk_track_in_field
-
-from ocelot.cpbd.elements.undulator import Undulator
-from ocelot.cpbd.elements.undulator_atom import und_field
 from ocelot.cpbd.elements.bend import Bend
 from ocelot.cpbd.elements.rbend import RBend
 from ocelot.cpbd.elements.sbend import SBend
+from ocelot.cpbd.elements.undulator import Undulator
+from ocelot.cpbd.elements.undulator_atom import und_field
 from ocelot.cpbd.elements.xyquadruple import XYQuadrupole
-
+from ocelot.cpbd.high_order import arcline, rk_track_in_field
 from ocelot.cpbd.physics_proc import PhysProc
+
+
 # matplotlib may or may not be on the HPC nodes at DESY.
 #try:
 #    import matplotlib.pyplot as plt
@@ -42,13 +42,11 @@ except:
 
 try:
 
-    from pyfftw.interfaces.numpy_fft import fft
-    from pyfftw.interfaces.numpy_fft import ifft
+    from pyfftw.interfaces.numpy_fft import fft, ifft
 except:
     logger.info("csr.py: module PYFFTW is not installed."
                 " Install it to speed up calculation.")
-    from numpy.fft import ifft
-    from numpy.fft import fft
+    from numpy.fft import fft, ifft
 
 try:
     import numexpr as ne
@@ -441,6 +439,7 @@ class K0_fin_anf:
             logger.debug("K0_fin_anf: NUMBA")
             self.K0_1 = nb.jit(nopython=True)(self.K0_1_jit)
             self.K0_0 = nb.jit(nopython=True)(self.K0_0_jit)
+            self.integrate_kernel = nb.njit(self.integrate_kernel_jit)
             self.eval = self.K0_fin_anf_opt
         elif ne_flag:
             logger.debug("K0_fin_anf: NumExpr")
@@ -448,6 +447,30 @@ class K0_fin_anf:
         else:
             logger.debug("K0_fin_anf: Python")
             self.eval = self.K0_fin_anf_np
+
+    @staticmethod
+    def integrate_kernel_np(K, s):
+        N = K.shape[0]
+        a = np.empty(N, dtype=K.dtype)
+        a[:-1] = 0.5 * (K[:-1] + K[1:]) * np.diff(s)
+        a[-1] = 0.5 * K[-1] * s[-1]
+        KS = np.cumsum(a[::-1])[::-1]
+        return KS
+
+    @staticmethod
+    def integrate_kernel_jit(K, s):
+        N = K.shape[0]
+        a = np.empty(N, dtype=K.dtype)
+        for k in range(N-1):
+            a[k] = 0.5 * (K[k] + K[k+1]) * (s[k+1] - s[k])
+        a[N-1] = 0.5 * K[N-1] * s[N-1]
+        # Cumulative sum in reverse order
+        KS = np.empty(N, dtype=K.dtype)
+        total = 0.0
+        for k in range(N-1, -1, -1):
+            total += a[k]
+            KS[k] = total
+        return KS
 
     @staticmethod
     def K0_1_jit(indx, j, R, n, traj4, traj5, traj6, w, gamma):
@@ -478,9 +501,7 @@ class K0_fin_anf:
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-
         i_0 = 0
-
         traj0i = traj0[i]
         traj1i = traj1[i]
         traj2i = traj2[i]
@@ -520,131 +541,92 @@ class K0_fin_anf:
         w = w[j:]
 
         K = self.K0_1(i, j, R, n, traj[4], traj[5], traj[6], w, gamma)
-
         if len(K) > 1:
-            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
-            KS = np.cumsum(a[::-1])[::-1]
-            # KS = cumsum_inv_jit(a)
-            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+            KS = self.integrate_kernel(K, s)
         else:
             KS = 0.5 * K[-1] * s[-1]
         return w, KS
 
     def K0_fin_anf_np(self, i, traj, wmin, gamma):
-        # function [ w,KS ] = K0_inf_anf( i,traj,wmin,gamma )
-
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-
         i_0 = self.estimate_start_index(i, traj, wmin, beta)
-
-        s = traj[0, i_0:i] - traj[0, i]
-        n0 = traj[1, i] - traj[1, i_0:i]
-        n1 = traj[2, i] - traj[2, i_0:i]
-        n2 = traj[3, i] - traj[3, i_0:i]
-        R = np.sqrt(n0*n0 + n1*n1 + n2*n2)
+        idx = np.arange(i_0, i)
+        s = traj[0, idx] - traj[0, i]
+        n = traj[1:4, i, None] - traj[1:4, idx]
+        R = np.linalg.norm(n, axis=0)
         w = s + beta * R
-
         j = np.where(w <= wmin)[0]
         if len(j) > 0:
             j = j[-1]
-            w = w[j:]
+            idx = idx[j:]
             s = s[j:]
-            n0 = n0[j:]
-            n1 = n1[j:]
-            n2 = n2[j:]
+            n = n[:, j:]
             R = R[j:]
-            j += i_0
+            w = w[j:]
         else:
             j = i_0
-
         R_inv = 1 / R
-        n0 *= R_inv
-        n1 *= R_inv
-        n2 *= R_inv
-
-        # kernel
-        t4 = traj[4, j:i]
-        t5 = traj[5, j:i]
-        t6 = traj[6, j:i]
-
-        t4_i = traj[4, i]
-        t5_i = traj[5, i]
-        t6_i = traj[6, i]
-
-        x = n0 * t4 + n1 * t5 + n2 * t6
-        K = ((beta * (x - n0 * t4_i - n1 * t5_i - n2 * t6_i) -
-              b2 * (1. - t4 * t4_i - t5 * t5_i - t6 * t6_i) -
-              g2i) * R_inv -
-             (1. - beta * x) / w * g2i)
-
-        # integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
-
+        n *= R_inv
+        t4 = traj[4, idx]
+        t5 = traj[5, idx]
+        t6 = traj[6, idx]
+        t_i = traj[4:7, i]
+        x = n[0] * t4 + n[1] * t5 + n[2] * t6
+        K = ((beta * (x - (n[0] * t_i[0] + n[1] * t_i[1] + n[2] * t_i[2]))
+              - b2 * (1. - (t4 * t_i[0] + t5 * t_i[1] + t6 * t_i[2]))
+              - g2i) * R_inv
+             - (1. - beta * x) / w * g2i)
         if len(K) > 1:
-            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
-            KS = np.cumsum(a[::-1])[::-1]
-            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+            KS = self.integrate_kernel_np(K, s)
         else:
             KS = 0.5 * K[-1] * s[-1]
-
         return w, KS
 
     def K0_fin_anf_numexpr(self, i, traj, wmin, gamma):
-        # function [ w,KS ] = K0_inf_anf( i,traj,wmin,gamma )
-
         g2i = 1. / gamma ** 2
         b2 = 1. - g2i
         beta = np.sqrt(b2)
-
         i_0 = self.estimate_start_index(i, traj, wmin, beta)
-
-        s = traj[0, i_0:i] - traj[0, i]
-        n0 = traj[1, i] - traj[1, i_0:i]
-        n1 = traj[2, i] - traj[2, i_0:i]
-        n2 = traj[3, i] - traj[3, i_0:i]
+        idx = np.arange(i_0, i)
+        s = traj[0, idx] - traj[0, i]
+        n0 = traj[1, i] - traj[1, idx]
+        n1 = traj[2, i] - traj[2, idx]
+        n2 = traj[3, i] - traj[3, idx]
         R = ne.evaluate("sqrt(n0**2 + n1**2 + n2**2)")
-
         w = ne.evaluate('s + beta*R')
         j = np.where(w <= wmin)[0]
         if len(j) > 0:
             j = j[-1]
-            w = w[j:]
+            idx = idx[j:]
             s = s[j:]
             n0 = n0[j:]
             n1 = n1[j:]
             n2 = n2[j:]
             R = R[j:]
-            j += i_0
+            w = w[j:]
         else:
             j = i_0
         R_inv = 1 / R
-        n0 *= R_inv
-        n1 *= R_inv
-        n2 *= R_inv
-
-        # kernel
-        t4 = traj[4, j:i]
-        t5 = traj[5, j:i]
-        t6 = traj[6, j:i]
-
-        x = ne.evaluate('n0*t4 + n1*t5 + n2*t6')
-
+        n0 = n0 * R_inv
+        n1 = n1 * R_inv
+        n2 = n2 * R_inv
+        t4 = traj[4, idx]
+        t5 = traj[5, idx]
+        t6 = traj[6, idx]
         t4i = traj[4, i]
         t5i = traj[5, i]
         t6i = traj[6, i]
+        x = ne.evaluate('n0*t4 + n1*t5 + n2*t6')
         K = ne.evaluate(
-            '((beta*(x - n0*t4i- n1*t5i - n2*t6i) -'
+            '((beta*(x - n0*t4i - n1*t5i - n2*t6i) -'
             '  b2*(1. - t4*t4i - t5*t5i - t6*t6i) - g2i)/R -'
             ' (1. - beta*x)/w*g2i)')
-
         if len(K) > 1:
-            a = np.append(0.5 * (K[0:-1] + K[1:]) * np.diff(s), 0.5 * K[-1] * s[-1])
-            KS = np.cumsum(a[::-1])[::-1]
-            # KS = cumtrapz(K[::-1], -s[::-1], initial=0)[::-1] + 0.5*K[-1]*s[-1]
+            KS = self.integrate_kernel_np(K, s)
         else:
             KS = 0.5 * K[-1] * s[-1]
-
         return w, KS
 
     def estimate_start_index(self, i, traj, w_min, beta, i_min=1000, n_test=10):
@@ -704,12 +686,39 @@ class K0_fin_anf:
 
 class CSR(PhysProc):
     """
-    coherent synchrotron radiation
+    This class simulates the CSR wakefield, its interaction with the beam, and applies the corresponding CSR kick to the particle array.
+
     Attributes:
-        self.step = 1 [in Navigator.unit_step] - step of the CSR kick applying for beam (ParticleArray)
-        self.sigma_min = 1.e-4  - minimal sigma if gauss filtering applied
-        self.traj_step = 0.0002 [m] - trajectory step or, other words, integration step for calculation of the CSR-wake
-        self.apply_step = 0.0005 [m] - step of the calculation CSR kick, to calculate average CSR kick
+        step (int): Step size for applying the CSR kick to the beam (ParticleArray). Default is 1 [in Navigator.unit_step].
+        sigma_min (float): Minimal sigma used in Gaussian filtering. Default is 1.e-4.
+        traj_step (float): Trajectory step, or integration step for CSR-wake calculation. Default is 0.0002 [m].
+        apply_step (float): Step size for calculating the CSR kick. Default is 0.0005 [m].
+
+        x_qbin (float): length or charge binning; 0... 1 = length...charge. Default is 0.
+        n_bin (int): Number of bins used for binning. Default is 100.
+        m_bin (int): Multiple binning factor with shifted bins. Default is 5.
+
+        ip_method (int): Method for smoothing (0: rectangular, 1: triangular, 2: Gaussian). Default is 2 (Gaussian).
+        sp (float): Smoothing parameter for the Gaussian method. Default is 0.5.
+        step_unit (int): Step unit for the CSR kick. If positive, `step` is multiplied by `step_unit`. Default is 0.
+
+        energy (float or None): The beam energy in [GeV]. If None, assumes `beta = 1` and the trajectory is calculated without the Runge-Kutta method.
+
+        z_csr_start (float): Position of the start element in the trajectory in [m]. Default is 0.
+        z0 (float): Position in the navigator for the starting point in the track. Default is 0.
+
+        end_poles (bool): If True, magnetic field configuration will be applied (1/4, -3/4, 1, ...). Default is False.
+        rk_traj (bool): If True, the trajectory of the reference particle is calculated using the Runge-Kutta method. Default is False.
+
+        debug (bool): If True, enables debugging output. Default is False.
+        filter_order (int): The order of the filter for CSR calculations. Default is 10.
+        n_mesh (int): Number of mesh points for the CSR wakefield calculations. Default is 345.
+
+        pict_debug (bool): If True, the trajectory of the reference particle and CSR wakes will be saved for each step in the working folder. Default is False.
+
+        sub_bin (SubBinning): An instance of the SubBinning class for particle binning.
+        bin_smoth (Smoothing): An instance of the Smoothing class for applying smoothing to the CSR wakefield.
+        k0_fin_anf (K0_fin_anf): An instance of the K0_fin_anf class for further CSR-related calculations.
     """
 
     def __init__(self, **kw):
@@ -930,13 +939,18 @@ class CSR(PhysProc):
 
     def prepare(self, lat):
         """
-        calculation of trajectory in rectangular coordinates
-        calculation of the z_csr_start
-        :param lat: Magnetic Lattice
-        :return: self.csr_traj: trajectory. traj[0,:] - longitudinal coordinate,
-                                 traj[1,:], traj[2,:], traj[3,:] - rectangular coordinates, \
-                                 traj[4,:], traj[5,:], traj[6,:] - tangential unit vectors
+        Calculates the trajectory in rectangular coordinates and determines the starting point for CSR calculations.
+
+        Args:
+            lat (MagneticLattice): The magnetic lattice for which the calculations are performed.
+
+        Returns:
+            ndarray: The CSR trajectory with the following components:
+                - `traj[0, :]`: Longitudinal coordinates.
+                - `traj[1, :]`, `traj[2, :]`, `traj[3, :]`: Rectangular coordinates.
+                - `traj[4, :]`, `traj[5, :]`, `traj[6, :]`: Tangential unit vectors.
         """
+        self.check_step()
 
         # if pict_debug = True import matplotlib
         if self.pict_debug:
@@ -1035,7 +1049,7 @@ class CSR(PhysProc):
                 yp2 = yp * yp
                 zp = np.sqrt(1./(1. + xp2 + yp2))
 
-                s = cumtrapz(np.sqrt(1. + xp2 + yp2), z, initial=0)
+                s = cumulative_trapezoid(np.sqrt(1. + xp2 + yp2), z, initial=0)
                 if elem.__class__ == Undulator:
                     delta_s = s[-1]
 
@@ -1085,6 +1099,7 @@ class CSR(PhysProc):
         return self.csr_traj
 
     def apply(self, p_array, delta_s):
+        import matplotlib.pyplot as plt
         if delta_s < self.traj_step:
             logger.debug("CSR delta_s < self.traj_step")
             return
@@ -1096,11 +1111,14 @@ class CSR(PhysProc):
         #B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
         #s1, s2, Ns, lam_ds = Q2EQUI(p_array.q_array[ind_z_sort], B_params, SBINB, NBIN)
         SBINB, NBIN = self.sub_bin.subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
+
         B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
         s1, s2, Ns, lam_ds = self.bin_smoth.Q2EQUI(p_array.q_array[ind_z_sort], B_params, SBINB, NBIN)
+
         st = (s2 - s1) / Ns
         sa = s1 + st / 2.
         Ndw = [Ns - 1, st]
+
         #print(Ndw, z[ind_z_sort][-1] - z[ind_z_sort][0], len(lam_ds), z[ind_z_sort].max() - z[ind_z_sort].min(), s1, s2)
         #plt.plot(lam_ds)
         #plt.show()
@@ -1111,10 +1129,14 @@ class CSR(PhysProc):
         h = max(1., self.apply_step/self.traj_step)
 
         itr_ra = np.unique(-np.round(np.arange(-indx, -indx_prev, h))).astype(int)
-
+        #print(s1, s2, Ns, Ndw, itr_ra)
         K1 = 0
         for it in itr_ra:
             K1 += self.CSR_K1(it, self.csr_traj, Ndw, gamma=gamma)
+            #plt.plot(np.linspace(s1, s2, num=int(Ns)), K1*st)
+            #plt.show()
+
+
         #x = np.arange(Ndw[0] + 1) * Ndw[1]
         #xp = np.arange(self.kernel_Ndw[0] + 1) * self.kernel_Ndw[1]
         #for it in itr_ra:

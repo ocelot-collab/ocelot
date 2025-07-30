@@ -17,6 +17,7 @@ from matplotlib.offsetbox import AnchoredText
 import matplotlib.patches as mpatches
 import matplotlib.path as mpath
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 from ocelot.cpbd.optics import *
 import numpy as np
 from ocelot.cpbd.elements import *
@@ -369,7 +370,7 @@ def plot_disp(ax, tws, top_plot, font_size):
     Fmin = []
     Fmax = []
     for elem in top_plot:
-        Ftop = [p.__dict__[elem] for p in tws]
+        Ftop = [getattr(p, elem) for p in tws]
 
         Fmin.append(min(Ftop))
         Fmax.append(max(Ftop))
@@ -540,47 +541,68 @@ def plot_xy(ax, S, X, Y, font_size):
     leg.get_frame().set_alpha(0.5)
 
 
-def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12, excld_legend=None, figsize=None):
+def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12,
+             excld_legend=None, figsize=None, add_extra_subplot=False):
     """
-    Function creates a picture with lattice on the bottom part of the picture and top part of the picture can be
-    plot arbitrary lines.
+    Creates a figure with a main plot area (ax_xy) and beamline (ax_el).
+    Optionally adds an extra subplot (ax_extra) above ax_xy.
 
     :param lat: MagneticLattice
-    :param legend: True - displaying legend of element types in bottom section,
-    :param fig_name: None - name of figure,
-    :param grid: True - grid
-    :param font_size: 16 - font size for any element of plot
-    :param excld_legend: None, exclude type of element from the legend, e.g. excld_legend=[Hcor, Vcor]
-    :param figsize: None or e.g. (8, 6)
-    :return: fig, ax
+    :param legend: Show legend on beamline
+    :param fig_name: ID for the matplotlib figure
+    :param grid: Enable grid on plots
+    :param font_size: Font size for axis labels
+    :param excld_legend: Element types to exclude from beamline legend
+    :param figsize: Custom figure size
+    :param add_extra_subplot: If True, includes an additional subplot above ax_xy
+    :return: fig, axes (ax_xy, or (ax_extra, ax_xy))
     """
 
     fig = plt.figure(fig_name, figsize=figsize)
     plt.rc('axes', grid=grid)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
+
     left, width = 0.1, 0.85
-    rect2 = [left, 0.19, width, 0.69]
-    rect3 = [left, 0.07, width, 0.12]
 
-    ax_xy = fig.add_axes(rect2)  # left, bottom, width, height
-    ax_el = fig.add_axes(rect3, sharex=ax_xy)
+    if add_extra_subplot:
+        rect1 = [left, 0.59, width, 0.34]  # ax_extra
+        rect2 = [left, 0.2, width, 0.34]  # ax_xy
+        rect3 = [left, 0.07, width, 0.10]  # ax_el
+        ax_extra = fig.add_axes(rect1)
+        ax_xy = fig.add_axes(rect2, sharex=ax_extra)
+        ax_el = fig.add_axes(rect3, sharex=ax_extra)
 
-    for ax in ax_xy, ax_el:
-        if ax != ax_el:
+        for ax in [ax_extra, ax_xy]:
             for label in ax.get_xticklabels():
                 label.set_visible(False)
 
-    ax_xy.grid(grid)
+        axes = (ax_extra, ax_xy)
+
+    else:
+        rect2 = [left, 0.19, width, 0.69]  # ax_xy
+        rect3 = [left, 0.07, width, 0.10]  # ax_el
+        ax_xy = fig.add_axes(rect2)
+        ax_el = fig.add_axes(rect3, sharex=ax_xy)
+
+        for label in ax_xy.get_xticklabels():
+            label.set_visible(False)
+
+        axes = ax_xy
+
+    # General settings
+    for ax in ([ax_extra, ax_xy] if add_extra_subplot else [ax_xy]):
+        ax.grid(grid)
+        ax.tick_params(axis='both', labelsize=font_size)
+
     ax_el.set_yticks([])
     ax_el.grid(grid)
-
-    ax_xy.tick_params(axis='both', labelsize=font_size)
+    ax_el.tick_params(axis='both', labelsize=font_size)
 
     fig.subplots_adjust(hspace=0)
 
+    # Plot beamline (always present)
     plot_elems(fig, ax_el, lat, legend=legend, y_scale=0.8, font_size=font_size, excld_legend=excld_legend)
-
-    return fig, ax_xy
+    return fig, axes
 
 
 def compare_betas(lat, tws1, tws2, prefix1="beam1", prefix2="beam2", legend=True, fig_name=None, grid=True,
@@ -787,63 +809,152 @@ def show_mu(contour_da, mux, muy, x_array, y_array, zones=None):
     plt.show()
 
 
-def show_density(x, y, ax=None, nbins_x=250, nbins_y=250, interpolation="bilinear", xlabel=None, ylabel=None, nfig=50,
-                 title=None, figsize=None, grid=True, show_xtick_label=True, limits=None):
-    """
-    Function shows density
+def show_density(
+    x: np.ndarray,
+    y: np.ndarray,
+    q: np.ndarray | None = None,
+    *,
+    ax: plt.Axes | None = None,
+    nbins_x: int = 250,
+    nbins_y: int = 250,
+    interpolation: str = "bilinear",
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    nfig: int | None = 50,
+    title: str | None = None,
+    figsize: tuple[int, int] | None = None,
+    grid: bool = True,
+    show_xtick_label: bool = True,
+    limits: list[list[float]] | None = None,
+    cmap: str = "my_rainbow",
+    density_mode: str = "hist",  # "hist" for imshow; "scatter" for per-particle colouring
+    use_log: bool = True,
+    downsample: int | None = None,  # new: for scatter mode, use N random particles
+    seed: int | None = None
+):
+    """Visualise 2-D charge density or particle distribution.
 
-    :param x: np.array
-    :param y: np.array
-    :param ax: None, subplot axis, if None creates standalone plot.
-    :param nbins_x: 250, number of bins for 2D hist. in horz. plane
-    :param nbins_y: 250, number of bins for 2D hist. in vertical plane
-    :param interpolation: "bilinear". Acceptable values are 'none’, ‘nearest’, ‘bilinear’, ‘bicubic’, ‘spline16’,
-                        ‘spline36’, ‘hanning’, ‘hamming’, ‘hermite’, ‘kaiser’, ‘quadric’, ‘catrom’, ‘gaussian’, ‘bessel’
-    :param xlabel: None, otherwise "string"
-    :param ylabel: None, otherwise "string"
-    :param nfig: number of the figure
-    :param title: title of the figure
-    :param figsize: None or e.g. (8, 6)
-    :param grid: True, show grid
-    :param show_xtick_label: True
-    :param label, None or string.
-    :param limits,  None or [[xmin, xmax], [ymin, ymax]]
-    :return:
+    Parameters
+    ----------
+    x, y : np.ndarray
+        Coordinates of macro-particles (same length).
+    q : np.ndarray | None, optional
+        Charge (weight) of each particle. If *None*, all particles get equal
+        charge so that total charge = 1 (arbitrary units).
+    ax : matplotlib.axes.Axes | None, optional
+        Axis to plot into. If *None*, a new figure/axis is created.
+    nbins_x, nbins_y : int
+        Number of histogram bins in *x* and *y* directions.
+    interpolation : str
+        Interpolation method for *imshow* (only for ``mode='hist'``).
+    xlabel, ylabel : str | None
+        Axis labels.
+    nfig : int | None
+        Figure number (only if *ax* is *None*).
+    title : str | None
+        Figure title.
+    figsize : tuple[int, int] | None
+        Figure size in inches (only if *ax* is *None*).
+    grid : bool
+        Turn grid on/off.
+    show_xtick_label : bool
+        Show or hide x tick labels (useful for subplots).
+    limits : [[xmin, xmax], [ymin, ymax]] | None
+        Plot limits. If *None*, determined from data with ~5 % margin in *y*.
+    cmap : str
+        Matplotlib colormap name. Special value ``"my_rainbow"`` uses
+        ``matplotlib.colormaps['rainbow']`` with *under* colour = white.
+    density_mode : {"hist", "scatter"}
+        * "hist"  – show 2-D charge density via ``imshow`` (default).
+        * "scatter" – colour individual particles by charge density in their
+          histogram cell (like the example we discussed).
+    use_log : bool
+        Use logarithmic colour normalisation.
+    downsample : int | None
+        If set and mode is 'scatter', use only a random subset of particles.
+    seed : int | None
+        Optional seed for reproducibility (used when downsampling).
+
+    Returns
+    -------
+    im | PathCollection
+        Handle to the created artist (image or scatter).
     """
+
+    if q is None:
+        q = np.full_like(x, 1.0 / len(x))
+    else:
+        q = np.asarray(q)
+        if q.shape != x.shape:
+            raise ValueError("q must have same shape as x and y")
 
     if ax is None:
-        fig = plt.figure(nfig, figsize=figsize)
+        plt.figure(nfig, figsize=figsize)
         ax = plt.subplot(111)
+
     if title is not None:
-        plt.title(title)
-    my_rainbow = copy(plt.cm.get_cmap('rainbow'))
-    my_rainbow.set_under('w')
+        ax.set_title(title)
 
-    x_min = np.min(x)
-    x_max = np.max(x)
-    y_min = np.min(y)
-    y_max = np.max(y)
-    dy = y_max - y_min
-
-    if limits is None:
-        range = [[x_min * 1, x_max * 1], [y_min - dy * 0.05, y_max + dy * 0.05]]
+    # colour map setup
+    if cmap == "my_rainbow":
+        my_rainbow = matplotlib.colormaps['rainbow'].copy()
+        my_rainbow.set_under('w')
     else:
-        range = limits
+        my_rainbow = matplotlib.colormaps[cmap]
 
-    H, xedges, yedges = np.histogram2d(x, y, bins=(nbins_x, nbins_y), range=range)
-    H = H.T
-    vmin = np.min(H) + (np.max(H) - np.min(H)) * 0.0001
+    # limits
+    if limits is None:
+        x_min, x_max = np.min(x), np.max(x)
+        y_min, y_max = np.min(y), np.max(y)
+        dy = y_max - y_min
+        limits = [[x_min, x_max], [y_min - 0.05 * dy, y_max + 0.05 * dy]]
 
-    ax.imshow(H, interpolation=interpolation, aspect='auto', origin='lower',
-              extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], vmin=vmin, cmap=my_rainbow)
+    # histogram of total charge per bin
+    H, xedges, yedges = np.histogram2d(x, y, bins=(nbins_x, nbins_y),
+                                       range=limits, weights=q)
 
+    if density_mode == "hist":
+        H = H.T  # transpose so y is vertical
+        vmin = np.min(H[np.nonzero(H)]) if use_log else None
+        norm = LogNorm(vmin=vmin, vmax=H.max()) if use_log else None
+        im = ax.imshow(H, interpolation=interpolation, origin='lower',
+                       aspect='auto', extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]],
+                       cmap=my_rainbow, norm=norm)
+    elif density_mode == "scatter":
+        # downsample if requested
+        if downsample is not None and downsample < len(x):
+            rng = np.random.default_rng(seed)
+            idx = rng.choice(len(x), size=downsample, replace=False)
+            x, y, q = x[idx], y[idx], q[idx]
+
+        # find bin index for each particle
+        ix = np.clip(np.digitize(x, xedges) - 1, 0, nbins_x - 1)
+        iy = np.clip(np.digitize(y, yedges) - 1, 0, nbins_y - 1)
+        density = H[ix, iy]
+        vmin = np.min(density[density > 0]) if use_log else None
+        norm = LogNorm(vmin=vmin, vmax=density.max()) if use_log else None
+        im = ax.scatter(x, y, c=density, s=0.3, cmap=my_rainbow,
+                         norm=norm, alpha=0.5)
+    else:
+        raise ValueError("mode must be 'hist' or 'scatter'")
+
+    # labels etc.
     if xlabel is not None:
         ax.set_xlabel(xlabel)
     if ylabel is not None:
         ax.set_ylabel(ylabel)
     ax.grid(grid)
-
     plt.setp(ax.get_xticklabels(), visible=show_xtick_label)
+
+    # colour-bar switched off
+    if ax.figure.get_axes()[0] is ax and 0:
+        cbar = ax.figure.colorbar(im, ax=ax)
+        if density_mode == "hist":
+            cbar.set_label(r"Charge per bin (arb. units)")
+        else:
+            cbar.set_label(r"Local charge density (arb. units)")
+
+    return im
 
 
 def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, nbins_y=200,
@@ -852,7 +963,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
                 title=None, figsize=None, grid=True,
                 filename=None, headtail=True,
                 filter_base=2, filter_iter=2,
-                tau_units="mm", **kwargs
+                tau_units="mm", p_units=None, cmap="my_rainbow", **kwargs
                 ):
     """
     Shows e-beam slice parameters (current, emittances, energy spread)
@@ -876,17 +987,37 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     :param headtail: True, shows where is the beam head is.
     :param filter_base: support of rectangle filter is 2*p+1
     :param filter_iter: the number of the filter iterations
+    :param tau_units: unints of longitudinal coordinate tau - 'm', 'mm', 'um', "ps", "fs
+    :param cmap: color map
     :return:
     """
+    allowed = {'downsample', 'density_mode'}
+    filtered = {k: v for k, v in kwargs.items() if k in allowed}
     if tau_units == "m":
         tau_factor = 1  # m
         tau_label = r"$s\,[\mathrm{m}]$"
     elif tau_units == "um":
         tau_factor = 1e6  # um
         tau_label = r"$s\,[\mathrm{\mu{}m}]$"
+    elif tau_units == "ps":
+        tau_factor = 1e12/speed_of_light  # pm
+        tau_label = r"$t\,[\mathrm{ps}]$"
+    elif tau_units == "fs":
+        tau_factor = 1e15/speed_of_light  # fm
+        tau_label = r"$t\,[\mathrm{fs}]$"
     else:
         tau_factor = 1e3  # mm
         tau_label = r"$s\,[\mathrm{mm}]$"
+
+    if p_units == "MeV":
+        pref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
+        #Enew = p_array.p()[0] * pref + p_array.E
+        p_factor = pref*1e3
+        p_label = r'$E\,[MeV]$'
+    else:
+        p_factor = 1e2
+        p_label = r'$\delta_E\,[\%]$'
+
 
     p_array_copy = deepcopy(p_array)
     if inverse_tau:
@@ -926,7 +1057,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
     imax = np.max(slice_params.I)
     imax_label = rf"$I_{{\mathrm{{max}}}}= {imax:.0f}\,\mathrm{{A}}$"
     leg = ax_c.legend([imax_label], handlelength=0, handletextpad=0, fancybox=True, loc="best")
-    for item in leg.legendHandles:
+    for item in leg.legend_handles:
         item.set_visible(False)
 
 
@@ -938,7 +1069,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.y() * 1e3, ax=ax_ys, nbins_x=nbins_x, nbins_y=nbins_y,
                  interpolation=interpolation, xlabel=tau_label, ylabel='$y\,[\mathrm{mm}]$', nfig=50,
-                 title="Side view", figsize=None, grid=grid)
+                 title="Side view", figsize=None, grid=grid, cmap=cmap, **filtered)
     if show_moments:
         plt.plot(slice_params.s * tau_factor, slice_params.my * 1e3, "k", lw=2)
         plt.plot(slice_params.s * tau_factor, (slice_params.my + slice_params.sig_y) * 1e3, "w", lw=1)
@@ -948,7 +1079,7 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.x() * 1e3, ax=ax_xs, nbins_x=nbins_x, nbins_y=nbins_y,
                  interpolation=interpolation, ylabel=r'$x\,[\mathrm{mm}]$',
-                 title="Top view", grid=grid, show_xtick_label=False)
+                 title="Top view", grid=grid, show_xtick_label=False, cmap=cmap, **filtered)
     if show_moments:
         plt.plot(slice_params.s * tau_factor, slice_params.mx * 1e3, "k", lw=2)
         plt.plot(slice_params.s * tau_factor, (slice_params.mx + slice_params.sig_x) * 1e3, "w", lw=1)
@@ -956,9 +1087,9 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
 
     ax_ps = plt.subplot(322, sharex=ax_sp)
 
-    show_density(p_array_copy.tau() * tau_factor, p_array_copy.p() * 1e2, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, ylabel=r'$\delta_E\,[\%]$',
-                 title="Longitudinal phase space", grid=grid, show_xtick_label=False)
+    show_density(p_array_copy.tau() * tau_factor, p_array_copy.p() * p_factor, ax=ax_ps, nbins_x=nbins_x, nbins_y=nbins_y,
+                 interpolation=interpolation, ylabel=p_label,
+                 title="Longitudinal phase space", grid=grid, show_xtick_label=False, cmap=cmap, **filtered)
 
     if inverse_tau:
         arrow = r"$\Longrightarrow$"
@@ -1460,7 +1591,7 @@ def show_e_beam_slices(p_array, nparts_in_slice=5000, smooth_param=0.05, inverse
         plt.legend()
     if headtail:
         leg = ax_c.legend([label_arr], handlelength=0, handletextpad=0, fancybox=True, loc=location)
-        for item in leg.legendHandles:
+        for item in leg.legend_handles:
             item.set_visible(False)
     plt.setp(ax_c.get_xticklabels(), visible=False)
     plt.ylabel("I [A]")
@@ -1576,7 +1707,7 @@ def beam_jointplot(p_array, show_plane="x", nparts_in_slice=5000, smooth_param=0
     # label = r"$I_{max}=$" + str(np.round(np.max(slice_params.I), 1))
     if show_head:
         leg = ax_top.legend([label], handlelength=0, handletextpad=0, fancybox=True, loc=location)
-        for item in leg.legendHandles:
+        for item in leg.legend_handles:
             item.set_visible(False)
     plt.setp(ax_top.get_xticklabels(), visible=False)
     plt.ylabel("I [A]")

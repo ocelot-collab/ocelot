@@ -1,12 +1,12 @@
 from ocelot import * 
 
 tws0 = Twiss()
+tws0.emit_xn = 0.5e-6
+tws0.emit_yn = 0.5e-6
 tws0.beta_x  = 3.7650634043210496
 tws0.beta_y  = 0.8380337780945593
 tws0.alpha_x = 2.071053894766802
 tws0.alpha_y = -0.61098754078337
-tws0.gamma_x = 1.404827400504972
-tws0.gamma_y = 1.6387236539737111
 tws0.E = 0.13
 
 # drifts 

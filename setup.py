@@ -1,26 +1,31 @@
 from setuptools import setup, find_packages
-from os.path import join, dirname
+from pathlib import Path
 
-all_packages = []
-for pkg in find_packages():
-    if "demos" in pkg:
-        pkg = "ocelot." + pkg
-    all_packages.append(pkg)
-
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text(encoding='utf-8')
 
 setup(
-    name='ocelot',
-    version='24.03.0',
+    name='ocelot-collab',
+    version='25.07.1',
     description='Accelerator, radiation and x-ray optics simulation framework',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     author='ocelot-collab',
-    author_email='tomin.sergey@gmail.com',
+    author_email='sergey.tomin@desy.de',
     url='https://github.com/ocelot-collab/ocelot',
-    packages=all_packages,
-    package_dir={'ocelot.demos': 'demos'},  ## install examples along with the rest of the source
+    packages=find_packages(include=["ocelot", "ocelot.*", "demos", "demos.*"]),
+    package_dir={
+        'ocelot': 'ocelot',
+        'demos': 'demos'
+    },
     install_requires=[
         'numpy', 'scipy', 'matplotlib', 'pandas', 'h5py'
     ],
     extras_require={'docs': ['Sphinx', 'alabaster', 'sphinxcontrib-jsmath']},
-    package_data={'ocelot.optics': ['data/*.dat']},
+    package_data={
+        'ocelot.optics': ['data/*.dat'],
+        'ocelot': ['py.typed']
+    },
     license="GNU General Public License v3.0",
+    python_requires=">=3.9"
 )

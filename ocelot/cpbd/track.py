@@ -434,6 +434,9 @@ def track(
         bounds=None,
         return_df=False,
         overwrite_progress=True,
+        slice=None,
+        twiss_disp_correction=False,
+        get_twiss=None,
         ) -> Tuple[Union[List[Twiss], pd.DataFrame], ParticleArray]:
 
     """
@@ -445,37 +448,35 @@ def track(
     :param print_progress: True, print tracking progress
     :param calc_tws: True, during the tracking twiss parameters are calculated from the beam distribution
     :param bounds: None, optional, [left_bound, right_bound] - bounds in units of std(p_array.tau())
+    :param slice: str or None, optional. Reference slice when bounds is set. If None, uses mean(tau). If 'Imax', uses maximum current slice.
+    :param twiss_disp_correction: bool, optional, If True, estimate and subtract linear dispersion from the statistics of the particle array. Default is False.
+    :param get_twiss: function, optional, function for twiss calculation. Default is `get_envelope`
     :return: twiss_list, ParticleArray. In case calc_tws=False, twiss_list is list of empty Twiss classes.
     """
     if navi is None:
         navi = Navigator(lattice)
-    tw0 = get_envelope(p_array, bounds=bounds) if calc_tws else Twiss()
+    if navi.lat is not lattice:
+        _logger.warning("MagneticLattice is not the same in lattice argument and in Navigator")
+    if get_twiss is None:
+        get_twiss = get_envelope
+
+    tw0 = get_twiss(p_array, bounds=bounds, slice=slice, auto_disp=twiss_disp_correction) if calc_tws else Twiss()
     tws_track = [tw0]
     L = 0.
 
     for t_maps, dz, proc_list, phys_steps in navi.get_next_step():
         for tm in t_maps:
-            start = time()
             tm.apply(p_array)
-            time_delta = time() - start
-            _logger.debug("tracking_step -> tm.class: %s  l = %s",
-                          tm.__class__.__name__,
-                          tm.length
-            )
-            _logger.debug(
-                "tracking_step -> tm.apply: time exec = %s sec",
-                time_delta
-            )
+            _logger.debug("tracking_step -> tm.class: %s  l = %s", tm.__class__.__name__, tm.length)
 
-        #part = p_array[0]
         for p, z_step in zip(proc_list, phys_steps):
             p.z0 = navi.z0
             p.apply(p_array, z_step)
-        #p_array[0] = part
+
         if p_array.n == 0:
             _logger.debug(" Tracking stop: p_array.n = 0")
             return tws_track, p_array
-        tw = get_envelope(p_array, bounds=bounds) if calc_tws else Twiss()
+        tw = get_twiss(p_array, bounds=bounds, slice=slice, auto_disp=twiss_disp_correction) if calc_tws else Twiss()
         L += dz
         tw.s += L
         tws_track.append(tw)

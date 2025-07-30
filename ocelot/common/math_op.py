@@ -2,11 +2,11 @@
 statistical analysis functions, fitting, optimization and the like
 """
 
-import numpy as np
-from scipy.special import gammaincc, gamma, exp1
-from scipy import fftpack, integrate, interpolate
-from scipy import optimize
 import sys
+
+import numpy as np
+from scipy import fftpack, integrate, interpolate, optimize
+from scipy.special import exp1, gamma, gammaincc
 
 try:
     import numba as nb
@@ -54,7 +54,7 @@ def invert_cdf(y, x):
     # analytical formula for the beam distribution
     f = lambda x: A * np.exp(-(x - mu) ** 2 / (2. * sigma ** 2))
 
-    # we are interesting in range from -30 to 30 e.g. [um]
+    # we are interested in range from -30 to 30 e.g. [um]
     x = np.linspace(-30, 30, num=100)
 
     # Inverted cumulative distribution function
@@ -69,9 +69,8 @@ def invert_cdf(y, x):
     :return: function
     """
 
-    cum_int = integrate.cumtrapz(y, x, initial=0)
-    #print("invert", np.max(cum_int), np.min(cum_int))
-    cdf = cum_int / (np.max(cum_int) - np.min(cum_int))
+    cum_int = integrate.cumulative_trapezoid(y, x, initial=0)
+    cdf = cum_int / (max(cum_int) - min(cum_int))
     inv_cdf = interpolate.interp1d(cdf, x)
     return inv_cdf
 

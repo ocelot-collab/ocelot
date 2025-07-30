@@ -9,7 +9,8 @@ class Bend(OpticElement):
     """
     bending magnet
     l - length of magnet in [m],
-    angle - angle of bend in [rad],
+    angle - angle of bend in [rad], we use convention from MAD8 where "a positive bend angle represents a bend to the right,
+        i.e. towards negative x vales"
     k1 - strength of quadrupole lens in [1/m^2],
     k2 - strength of sextupole lens in [1/m^3],
     tilt - tilt of lens in [rad],
@@ -19,7 +20,7 @@ class Bend(OpticElement):
     fintx - allows (fintx > 0) to set fint at the element exit different from its entry value.
     gap - the magnet gap [m], NOTE in MAD and ELEGANT: HGAP = gap/2
     h_pole1 - the curvature (1/r) of the entrance face
-    h_pole1 - the curvature (1/r) of the exit face
+    h_pole2 - the curvature (1/r) of the exit face
     """
 
     def __init__(self, l=0., angle=0., k1=0., k2=0., e1=0., e2=0., tilt=0.0,

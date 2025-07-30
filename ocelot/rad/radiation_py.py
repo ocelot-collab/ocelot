@@ -13,7 +13,7 @@ import time
 from math import pi
 
 import numpy as np
-from scipy.integrate import cumtrapz
+from scipy.integrate import cumulative_trapezoid, trapezoid
 from scipy.interpolate import splrep, splev
 
 from ocelot.rad.spline_py import cspline_coef
@@ -122,7 +122,7 @@ class BeamTraject:
         xp2 = self.xp(n) ** 2
         yp2 = self.yp(n) ** 2
         # zp = np.sqrt(1. / (1. + xp2 + yp2))
-        s = cumtrapz(np.sqrt(1. + xp2 + yp2), self.z(n), initial=0)
+        s = cumulative_trapezoid(np.sqrt(1. + xp2 + yp2), self.z(n), initial=0)
         return s
 
     def p_array_end(self, p_array):
@@ -134,7 +134,7 @@ class BeamTraject:
             y1 = u[3::9, :]
             # dz = u[4 + 9::9, :] - u[4:-9:9, :]
             z = u[4::9, :]
-            s_fin += np.trapz(np.sqrt(1 + x1 * x1 + y1 * y1), z, axis=0)
+            s_fin += trapezoid(np.sqrt(1 + x1 * x1 + y1 * y1), z, axis=0)
             # s_fin += np.sum(dz * np.sqrt(1 + x1 * x1 + y1 * y1), axis=0)
 
         N = int(np.shape(self.U[-1])[0] / 9)

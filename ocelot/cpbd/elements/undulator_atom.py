@@ -48,6 +48,22 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
             '1/2' - magnetic field starts with 1/2 and finishes with -1/2 poles
         The default is '1'.
 
+    Note
+    -----
+    One should not forget that, in reality, the field in the horizontal direction should decay;
+    for that, `kx` must be an imaginary number. In that case, we have:
+
+        cosh(i x) = cos(x)
+
+    For the Bx component, the expression evolves as follows:
+
+        Bx = B0 * (kx / ky) * sin(kx * x) ...
+
+    When `kx` is imaginary, this transforms to:
+
+        Bx = B0 * (i * kx / ky) * sinh(i * kx * x) ... = -B0 * (kx / ky) * sin(kx * x) ...
+    This is what we have in OCELOT
+
     Raises
     ------
     ValueError
@@ -80,8 +96,6 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
     ky_y = ky * y
     kz_z = kz * z + phase
 
-    cosz = np.cos(kz_z)
-
     if nperiods is not None:
 
         ph_shift = np.pi / 2.
@@ -90,12 +104,12 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
             return 0.5 * (np.sign(x) + 1)
 
         if end_poles == '0':
-            z_coef = 1
-            cosz = np.cos(kz_z + ph_shift) * z_coef
+            cosz = np.cos(kz_z + ph_shift)
+            sinz = np.sin(kz_z + ph_shift)
 
         elif end_poles == '1':
-            z_coef = 1
-            cosz = np.cos(kz_z) * z_coef
+            cosz = np.cos(kz_z)
+            sinz = np.sin(kz_z)
 
         elif end_poles == '3/4':
             z_coef = (0.25 * heaviside(z) + 0.5 * heaviside(z - lperiod / 2.) + 0.25 * heaviside(z - lperiod)
@@ -103,6 +117,7 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
                       - 0.25 * heaviside(z - nperiods * lperiod))
 
             cosz = np.cos(kz_z + ph_shift) * z_coef
+            sinz = np.sin(kz_z + ph_shift) * z_coef
 
         elif end_poles == '1/2':
             z_coef = (-0.5 * heaviside(z - lperiod * 0.5) - 0.5 * heaviside(z + lperiod)
@@ -110,6 +125,7 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
                       + 0.5 * heaviside(z - nperiods * lperiod))
 
             cosz = np.cos(kz_z + ph_shift) * z_coef
+            sinz = np.sin(kz_z + ph_shift) * z_coef
 
         else:
             raise ValueError("'end_poles' must be either '1', '0', '3/4' or '1/2';" +
@@ -118,12 +134,15 @@ def und_field_py(x, y, z, lperiod, Kx, nperiods=None, phase=0, end_poles='1'):
                              "if 3/4' the following end poles sequence is added 1/4, -3/4, +1, -1 instead of existing +1, -1, +1, -1" +
                              "if 1/2 the following end poles sequence is added 1/2, -1, +1 instead of existing +1, -1, +1.")
 
+    else:
+        cosz = np.cos(kz_z)
+        sinz = np.sin(kz_z)
     cosx = np.cos(kx_x)
     sinhy = np.sinh(ky_y)
     # cosz = np.cos(kz_z + ph_shift)*z_coef
     Bx = k1 * np.sin(kx_x) * sinhy * cosz  # // here kx is only real
     By = B0 * cosx * np.cosh(ky_y) * cosz
-    Bz = k2 * cosx * sinhy * np.sin(kz_z)
+    Bz = k2 * cosx * sinhy * sinz
     return (Bx, By, Bz)
 
 

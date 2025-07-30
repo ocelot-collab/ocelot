@@ -479,6 +479,65 @@ def test_phase_space_aperture(lattice, p_array, parameter, update_ref_values=Fal
     assert check_result(result1 + result2)
 
 
+@pytest.mark.parametrize('parameter', [0, 1, 2, 3])
+def test_ibs(lattice, p_array, parameter, update_ref_values=False):
+    """
+    test PhysicsProc WakeTable
+
+    0 - tracking of the electron beam with positive energy chirp trough undulator
+    1 - tracking of the electron beam with negative energy chirp trough undulator
+    """
+    emit_x = 1e-6  # m
+    sigma_x = 250e-6  # m
+    sigma_z = 1e-3  # m
+    E = 0.1
+    gamma = E / m_e_GeV
+    parray_init = generate_parray(sigma_x=sigma_x, sigma_px=emit_x / gamma / sigma_x, sigma_y=sigma_x,
+                                  sigma_py=emit_x / gamma / sigma_x,
+                                  sigma_tau=sigma_z, sigma_p=1e-3 / 100, chirp=0.00, charge=0.25e-9, nparticles=2000000,
+                                  energy=E,
+                                  tau_trunc=None, tws=None, shape="gauss")
+    parray = copy.deepcopy(parray_init)
+    ibs = IBS()
+    ibs.Clog = 8
+    if parameter == 0:
+        ibs.method = "Nagaitsev"
+        ibs.update_Clog = True
+    if parameter == 1:
+        ibs.method = "Nagaitsev"
+        ibs.update_Clog = False
+    if parameter == 2:
+        ibs.method = "Huang"
+        ibs.update_Clog = True
+    else:
+        ibs.method = "Huang"
+        ibs.update_Clog = False
+    tws = get_envelope(parray, bounds=[-0.5, 0.5], slice="Imax")
+
+    pc = np.sqrt(parray.E ** 2 - m_e_GeV ** 2)
+
+    sigma_p = np.sqrt(tws.pp) * pc
+
+    Sigma_e_ocl = [sigma_p * 1e6]
+    s_ocl = [1]
+    s_pos = 1
+    for i in range(29):
+        ibs.apply(parray, dz=1)
+
+        tws = get_envelope(parray, bounds=[-0.5, 0.5], slice="Imax")
+        sigma_p = np.sqrt(tws.pp) * pc
+        Sigma_e_ocl.append(sigma_p * 1e6)
+        s_pos += 1
+        s_ocl.append(s_pos)
+    B = np.column_stack((s_ocl, Sigma_e_ocl))
+    if update_ref_values:
+        return numpy2json(B)
+
+    B_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + str(parameter) + '.json'))
+
+    result = check_matrix(B, B_ref, tolerance=1.0e-2, tolerance_type='relative', assert_info=' current - ')
+    assert check_result(result)
+
 def setup_module(module):
 
     f = open(pytest.TEST_RESULTS_FILE, 'a')
@@ -525,12 +584,14 @@ def test_update_ref_values(lattice, p_array, cmdopt):
     update_functions.append('test_track_spontan_rad_effects')
     update_functions.append("test_dechirper_offaxis")
     update_functions.append("test_phase_space_aperture")
+    update_functions.append("test_ibs")
 
     update_function_parameters = {}
     update_function_parameters['test_track_smooth'] = [0, 1]
     update_function_parameters['test_track_aperture'] = [0, 1, 2]
     update_function_parameters['test_track_ellipt_aperture'] = [0, 1, 2]
     update_function_parameters['test_phase_space_aperture'] = [0, 1, 2]
+    update_function_parameters['test_ibs'] = [0, 1, 2, 3]
 
     parameter = update_function_parameters[cmdopt] if cmdopt in update_function_parameters.keys() else ['']
 

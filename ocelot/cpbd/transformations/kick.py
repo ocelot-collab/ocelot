@@ -8,12 +8,20 @@ from ocelot.cpbd.elements.element import Element
 
 
 class KickTM(Transformation):
-    """[summary]
-    Implementation of the Kick Transforamtion.
-    The concrete element atom have to implement at least 'create_kick_main_params(self) -> KickParams'. If the element has edges 
-        'create_kick_entrance_params(self) -> KickParams' and 'create_kick_exit_params(self) -> KickParams' have to be implemented as well.
     """
+    Implementation of the Kick Transformation.
 
+    This class provides the implementation of a kick transformation. Elements using this transformation
+    must implement the following methods:
+
+    - `create_kick_main_params(self) -> KickParams`: This method defines the main kick parameters.
+    - If the element has edges:
+        - `create_kick_entrance_params(self) -> KickParams`: Defines the parameters for the entrance edge.
+        - `create_kick_exit_params(self) -> KickParams`: Defines the parameters for the exit edge.
+
+    Attributes:
+        (Add any attributes here if applicable, e.g., main parameters or edge-related configurations.)
+    """
     def __init__(self, create_tm_param_func, delta_e_func, tm_type: TMTypes, length: float, delta_length: float = 0.0, **params) -> None:    
         super().__init__(create_tm_param_func, delta_e_func, tm_type, length, delta_length)
         nkick = params.get('nkick')
@@ -21,16 +29,26 @@ class KickTM(Transformation):
 
     @classmethod
     def from_element(cls, element: Element, tm_type: TMTypes = TMTypes.MAIN, delta_l=None, **params):
-        """[summary]
-        :param element: An Element which implements at least 'create_kick_main_params(self) -> KickParams'. If the element has edges 
-        'create_kick_entrance_params(self) -> KickParams' and 'create_kick_exit_params(self) -> KickParams' have to be implemented as well.
-        :type element: Element
-        :param tm_type: Type of Transformation can be TMTypes.ENTRANCE, TMTypes.MAIN or TMTypes.EXIT, defaults to TMTypes.MAIN
-        :type tm_type: TMTypes, optional
-        :param delta_l: If the parameter is set, just a section of the element is taken into account for the tm calculation, defaults to None
-        :type delta_l: [type], optional
-        :return: [description]
-        :rtype: [type]
+        """
+        Creates a transformation matrix (TM) from an element.
+
+        The element must implement at least the `create_kick_main_params(self) -> KickParams` method.
+        If the element has edges, the following methods should also be implemented:
+        - `create_kick_entrance_params(self) -> KickParams`: Defines the entrance edge parameters.
+        - `create_kick_exit_params(self) -> KickParams`: Defines the exit edge parameters.
+
+        Args:
+            element (Element): An element that provides the necessary methods for kick parameter creation.
+            tm_type (TMTypes, optional): The type of transformation matrix. Can be one of:
+                - `TMTypes.ENTRANCE`: Entrance transformation matrix.
+                - `TMTypes.MAIN`: Main transformation matrix (default).
+                - `TMTypes.EXIT`: Exit transformation matrix.
+            delta_l (float, optional): If set, only a section of the element is considered for the transformation
+                matrix calculation. Defaults to `None`.
+            **params: Additional parameters for the transformation matrix calculation.
+
+        Returns:
+            Any: The calculated transformation matrix or related object.
         """
         return cls.create(entrance_tm_params_func=element.create_kick_entrance_params if element.has_edge else None,
                           delta_e_func=element.create_delta_e,

@@ -78,7 +78,7 @@ def test_tracking_step(lattice, parameter, update_ref_values=False):
     :parameter=0 - tracking with {'global': TransferMap, 'Undulator': UndulatorTestTM}
     :parameter=1 - tracking with default {'global': TransferMap}
     """
-    
+    eps = 1e-12
     p = Particle(x=0.001, y=0.002)
     p.E = 2.5
 
@@ -86,7 +86,7 @@ def test_tracking_step(lattice, parameter, update_ref_values=False):
     dz = 0.01
 
     P1 = []
-    for iii in range(int(lattice[parameter].totalLen/dz)):
+    for iii in range(int((lattice[parameter].totalLen + eps)/dz)):
         tracking_step(lattice[parameter], [p], dz=dz, navi=navi)
         P1.append(copy.copy(p))
 

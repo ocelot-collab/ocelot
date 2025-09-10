@@ -93,13 +93,14 @@ def trace_z(lattice, obj0, z_array):
     usage: twiss = trace_z(lattice, twiss_0, [1.23, 2.56, ...]) ,
     to calculate Twiss params at 1.23m, 2.56m etc.
     """
+    eps = 1e-12
     obj_list = []
     i = 0
     elem = lattice.sequence[i]
     L = elem.l
     obj_elem = obj0
     for z in z_array:
-        while z > L:
+        while z > L + eps and i + 1 < len(lattice.sequence):
             for tm in lattice.sequence[i].first_order_tms:
                 obj_elem = tm * obj_elem
             i += 1
@@ -107,6 +108,10 @@ def trace_z(lattice, obj0, z_array):
             L += elem.l
 
         delta_l = z - (L - elem.l)
+        if delta_l < 0:   # safeguard against floating-point issues
+            delta_l = 0.0
+        elif delta_l > elem.l:
+            delta_l = elem.l
         first_order_tms = elem.get_section_tms(start_l=0.0, delta_l=delta_l, first_order_only=True)
 
         obj_z = obj_elem

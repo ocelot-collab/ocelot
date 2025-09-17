@@ -46,7 +46,11 @@ __all__ = ['Twiss', "Beam", "Particle", "get_current", "get_envelope", "generate
 import numpy as np
 from ocelot.cpbd.magnetic_lattice import MagneticLattice, merger
 
-from ocelot.cpbd.beam import *
+from ocelot.cpbd.beam.core import Twiss, Beam
+from ocelot.cpbd.beam.beam import ellipse_from_twiss, gauss_from_twiss
+from ocelot.cpbd.beam.generator import generate_parray
+from ocelot.cpbd.beam.analysis import get_current, get_envelope, global_slice_analysis
+from ocelot.cpbd.beam.particle import ParticleArray, Particle
 from ocelot.cpbd.tm_params import *
 from ocelot.cpbd.transformations import *
 from ocelot.cpbd.elements import *

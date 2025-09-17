@@ -154,8 +154,8 @@ def freq_analysis(track_list, lat, nturns, harm=True, diap=0.10, nearest=False, 
     def beta_freq(lat):
 
         tws = twiss(lat, Twiss())
-        nux = tws[-1].mux/2./pi*nsuperperiods
-        nuy = tws[-1].muy/2./pi*nsuperperiods
+        nux = tws[-1].mux/2./np.pi*nsuperperiods
+        nuy = tws[-1].muy/2./np.pi*nsuperperiods
         print ("freq. analysis: Qx = ", nux, " Qy = ", nuy)
         nux = abs(int(nux+0.5) - nux)
         nuy = abs(int(nuy+0.5) - nuy)
@@ -267,7 +267,7 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
     #sigma_x = sqrt((sigma_e*tws0.Dx)**2 + emit*tws0.beta_x)
     #sigma_xp = sqrt((sigma_e*tws0.Dxp)**2 + emit*tws0.gamma_x)
     if type == "contour":
-        t = np.linspace(0,2*pi, num)
+        t = np.linspace(0,2*np.pi, num)
         x = n_t_sigma*beam.sigma_x*np.cos(t)
         y = n_t_sigma*beam.sigma_xp*np.sin(t)
     else:

@@ -271,7 +271,7 @@ class MagneticLattice:
 
         return self.find_indices_by_predicate(lambda elem: isinstance(elem, element))
 
-    def find_indices_by_predicate(self, predicate: Callable[Element, bool]) -> List[int]:
+    def find_indices_by_predicate(self, predicate: Callable[[Element], bool]) -> List[int]:
         """Get indices using some callable function.  Function should
         take one argument, an element of the sequence, and return
         either True or False.

@@ -6,11 +6,11 @@ from scipy.optimize import *
 
 from ocelot.cpbd.beam_params import radiation_integrals
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
-from ocelot.cpbd.beam import Particle
+from ocelot.cpbd.beam import Particle, Twiss
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.beam import get_envelope
 from ocelot.cpbd.track import track
-from ocelot.cpbd.optics import lattice_transfer_map, twiss, Twiss
+from ocelot.cpbd.optics import lattice_transfer_map, twiss
 from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.tm_utils import SecondOrderMult
 

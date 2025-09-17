@@ -9,7 +9,7 @@ import numpy as np
 from ocelot.adaptors import *
 from ocelot.adaptors.astra2ocelot import *
 from ocelot.cpbd.physics_proc import PhysProc
-
+import ocelot.common.globals as glb
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -333,7 +333,7 @@ class WakeTableDechirperOffAxis(WakeTable):
         sigma = sigma * 1e3  # m -> mm, characteristic beam size in mm
         y0 = a - b  # in mm POSITION of the charge CHANGE ONLY THIS PARAMETER
         # now distance from the plate 500um = a-y0
-        c = speed_of_light
+        c = glb.speed_of_light
         Z0 = 3.767303134695850e+02
         y = y0
         x0 = D / 2.
@@ -473,7 +473,7 @@ class WakeTableParallelPlate_origin(WakeTable):
         offset = a - b
         if np.abs(offset) >= a:
             raise ValueError("distance to +y/+x plate must be smaller than 2a")
-        c = speed_of_light
+        c = glb.speed_of_light
         Z0 = 3.767303134695850e+02
         s = np.arange(0, 50 + 0.01, 0.01) * sigma
         ns = len(s)
@@ -507,7 +507,7 @@ class WakeTableParallelPlate_origin(WakeTable):
         
         
         # scale factors, hab
-        Y = pi * offset / (2 * a)
+        Y = np.pi * offset / (2 * a)
         
         if Y == 0:
             sl = 9/4 * s0r
@@ -584,7 +584,7 @@ class WakeTableParallelPlate(WakeTable):
         offset = a - b
         if np.abs(offset) >= a:
             raise ValueError("distance to +y/+x plate must be smaller than 2a")
-        c = speed_of_light
+        c = glb.speed_of_light
         Z0 = 3.767303134695850e+02
         s = np.arange(0, 50 + 0.01, 0.01) * sigma
         ns = len(s)
@@ -618,7 +618,7 @@ class WakeTableParallelPlate(WakeTable):
         
         
         # scale factors, hab
-        Y = pi * offset / (2 * a)
+        Y = np.pi * offset / (2 * a)
         
         if Y == 0:
             sl = 9/4 * s0r
@@ -696,7 +696,7 @@ class WakeTableParallelPlate3_origin(WakeTable3):
         offset = a - b
         if np.abs(offset) >= a:
             raise ValueError("distance to +y/+x plate must be smaller than 2a")
-        c = speed_of_light
+        c = glb.speed_of_light
         Z0 = 3.767303134695850e+02
         s = np.arange(0, 50 + 0.01, 0.01) * sigma
         ns = len(s)
@@ -752,7 +752,7 @@ class WakeTableParallelPlate3_origin(WakeTable3):
         
         
         # scale factors, hab
-        Y = pi * offset / (2 * a)
+        Y = np.pi * offset / (2 * a)
         
         if Y == 0:
             sl = 9/4 * s0r
@@ -876,7 +876,7 @@ class WakeTableParallelPlate3(WakeTable3):
         offset = a - b
         if np.abs(offset) >= a:
             raise ValueError("distance to +y/+x plate must be smaller than 2a")
-        c = speed_of_light
+        c = glb.speed_of_light
         Z0 = 3.767303134695850e+02
         s = np.arange(0, 50 + 0.01, 0.01) * sigma
         ns = len(s)
@@ -932,7 +932,7 @@ class WakeTableParallelPlate3(WakeTable3):
         
         
         # scale factors, hab
-        Y = pi * offset / (2 * a)
+        Y = np.pi * offset / (2 * a)
         
         if Y == 0:
             sl = 9/4 * s0r
@@ -1063,7 +1063,7 @@ class Wake(PhysProc):
         :return:
         """
         R, L, Cinv, nm, W0, N0, W1, N1 = T
-        c = speed_of_light
+        c = glb.speed_of_light
         x = I[:, 0]
         bunch = I[:, 1]
         if L != 0 or N1 > 0:
@@ -1089,7 +1089,7 @@ class Wake(PhysProc):
 
     def add_total_wake(self, X, Y, Z, q, TH, Ns, NF):
         T, H = TH
-        c = speed_of_light
+        c = glb.speed_of_light
         Np = X.shape[0]
         X2 = X ** 2
         Y2 = Y ** 2
@@ -1272,7 +1272,7 @@ class Wake3(Wake):
 
     def add_total_wake(self, X, Y, Z, q, TH, Ns, NF):
         T, H = TH
-        c = speed_of_light
+        c = glb.speed_of_light
         Np = X.shape[0]
         X2 = X ** 2
         Y2 = Y ** 2
@@ -1555,7 +1555,7 @@ def undulator_wake_euxfel(x, I, q):
     # bunch
     hx = x[1] - x[0]
     bunch = I / (np.sum(I) * hx)
-    In = bunch * q * speed_of_light
+    In = bunch * q * glb.speed_of_light
     I0 = np.max(In)
     i0 = np.argmax(In)
 
@@ -1573,9 +1573,9 @@ def undulator_wake_euxfel(x, I, q):
     s1 = 9.86e-6
     alpha = 1.29  # % corrected
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    w0 = A * Z0 * speed_of_light / (np.pi * a ** 2) * np.exp(-(xwi / s0) ** alpha)*np.cos(xwi/s1)
+    w0 = A * glb.Z0 * glb.speed_of_light / (np.pi * a ** 2) * np.exp(-(xwi / s0) ** alpha)*np.cos(xwi/s1)
     g0 = 123e-3
-    w1 = speed_of_light * Z0 / (Lsec * np.pi ** 2 * a) * np.sqrt(2 * g0 * xwi)
+    w1 = glb.speed_of_light * glb.Z0 / (Lsec * np.pi ** 2 * a) * np.sqrt(2 * g0 * xwi)
 
     w0[0] = w0[0] * 0.5
 
@@ -1583,6 +1583,6 @@ def undulator_wake_euxfel(x, I, q):
     W0 = -wc[0:nb]
     xc1, wc1 = convolution(x, d1_bunch, xwi, w1)
     W1 = -wc1[0:nb]
-    WR = -bunch * R * speed_of_light
+    WR = -bunch * R * glb.speed_of_light
     W = (W0 + W1 + WR) * q
     return x, W

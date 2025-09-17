@@ -70,9 +70,8 @@ def invert_cdf(y, x):
     """
 
     cum_int = integrate.cumulative_trapezoid(y, x, initial=0)
-    cdf = cum_int / (max(cum_int) - min(cum_int))
-    inv_cdf = interpolate.interp1d(cdf, x)
-    return inv_cdf
+    cdf = cum_int / cum_int[-1]
+    return interpolate.interp1d(cdf, x, bounds_error=False, fill_value=(x[0], x[-1]))
 
 
 def rolling_mean(x, window):

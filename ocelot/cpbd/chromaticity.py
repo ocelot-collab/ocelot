@@ -8,7 +8,7 @@ from ocelot.cpbd.optics import *
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.transformations.transformation import TMTypes
-
+import numpy as np
 
 def natural_chromaticity(lattice, tws_0, nsuperperiod=1):
     edge_ksi_x, edge_ksi_y = 0, 0
@@ -49,8 +49,8 @@ def natural_chromaticity(lattice, tws_0, nsuperperiod=1):
                 integr_x += twiss_z.beta_x*elem.kn[1]
                 integr_y -= twiss_z.beta_y*elem.kn[1]
             tws_elem = tm * tws_elem
-    ksi_x = -(integr_x - edge_ksi_x)/(4*pi)
-    ksi_y = -(integr_y - edge_ksi_y)/(4*pi)
+    ksi_x = -(integr_x - edge_ksi_x)/(4*np.pi)
+    ksi_y = -(integr_y - edge_ksi_y)/(4*np.pi)
     return np.array([ksi_x*nsuperperiod, ksi_y*nsuperperiod])
 
 
@@ -84,8 +84,8 @@ def sextupole_chromaticity(lattice, tws0, nsuperperiod=1):
 
         for tm in elem.first_order_tms:
             tws_elem = tm*tws_elem
-    chrom_sex_x = (integr_x)/(4*pi)
-    chrom_sex_y = -(integr_y)/(4*pi)
+    chrom_sex_x = (integr_x)/(4*np.pi)
+    chrom_sex_y = -(integr_y)/(4*np.pi)
     return np.array([chrom_sex_x*nsuperperiod, chrom_sex_y*nsuperperiod])
 
 
@@ -133,11 +133,11 @@ def calculate_sex_strength(lattice, tws_0, ksi, ksi_comp, nsuperperiod):
         for tm in element.first_order_tms:
             # if element.type == "sextupole":
             if element.id == sex_name[0]:
-                m1x += tws_elem.Dx*tws_elem.beta_x/(4*pi)*nsuperperiod
-                m1y -= tws_elem.Dx*tws_elem.beta_y/(4*pi)*nsuperperiod
+                m1x += tws_elem.Dx*tws_elem.beta_x/(4*np.pi)*nsuperperiod
+                m1y -= tws_elem.Dx*tws_elem.beta_y/(4*np.pi)*nsuperperiod
             elif element.id == sex_name[1]:
-                m2x += tws_elem.Dx*tws_elem.beta_x/(4*pi)*nsuperperiod
-                m2y -= tws_elem.Dx*tws_elem.beta_y/(4*pi)*nsuperperiod
+                m2x += tws_elem.Dx*tws_elem.beta_x/(4*np.pi)*nsuperperiod
+                m2y -= tws_elem.Dx*tws_elem.beta_y/(4*np.pi)*nsuperperiod
             tws_elem = tm * tws_elem
     M = np.array([[m1x, m2x], [m1y, m2y]])
     ksi = np.array([[ksi_x_comp - ksi_x], [ksi_y_comp - ksi_y]])
@@ -247,8 +247,8 @@ def DZ(lattice, energy):
     # print DR
     DR = DR_new
 
-    DQ1 = (DR[0, 0] + DR[1, 1])/(2*sin(tws[-1].mux))/2/pi
-    DQ2 = (DR[2, 2] + DR[3, 3])/(2*sin(tws[-1].muy))/2/pi
+    DQ1 = (DR[0, 0] + DR[1, 1])/(2*np.sin(tws[-1].mux))/2/np.pi
+    DQ2 = (DR[2, 2] + DR[3, 3])/(2*np.sin(tws[-1].muy))/2/np.pi
     print(DQ1*6, DQ2*6)
-    print(tws[-1].mux/2/pi*6)
-    print(tws[-1].muy/2/pi*6)
+    print(tws[-1].mux/2/np.pi*6)
+    print(tws[-1].muy/2/np.pi*6)

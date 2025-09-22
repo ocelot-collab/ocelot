@@ -1062,13 +1062,13 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
 
 
     plt.setp(ax_c.get_xticklabels(), visible=False)
-    plt.ylabel("$I\,[\mathrm{A}]$")
+    plt.ylabel(r"$I\,[\mathrm{A}]$")
     plt.grid(grid)
 
     ax_ys = plt.subplot(326, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.y() * 1e3, ax=ax_ys, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, xlabel=tau_label, ylabel='$y\,[\mathrm{mm}]$', nfig=50,
+                 interpolation=interpolation, xlabel=tau_label, ylabel=r'$y\,[\mathrm{mm}]$', nfig=50,
                  title="Side view", figsize=None, grid=grid, cmap=cmap, **filtered)
     if show_moments:
         plt.plot(slice_params.s * tau_factor, slice_params.my * 1e3, "k", lw=2)
@@ -1263,7 +1263,7 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
              label=fr"$I_{{\mathrm{{max}}}}={i2max:.0f}\,\mathrm{{A}}$ {legend_beam2}")
     plt.legend()
     plt.setp(ax_c.get_xticklabels(), visible=False)
-    plt.ylabel("$I\,[\mathrm{A}]$")
+    plt.ylabel(r"$I\,[\mathrm{A}]$")
     plt.grid(True)
 
     # my_rainbow = deepcopy(plt.get_cmap('rainbow'))

@@ -338,7 +338,7 @@ class LSC(PhysProc):
             k += (-1) ** i * factorial(i) / (x ** (i + 1))
         T[inda] = k
         Z = 1j * Z0 / (4 * pi * speed_of_light*gamma**2) * w * T * dz
-        return Z # --> Omm/m
+        return Z # --> Omm
 
     def imp_step_lsc(self, gamma, rb, w, dz):
         """

@@ -1,7 +1,8 @@
 import numpy as np
 import ocelot.common.globals as glb
+from numba import njit
 
-from . import utils
+from . import beam_utils
 from . import core
 from ocelot.common.ocelog import *
 
@@ -294,7 +295,7 @@ def s_to_cur(A, sigma, q0, v):
     K = np.floor(Nsigma * sigma / s + 0.5)
     G = np.exp(-0.5 * (np.arange(-K, K + 1) * s / sigma) ** 2)
     G = G / np.sum(G)
-    B[:, 1] = utils.convmode(C, G, 1)
+    B[:, 1] = beam_utils.convmode(C, G, 1)
     koef = q0 * v / (s * np.sum(B[:, 1]))
     B[:, 1] = koef * B[:, 1]
     return B
@@ -355,17 +356,17 @@ def slice_analysis_transverse(parray, Mslice, Mcur, p, iter):
     _logger.debug("slice_analysis_transverse: charge = " + str(q1))
     n = np.int_(parray.rparticles.size / 6)
     PD = parray.rparticles
-    PD = utils.sortcols(PD, row=4)
+    PD = beam_utils.sortcols(PD, row=4)
 
     z = np.copy(PD[4])
     mx, mxs, mxx, mxxs, mxsxs, emittx = slice_analysis(PD[0], PD[1], Mslice)
 
     my, mys, myy, myys, mysys, emitty = slice_analysis(PD[2], PD[3], Mslice)
 
-    mm, mm, mm, mm, mm, emitty0 = utils.moments(PD[2], PD[3])
+    mm, mm, mm, mm, mm, emitty0 = beam_utils.moments(PD[2], PD[3])
     gamma0 = parray.E / glb.m_e_GeV
     emityn = emitty0 * gamma0
-    mm, mm, mm, mm, mm, emitt0 = utils.moments(PD[0], PD[1])
+    mm, mm, mm, mm, mm, emitt0 = beam_utils.moments(PD[0], PD[1])
     emitxn = emitt0 * gamma0
 
     z, ind = np.unique(z, return_index=True)
@@ -376,15 +377,15 @@ def slice_analysis_transverse(parray, Mslice, Mcur, p, iter):
     n = 1000
     hs = (smax - smin) / (n - 1)
     s = np.arange(smin, smax + hs, hs)
-    ex = utils.interp1(z, emittx, s)
-    ey = utils.interp1(z, emitty, s)
+    ex = beam_utils.interp1(z, emittx, s)
+    ey = beam_utils.interp1(z, emitty, s)
 
-    ex = utils.simple_filter(ex, p, iter) * gamma0 * 1e6
-    ey = utils.simple_filter(ey, p, iter) * gamma0 * 1e6
+    ex = beam_utils.simple_filter(ex, p, iter) * gamma0 * 1e6
+    ey = beam_utils.simple_filter(ey, p, iter) * gamma0 * 1e6
 
     sig0 = np.std(parray.tau())
     B = s_to_cur(z, Mcur * sig0, q1, glb.speed_of_light)
-    I = utils.interp1(B[:, 0], B[:, 1], s)
+    I = beam_utils.interp1(B[:, 0], B[:, 1], s)
     return [s, I, ex, ey, gamma0, emitxn, emityn]
 
 
@@ -483,7 +484,7 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     q1 = np.sum(parray.q_array)
     n = np.int_(parray.rparticles.size / 6)
     PD = parray.rparticles
-    PD = utils.sortcols(PD, row=4)
+    PD = beam_utils.sortcols(PD, row=4)
 
     z = np.copy(PD[4])
     mx, mxs, mxx, mxxs, mxsxs, emittx = slice_analysis(PD[0], PD[1], Mslice)
@@ -500,9 +501,9 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     sig0 = np.std(parray.tau())  # std pulse duration
     B = s_to_cur(z, Mcur * sig0, q1, glb.speed_of_light)
     gamma0 = parray.E / glb.m_e_GeV
-    _, _, _, _, _, emitty0 = utils.moments(PD[2], PD[3])
+    _, _, _, _, _, emitty0 = beam_utils.moments(PD[2], PD[3])
     emityn = emitty0 * gamma0
-    _, _, _, _, _, emitt0 = utils.moments(PD[0], PD[1])
+    _, _, _, _, _, emitt0 = beam_utils.moments(PD[0], PD[1])
     emitxn = emitt0 * gamma0
 
     z, ind = np.unique(z, return_index=True)
@@ -515,16 +516,16 @@ def global_slice_analysis_extended(parray, Mslice, Mcur, p, iter):
     n = 1000
     hs = (smax - smin) / (n - 1)
     s = np.arange(smin, smax + hs, hs)
-    ex = utils.interp1(z, emittx, s)
-    ey = utils.interp1(z, emitty, s)
-    se = utils.interp1(z, sE, s)
-    me = utils.interp1(z, mE, s)
-    ex = utils.simple_filter(ex, p, iter) * gamma0 * 1e6
-    ey = utils.simple_filter(ey, p, iter) * gamma0 * 1e6
-    se = utils.simple_filter(se, p, iter)
-    me = utils.simple_filter(me, p, iter)
+    ex = beam_utils.interp1(z, emittx, s)
+    ey = beam_utils.interp1(z, emitty, s)
+    se = beam_utils.interp1(z, sE, s)
+    me = beam_utils.interp1(z, mE, s)
+    ex = beam_utils.simple_filter(ex, p, iter) * gamma0 * 1e6
+    ey = beam_utils.simple_filter(ey, p, iter) * gamma0 * 1e6
+    se = beam_utils.simple_filter(se, p, iter)
+    me = beam_utils.simple_filter(me, p, iter)
 
-    I = utils.interp1(B[:, 0], B[:, 1], s)
+    I = beam_utils.interp1(B[:, 0], B[:, 1], s)
 
     return [s, I, ex, ey, me, se, gamma0, emitxn, emityn]
 
@@ -547,7 +548,7 @@ def global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.01, filte
     q1 = np.sum(parray.q_array)
 
     PD = parray.rparticles
-    PD = utils.sortcols(PD, row=4)
+    PD = beam_utils.sortcols(PD, row=4)
 
     z = np.copy(PD[4])
     mx, mxs, mxx, mxxs, mxsxs, emittx = slice_analysis(PD[0], PD[1], nparts_in_slice)
@@ -564,9 +565,9 @@ def global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.01, filte
     sig0 = np.std(parray.tau())  # std pulse duration
     B = s_to_cur(z, smooth_param * sig0, q1, glb.speed_of_light)
     gamma0 = parray.E / glb.m_e_GeV
-    _, _, _, _, _, emitty0 = utils.moments(PD[2], PD[3])
+    _, _, _, _, _, emitty0 = beam_utils.moments(PD[2], PD[3])
     slc.emityn = emitty0 * gamma0
-    _, _, _, _, _, emitt0 = utils.moments(PD[0], PD[1])
+    _, _, _, _, _, emitt0 = beam_utils.moments(PD[0], PD[1])
     slc.emitxn = emitt0 * gamma0
 
     _, mp, _, _, _, _ = slice_analysis(PD[4], PD[5], nparts_in_slice)
@@ -588,52 +589,52 @@ def global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.01, filte
 
     hs = (smax - smin) / (n - 1)
     s = np.linspace(smin, smax, num=n)
-    ex = utils.interp1(z, emittx, s)
-    ey = utils.interp1(z, emitty, s)
-    se = utils.interp1(z, sE, s)
-    me = utils.interp1(z, mE, s)
-    slc.ex = utils.simple_filter(ex, filter_base, filter_iter)
-    slc.ey = utils.simple_filter(ey, filter_base, filter_iter)
+    ex = beam_utils.interp1(z, emittx, s)
+    ey = beam_utils.interp1(z, emitty, s)
+    se = beam_utils.interp1(z, sE, s)
+    me = beam_utils.interp1(z, mE, s)
+    slc.ex = beam_utils.simple_filter(ex, filter_base, filter_iter)
+    slc.ey = beam_utils.simple_filter(ey, filter_base, filter_iter)
     slc.exn = slc.ex * gamma0
     slc.eyn = slc.ey * gamma0
-    slc.se = utils.simple_filter(se, filter_base, filter_iter)
-    slc.me = utils.simple_filter(me, filter_base, filter_iter)
+    slc.se = beam_utils.simple_filter(se, filter_base, filter_iter)
+    slc.me = beam_utils.simple_filter(me, filter_base, filter_iter)
 
-    slc.I = utils.interp1(B[:, 0], B[:, 1], s)
+    slc.I = beam_utils.interp1(B[:, 0], B[:, 1], s)
 
     mxpx = mxxs[ind]
     mypy = myys[ind]
-    xpx_m = utils.interp1(z, mxpx, s)
-    ypy_m = utils.interp1(z, mypy, s)
-    x_px = utils.simple_filter(xpx_m, filter_base, filter_iter)
-    y_py = utils.simple_filter(ypy_m, filter_base, filter_iter)
+    xpx_m = beam_utils.interp1(z, mxpx, s)
+    ypy_m = beam_utils.interp1(z, mypy, s)
+    x_px = beam_utils.simple_filter(xpx_m, filter_base, filter_iter)
+    y_py = beam_utils.simple_filter(ypy_m, filter_base, filter_iter)
     # additional moments <x>, <xp>, <y>, <yp>, <p>
     mx = mx[ind]
     mxs = mxs[ind]
     my = my[ind]
     mys = mys[ind]
 
-    xm = utils.interp1(z, mx, s)
-    xpm = utils.interp1(z, mxs, s)
-    ym = utils.interp1(z, my, s)
-    ypm = utils.interp1(z, mys, s)
+    xm = beam_utils.interp1(z, mx, s)
+    xpm = beam_utils.interp1(z, mxs, s)
+    ym = beam_utils.interp1(z, my, s)
+    ypm = beam_utils.interp1(z, mys, s)
 
-    sig_x = utils.interp1(z, sig_x, s)
-    sig_y = utils.interp1(z, sig_y, s)
+    sig_x = beam_utils.interp1(z, sig_x, s)
+    sig_y = beam_utils.interp1(z, sig_y, s)
 
-    sig_xp = utils.interp1(z, sig_xp, s)
-    sig_yp = utils.interp1(z, sig_yp, s)
+    sig_xp = beam_utils.interp1(z, sig_xp, s)
+    sig_yp = beam_utils.interp1(z, sig_yp, s)
 
-    slc.mx = utils.simple_filter(xm, filter_base, filter_iter)
-    slc.mxp = utils.simple_filter(xpm, filter_base, filter_iter)
-    slc.my = utils.simple_filter(ym, filter_base, filter_iter)
-    slc.myp = utils.simple_filter(ypm, filter_base, filter_iter)
+    slc.mx = beam_utils.simple_filter(xm, filter_base, filter_iter)
+    slc.mxp = beam_utils.simple_filter(xpm, filter_base, filter_iter)
+    slc.my = beam_utils.simple_filter(ym, filter_base, filter_iter)
+    slc.myp = beam_utils.simple_filter(ypm, filter_base, filter_iter)
 
-    slc.sig_x = utils.simple_filter(sig_x, filter_base, filter_iter)
-    slc.sig_y = utils.simple_filter(sig_y, filter_base, filter_iter)
+    slc.sig_x = beam_utils.simple_filter(sig_x, filter_base, filter_iter)
+    slc.sig_y = beam_utils.simple_filter(sig_y, filter_base, filter_iter)
 
-    slc.sig_xp = utils.simple_filter(sig_xp, filter_base, filter_iter)
-    slc.sig_yp = utils.simple_filter(sig_yp, filter_base, filter_iter)
+    slc.sig_xp = beam_utils.simple_filter(sig_xp, filter_base, filter_iter)
+    slc.sig_yp = beam_utils.simple_filter(sig_yp, filter_base, filter_iter)
 
     # twiss
     # np.full(n, np.nan)
@@ -644,9 +645,91 @@ def global_slice_analysis(parray, nparts_in_slice=5000, smooth_param=0.01, filte
     slc.gamma_x = np.divide(1 + slc.alpha_x ** 2, slc.beta_x, out=np.zeros_like(slc.alpha_x), where=slc.beta_x != 0)
     slc.gamma_y = np.divide(1 + slc.alpha_y ** 2, slc.beta_y, out=np.zeros_like(slc.alpha_y), where=slc.beta_y != 0)
     mp = mp[ind]
-    mp = utils.interp1(z, mp, s)
-    slc.mp = utils.simple_filter(mp, filter_base, filter_iter)
+    mp = beam_utils.interp1(z, mp, s)
+    slc.mp = beam_utils.simple_filter(mp, filter_base, filter_iter)
 
     slc.s = s
     slc.gamma0 = gamma0
     return slc
+
+
+def bunching_spectrum(z, Lwin=None, M=4096):
+    """
+    Compute |b(k)|^2 spectrum from 1D particle positions using FFT histogram.
+
+    Parameters
+    ----------
+    z : array_like
+        Particle positions (e.g. tau).
+    Lwin : float or None
+        Total window length. If None, use span of z (max - min).
+        Larger L = higher k-resolution but more zero-padding.
+    M : int
+        Number of grid points for FFT.
+
+    Returns
+    -------
+    k : ndarray
+        Wavenumbers [1/m].
+    bk2 : ndarray
+        |b(k)|^2 spectrum.
+    """
+    N = len(z)
+    zmin, zmax = z.min(), z.max()
+    if Lwin is None:
+        Lwin = zmax - zmin
+    # center window instead of forcing start at z.min()
+    zmid = 0.5*(zmin + zmax)
+    edges = np.linspace(zmid - Lwin/2, zmid + Lwin/2, M+1)
+    n, _ = np.histogram(z, bins=edges)
+    n_hat = np.fft.rfft(n)
+    b_k = n_hat / N
+    k = 2*np.pi*np.arange(len(b_k)) / Lwin
+    # power bunching np.abs(b_k)**2
+    return k, b_k
+
+
+def bunching_at_klist_2(z, k_list):
+    z = np.asarray(z)
+    b = []
+    for k in k_list:
+        b.append(np.exp(-1j * k * z).mean())
+    return np.array(b)
+
+@njit
+def bunching_at_klist(z, k_list):
+    N = z.size
+    out = np.empty(k_list.size, dtype=np.complex128)
+    for i in range(k_list.size):
+        s = 0.0 + 0.0j
+        k = k_list[i]
+        for j in range(N):
+            s += np.exp(-1j * k * z[j])
+        out[i] = s / N
+    return out
+
+
+def spectrum_to_z(spectrum_k, M, Lwin):
+    """
+    Transform e.g. Δδ(k) spectrum back to real-space Δδ(z).
+
+    Parameters
+    ----------
+    spectrum_k : ndarray
+        Complex spectrum (length M//2+1, from rfft).
+    M : int
+        Number of bins used in FFT (same as in bunching_spectrum).
+    Lwin : float
+        Window length [m] (same as in bunching_spectrum).
+
+    Returns
+    -------
+    z : ndarray
+        Bin centers [m].
+    signal_z : ndarray
+        Real-space Δδ(z) on the same grid.
+    """
+    signal_z = np.fft.irfft(spectrum_k, n=M)
+    dz = Lwin / M
+    z = np.linspace(-Lwin/2, Lwin/2 - dz, M)  # centered window
+    return z, signal_z.real

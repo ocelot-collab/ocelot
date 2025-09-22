@@ -10,7 +10,7 @@ from typing import Iterable
 import ocelot.common.globals as glb
 from ocelot.common.math_op import find_nearest_idx, invert_cdf
 from ocelot.common.ocelog import *
-from . import utils
+from . import beam_utils
 from . import analysis
 from . import particle
 from . import core
@@ -144,11 +144,11 @@ def beam_matching(parray, bounds, x_opt, y_opt, remove_offsets=True, slice=None)
     sig0 = np.std(pd[:, 4])
     inds = np.argwhere((z0 + sig0 * bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0 * bounds[1]))
 
-    mx, mxs, mxx, mxxs, mxsxs, emitx0 = utils.moments(pd[inds, 0], pd[inds, 1])
+    mx, mxs, mxx, mxxs, mxsxs, emitx0 = beam_utils.moments(pd[inds, 0], pd[inds, 1])
     beta_x = mxx / emitx0
     alpha_x = -mxxs / emitx0
 
-    [my, mys, myy, myys, mysys, emity0] = utils.moments(pd[inds, 2], pd[inds, 3])
+    [my, mys, myy, myys, mysys, emity0] = beam_utils.moments(pd[inds, 2], pd[inds, 3])
     beta_y = myy / emity0
     alpha_y = -myys / emity0
 

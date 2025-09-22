@@ -131,8 +131,7 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
 
     #tau = np.random.randn(nparticles) * sigma_tau
     dp = np.random.randn(nparticles) * sigma_p
-    if sigma_tau != 0:
-        dp += chirp * tau / sigma_tau
+
     # covariance matrix for [tau, p] for beam compression in BC
     # cov_t_p = [[1.30190131e-06, 2.00819771e-05],
     #           [2.00819771e-05, 3.09815718e-04]]
@@ -163,7 +162,9 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
             coords = [quiet] if quiet != "all" else ("x", "y", "px", "py", "dp")
             p_array.quietify_transverse(coords=coords, quiet_method=quiet_method, quiet_alpha=quiet_alpha,
                          quiet_jitter_fraction=quiet_jitter_fraction, rng=rng)
-
+    if sigma_tau != 0:
+        dp += chirp * p_array.tau() / sigma_tau
+    p_array.rparticles[5][:] = dp[:]
     if isinstance(tws, core.Twiss):
         x_opt = [tws.alpha_x, tws.beta_x, tws.mux]
         y_opt = [tws.alpha_y, tws.beta_y, tws.muy]

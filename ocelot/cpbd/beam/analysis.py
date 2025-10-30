@@ -265,40 +265,126 @@ def s2cur_auxil_py(A, xiA, C, N, I):
 s2cur_auxil = s2cur_auxil_py if not nb_flag else nb.jit(nopython=True)(s2cur_auxil_py)
 
 
-def s_to_cur(A, sigma, q0, v):
+def s_to_cur(A, sigma, q0, v=glb.speed_of_light, ds=None, N=None):
     """
-    Function to calculate beam current
+    Calculate beam current profile using first-order (CIC) deposition
+    with optional Gaussian smoothing.
 
-    :param A: s-coordinates of particles
-    :param sigma: smoothing parameter, e,g, sigma = 0.01*np.std(A)
-    :param q0: bunch charge
-    :param v: mean velocity
-    :return: [s, I]
+    Parameters
+    ----------
+    A : ndarray
+        s-coordinates of particles [m].
+    q0 : float
+        Total bunch charge [C].
+    v : float
+        Mean velocity [m/s].
+    sigma : float, optional
+        Gaussian smoothing width [m]. If None, no smoothing is applied.
+    ds : float, optional
+        Bin size [m]. If given, overrides default binning.
+    N : int, optional
+        Number of bins. If given, overrides default binning.
+        Mutually exclusive with `ds`.
+
+    Returns
+    -------
+    B : ndarray, shape (N,2)
+        Columns: [s [m], I(s) [A]].
     """
 
     Nsigma = 3
-    a = np.min(A) - Nsigma * sigma
-    b = np.max(A) + Nsigma * sigma
-    s = 0.25 * sigma
-    N = int(np.ceil((b - a) / s))
-    s = (b - a) / N
+
+    # --- grid extent ---
+    a = np.min(A)
+    b = np.max(A)
+    if sigma is not None:
+        a -= Nsigma * sigma
+        b += Nsigma * sigma
+
+    # --- grid definition ---
+    if ds is not None and N is not None:
+        raise ValueError("Specify either ds or N, not both.")
+    if ds is not None:
+        N = int(np.ceil((b - a) / ds))
+    elif N is not None:
+        ds = (b - a) / N
+    else:
+        # default resolution if neither ds nor N is given
+        if sigma is not None and sigma > 0:
+            ds = 0.25 * sigma
+        else:
+            ds = (b - a) / 1000.0
+        N = int(np.ceil((b - a) / ds))
+
+    ds = (b - a) / N  # ensure consistency
     B = np.zeros((N + 1, 2))
     C = np.zeros(N + 1)
 
-    B[:, 0] = np.arange(0, (N + 0.5) * s, s) + a
-    N = N + 1  # np.shape(B)[0]
-    cA = (A - a) / s
+    B[:, 0] = np.arange(0, (N + 0.5) * ds, ds) + a
+    N = N + 1
+    cA = (A - a) / ds
     I = np.int_(np.floor(cA))
     xiA = 1 + I - cA
     s2cur_auxil(A, xiA, C, N, I)
 
-    K = np.floor(Nsigma * sigma / s + 0.5)
-    G = np.exp(-0.5 * (np.arange(-K, K + 1) * s / sigma) ** 2)
-    G = G / np.sum(G)
-    B[:, 1] = beam_utils.convmode(C, G, 1)
-    koef = q0 * v / (s * np.sum(B[:, 1]))
+    # --- Gaussian smoothing (optional) ---
+    if sigma is not None and sigma > 0:
+        K = int(np.floor(Nsigma * sigma / ds + 0.5))
+        G = np.exp(-0.5 * (np.arange(-K, K + 1) * ds / sigma) ** 2)
+        G = G / np.sum(G)
+        B[:, 1] = beam_utils.convmode(C, G, 1)
+    else:
+        B[:, 1] = C
+
+    # --- normalization ---
+    koef = q0 * v / (ds * np.sum(B[:, 1]))
     B[:, 1] = koef * B[:, 1]
     return B
+
+
+def signal_to_spectrum(s, w):
+    """
+    Compute the Fourier spectrum of a longitudinal signal using the
+    convention exp(+i ω t).
+
+    This is a generic utility: depending on the physical meaning of `w`,
+    the output spectrum can represent an impedance, a current spectrum,
+    or a bunching spectrum.
+
+    Parameters
+    ----------
+    s : ndarray
+        Longitudinal coordinate array [m]. Uniformly spaced.
+    w : ndarray
+        Signal defined on `s`. Examples:
+          - wake potential W(s) [V/C] → spectrum gives impedance Z(ω) [Ω]
+          - current profile I(s) [A]  → spectrum gives current spectrum I(ω)
+          - normalized charge density → spectrum gives bunching factor b(k)
+
+    Returns
+    -------
+    f : ndarray
+        Frequency array [Hz] corresponding to the spectrum bins.
+    y : ndarray (complex)
+        Fourier spectrum of the input signal. Physical units depend on `w`.
+
+    Notes
+    -----
+    - Uses FFT with exp(+i ω t) convention.
+    - The relation between spatial coordinate s and time is t = s / c.
+    - The FFT normalization includes a factor `dt` so that Parseval's theorem
+      is satisfied and the units of `y` are consistent with the input `w`.
+    """
+    ds = s[1] - s[0]
+    dt = ds / glb.speed_of_light
+    n = len(s)
+    f = 1 / dt * np.arange(0, n) / n
+    #f = np.fft.fftfreq(n, d=dt)
+    shift = 1  # optional phase shift, e.g. exp(1j* f * t0 * 2π)
+    y = dt * np.fft.fft(w, n) * shift
+    return f, y
+
+
 
 
 def slice_analysis_py(x, xp, m_slice):
@@ -733,3 +819,71 @@ def spectrum_to_z(spectrum_k, M, Lwin):
     dz = Lwin / M
     z = np.linspace(-Lwin/2, Lwin/2 - dz, M)  # centered window
     return z, signal_z.real
+
+
+def compute_bunching(z, sigma, q0, v, ds=None, N=None):
+    """
+    Compute bunching factor spectrum from particle coordinates.
+
+    Parameters
+    ----------
+    z : ndarray
+        Particle longitudinal positions [m].
+    q0 : float
+        Bunch charge [C].
+    v : float
+        Mean velocity [m/s].
+    sigma : float
+        Smoothing parameter [m].
+    ds : float, optional
+        Bin size [m].
+    N : int, optional
+        Number of bins.
+
+    Returns
+    -------
+    k : ndarray
+        Wavenumbers [1/m].
+    b_k : ndarray (complex)
+        Bunching factor spectrum.
+    """
+    B = s_to_cur(z, sigma=sigma, q0=q0, v=v, ds=ds, N=N)
+
+    s, I_s = B[:,0], B[:,1]
+    s_pad, I_s_pad = zero_pad_signal(s, I_s)
+
+    f, I_f = signal_to_spectrum(s_pad, I_s_pad)
+
+    k = 2*np.pi*f / v
+    b_k = I_f / q0
+
+    return k, b_k
+
+
+def zero_pad_signal(s, I_s):
+    """
+    Zero-pad signal to double its length (append zeros of same length).
+
+    Parameters
+    ----------
+    s : ndarray
+        Coordinate array [m], uniformly spaced.
+    I_s : ndarray
+        Signal samples on grid s (e.g. current profile).
+
+    Returns
+    -------
+    s_pad : ndarray
+        Extended coordinate array [m].
+    I_s_pad : ndarray
+        Zero-padded signal.
+    """
+    nb = len(s)
+    ds = s[1] - s[0]
+
+    # New extended arrays
+    s_pad = np.arange(0, 2*nb) * ds + s[0]
+    I_s_pad = np.zeros_like(s_pad)
+    I_s_pad[:nb] = I_s
+
+    return s_pad, I_s_pad

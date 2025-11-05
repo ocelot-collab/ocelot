@@ -82,14 +82,11 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     if tws is not None:
         if not isinstance(tws, core.Twiss):
             raise TypeError(
-                f"'tws' must be an instance of Twiss, got {type(tws).__name__} instead."
+                f"'tws' must be an instance of Twiss or None, got {type(tws).__name__} instead."
             )
 
-        if np.any(np.array([
-            tws.emit_x, tws.emit_y,
-            tws.beta_x, tws.beta_y,
-        ]) == 0):
-            raise ValueError("Twiss parameters contain zeros. Check emit_{x,y}, and beta_{x,y} values.")
+    if isinstance(tws, core.Twiss) and np.all(np.array([tws.emit_x, tws.emit_y, tws.beta_x, tws.beta_y]) != 0):
+        #raise ValueError("Twiss parameters contain zeros. Check emit_{x,y}, and beta_{x,y} values.")
 
         _logger.info("Using Twiss parameters — overriding sigma_{x,px,y,py} values.")
 

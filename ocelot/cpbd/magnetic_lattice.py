@@ -218,21 +218,45 @@ class MagneticLattice:
     def totalLen(self):
         return sum([e.l for e in self.sequence])
 
-    def get_sequence_part(self, start: E, stop: E):
+    def get_sequence_part(self, start: E | None, stop: E | None):
+        """
+        Return a sub-sequence of elements from `start` to `stop` (inclusive).
+        Raises a ValueError if either element is not found, or if `stop` precedes `start`.
+
+        Parameters
+        ----------
+        start : Element or None
+            Element where the subsequence starts. If None, starts from the beginning.
+        stop : Element or None
+            Element where the subsequence ends. If None, continues to the end.
+
+        Returns
+        -------
+        list
+            Sub-list of elements from start to stop (inclusive).
+        """
+        seq = self.sequence
+
         try:
-            if start is not None:
-                id1 = self.sequence.index(start)
-            else:
-                id1 = 0
-            if stop is not None:
-                id2 = self.sequence.index(stop) + 1
-                sequence = self.sequence[id1:id2]
-            else:
-                sequence = self.sequence[id1:]
-        except:
-            print('cannot construct sequence, element not found')
-            raise
-        return sequence
+            id1 = seq.index(start) if start is not None else 0
+        except ValueError:
+            raise ValueError(f"Start element {getattr(start, 'id', start)} not found in lattice.")
+
+        try:
+            id2 = seq.index(stop) if stop is not None else len(seq) - 1
+        except ValueError:
+            raise ValueError(f"Stop element {getattr(stop, 'id', stop)} not found in lattice.")
+
+        # --- new check: ensure stop is after start ---
+        if id2 < id1:
+            s_id = getattr(start, "id", start)
+            e_id = getattr(stop, "id", stop)
+            raise ValueError(
+                f"Invalid range: stop element '{e_id}' appears before start element '{s_id}' "
+                f"in the lattice sequence (indices {id1}>{id2})."
+            )
+
+        return seq[id1:id2 + 1]  # inclusive
 
     def __getitem__(self, el):
         try:

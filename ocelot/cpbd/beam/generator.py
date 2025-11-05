@@ -79,25 +79,33 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
     :return: ParticleArray
     """
 
-    if isinstance(tws, core.Twiss) and np.all(
-            np.array([tws.emit_x, tws.emit_y, tws.beta_x, tws.beta_y, tws.gamma_x, tws.gamma_y]) != 0):
-        _logger.info("Twiss parameters have priority. sigma_{x, px, y, py} will be redefined")
+    if tws is not None:
+        if not isinstance(tws, core.Twiss):
+            raise TypeError(
+                f"'tws' must be an instance of Twiss, got {type(tws).__name__} instead."
+            )
+
+        if np.any(np.array([
+            tws.emit_x, tws.emit_y,
+            tws.beta_x, tws.beta_y,
+        ]) == 0):
+            raise ValueError("Twiss parameters contain zeros. Check emit_{x,y}, and beta_{x,y} values.")
+
+        _logger.info("Using Twiss parameters — overriding sigma_{x,px,y,py} values.")
 
         cov_x_px = tws.emit_x * np.array([[tws.beta_x, -tws.alpha_x],
                                           [-tws.alpha_x, tws.gamma_x]])
         hor_dist = np.random.multivariate_normal((0, 0), cov_x_px, nparticles)
-        x = hor_dist[:, 0]
-        px = hor_dist[:, 1]
+        x, px = hor_dist[:, 0], hor_dist[:, 1]
 
         cov_y_py = tws.emit_y * np.array([[tws.beta_y, -tws.alpha_y],
                                           [-tws.alpha_y, tws.gamma_y]])
         vert_dist = np.random.multivariate_normal((0, 0), cov_y_py, nparticles)
-        y = vert_dist[:, 0]
-        py = vert_dist[:, 1]
+        y, py = vert_dist[:, 0], vert_dist[:, 1]
 
-        if tws.pp != 0:
+        if getattr(tws, "pp", 0):
             sigma_p = np.sqrt(tws.pp)
-        if tws.E != 0:
+        if getattr(tws, "E", 0):
             energy = tws.E
     else:
         if sigma_y is None:

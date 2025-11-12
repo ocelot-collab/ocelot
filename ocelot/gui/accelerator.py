@@ -416,7 +416,7 @@ def plot_betas(ax, S, beta_x, beta_y, font_size):
 
 
 def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True, font_size=12, excld_legend=None,
-                  figsize=None, plt_figure=None):
+                  figsize=None, plt_figure=None, title=None):
     """
     function for plotting: lattice (bottom section), vertical and horizontal beta-functions (middle section),
     other parameters (top section) such as "Dx", "Dy", "E", "mux", "muy", "alpha_x", "alpha_y", "gamma_x", "gamma_y"
@@ -440,7 +440,8 @@ def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=Tr
             fig = plt.figure(fig_name, figsize=figsize)
     else:
         fig = plt_figure
-
+    if title:
+        fig.suptitle(title, fontsize=font_size)
     plt.rc('axes', grid=grid)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     left, width = 0.1, 0.85

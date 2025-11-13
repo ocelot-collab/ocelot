@@ -161,7 +161,6 @@ def launch_response_matrix(
     return Rx, Ry
 
 
-
 def read_orbit(
     lat: MagneticLattice,
     bpms: List[Monitor],
@@ -170,6 +169,8 @@ def read_orbit(
     bpm_offset_y: Optional[Sequence[float]] = None,
     noise_rms: Tuple[float, float] = (0.0, 0.0),
     noise_truncated: float = 3.0,
+    launch_jitter: Tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0),
+    launch_jitter_truncated: float = 3.0,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Track a single macroparticle through a lattice and simulate BPM readbacks
@@ -208,6 +209,12 @@ def read_orbit(
         Use (0, 0) to disable noise.
     noise_truncated : float, default 3.0
         Truncation level (in σ) for the Gaussian noise.
+        For example, `3.0` keeps samples within ±3σ.
+    launch_jitter : (float, float, float, float), default (0.0, 0.0, 0.0, 0.0)
+        RMS of Gaussian launch orbit jitter in (x [m], x'[rad], y[m], y'[rad]).
+        Use (0, 0, 0, 0) to disable jitter.
+    launch_jitter_truncated : float, default 3.0
+        Truncation level (in σ) for the Gaussian launch orbit jitter.
         For example, `3.0` keeps samples within ±3σ.
 
     Returns
@@ -254,6 +261,10 @@ def read_orbit(
 
     # Copy initial particle (avoid modifying caller’s instance)
     p = copy.deepcopy(pinit)
+    p.x = p.x + truncated_normal(0.0, launch_jitter[0], clip=launch_jitter_truncated)
+    p.px = p.px + truncated_normal(0.0, launch_jitter[1], clip=launch_jitter_truncated)
+    p.y = p.y + truncated_normal(0.0, launch_jitter[2], clip=launch_jitter_truncated)
+    p.py = p.py + truncated_normal(0.0, launch_jitter[3], clip=launch_jitter_truncated)
 
     mx, my = [], []
     s = []
@@ -496,6 +507,8 @@ def read_bpm_trajectories_vs_energy(
     bpm_offset_y: Optional[FloatArrayLike] = None,
     noise_rms: Tuple[float, float] = (0.0, 0.0),
     noise_truncated: Optional[float] = 3,
+    launch_jitter: Tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0),
+    launch_jitter_truncated: float = 3.0,
     plot: bool = True,
 )-> Tuple[List[NDArray[np.floating]], List[NDArray[np.floating]]]:
     """
@@ -523,7 +536,12 @@ def read_bpm_trajectories_vs_energy(
         Truncation in sigmas for noise (e.g., 3).
     plot : bool
         If True, create exactly two plots: x(s) and y(s), with BPM markers.
-
+    launch_jitter : (float, float, float, float), default (0.0, 0.0, 0.0, 0.0)
+        RMS of Gaussian launch orbit jitter in (x [m], x'[rad], y[m], y'[rad]).
+        Use (0, 0, 0, 0) to disable jitter.
+    launch_jitter_truncated : float, default 3.0
+        Truncation level (in σ) for the Gaussian launch orbit jitter.
+        For example, `3.0` keeps samples within ±3σ.
     Returns
     -------
     Mx, My : list[np.ndarray], list[np.ndarray]
@@ -563,6 +581,8 @@ def read_bpm_trajectories_vs_energy(
                 bpm_offset_y=bpm_offset_y,
                 noise_rms=noise_rms,
                 noise_truncated=noise_truncated,
+                launch_jitter=launch_jitter,
+                launch_jitter_truncated=launch_jitter_truncated,
             )
 
             # store

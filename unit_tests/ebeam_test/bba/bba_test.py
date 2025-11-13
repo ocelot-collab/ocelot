@@ -172,6 +172,233 @@ def test_list_quads_bpms(lattice, update_ref_values=False):
     # The helper prints info and returns True/False
     assert check_result(results)
 
+def test_quad_response_matrix(lattice, update_ref_values: bool = False):
+    # --- pick elements (same SA1 logic as in other tests)
+    quads, bpms = [], []
+    for e in lattice.sequence:
+        eid = getattr(e, "id", "")
+        if isinstance(e, Quadrupole) and ".SA1" in eid:
+            quads.append(e)
+        elif isinstance(e, Monitor) and ".SA1" in eid:
+            bpms.append(e)
+
+    energy = 14.0  # GeV (or whatever reference you use elsewhere)
+
+    Px, Py = bba.quad_response_matrix(
+        lat=lattice,
+        quads=quads,
+        bpms=bpms,
+        energy=energy,
+    )
+
+    # --- serialize for update mode
+    payload = {
+        "energy": energy,
+        "n_bpms": len(bpms),
+        "n_quads": len(quads),
+        "quad_ids": [q.id for q in quads],
+        "bpm_ids": [b.id for b in bpms],
+        "Px": numpy2json(Px),   # 2D array
+        "Py": numpy2json(Py),   # 2D array
+    }
+
+    ref_path = _ref_path(sys._getframe().f_code.co_name)
+    if update_ref_values:
+        return payload
+
+    # --- compare with reference
+    ref = json_read(ref_path)
+    results = []
+
+    # meta checks (very useful if lattice/topology changes)
+    if payload["energy"] != ref["energy"]:
+        results.append(
+            f"energy mismatch: {payload['energy']} vs {ref['energy']}\n"
+        )
+    else:
+        results.append(None)
+
+    if payload["n_bpms"] != ref["n_bpms"]:
+        results.append(
+            f"n_bpms mismatch: {payload['n_bpms']} vs {ref['n_bpms']}\n"
+        )
+    else:
+        results.append(None)
+
+    if payload["n_quads"] != ref["n_quads"]:
+        results.append(
+            f"n_quads mismatch: {payload['n_quads']} vs {ref['n_quads']}\n"
+        )
+    else:
+        results.append(None)
+
+    # element IDs (helps to see if you accidentally picked different devices)
+    if payload["quad_ids"] != ref.get("quad_ids", []):
+        results.append(
+            "quad_ids mismatch (order or membership differs from reference)\n"
+        )
+    else:
+        results.append(None)
+
+    if payload["bpm_ids"] != ref.get("bpm_ids", []):
+        results.append(
+            "bpm_ids mismatch (order or membership differs from reference)\n"
+        )
+    else:
+        results.append(None)
+
+    # numeric comparisons for Px, Py
+    Px_ref = json2numpy(ref["Px"])
+    Py_ref = json2numpy(ref["Py"])
+
+    if Px.shape != Px_ref.shape:
+        results.append(
+            f"Px shape mismatch: {Px.shape} vs {Px_ref.shape}\n"
+        )
+    else:
+        # check_matrix returns list[None | str]
+        results.extend(
+            check_matrix(
+                Px,
+                Px_ref,
+                tolerance=1.0e-10,
+                tolerance_type="absolute",
+                assert_info="Px - ",
+                numerical_zero=1.0e-15,
+            )
+        )
+
+    if Py.shape != Py_ref.shape:
+        results.append(
+            f"Py shape mismatch: {Py.shape} vs {Py_ref.shape}\n"
+        )
+    else:
+        results.extend(
+            check_matrix(
+                Py,
+                Py_ref,
+                tolerance=1.0e-10,
+                tolerance_type="absolute",
+                assert_info="Py - ",
+                numerical_zero=1.0e-15,
+            )
+        )
+
+    assert check_result(results)
+
+
+def test_launch_response_matrix(lattice, update_ref_values: bool = False):
+    # --- pick elements, same SA1 logic as in other tests ---
+    quads, bpms = [], []
+    for e in lattice.sequence:
+        eid = getattr(e, "id", "")
+        if isinstance(e, Quadrupole) and ".SA1" in eid:
+            quads.append(e)
+        elif isinstance(e, Monitor) and ".SA1" in eid:
+            bpms.append(e)
+
+    energy = 14.0  # GeV (keep consistent with other tests)
+
+    Rx, Ry = bba.launch_response_matrix(
+        lat=lattice,
+        bpms=bpms,
+        energy=energy,
+    )
+
+    # --- serialize for update mode ---
+    payload = {
+        "energy": energy,
+        "n_bpms": len(bpms),
+        "n_quads": len(quads),
+        "bpm_ids": [b.id for b in bpms],
+        # quads not used in this function, but stored for consistency/topology checks
+        "quad_ids": [q.id for q in quads],
+        "Rx": numpy2json(Rx),
+        "Ry": numpy2json(Ry),
+    }
+
+    ref_path = _ref_path(sys._getframe().f_code.co_name)
+    if update_ref_values:
+        return payload
+
+    # --- compare with reference ---
+    ref = json_read(ref_path)
+    results = []
+
+    # meta checks
+    if payload["energy"] != ref["energy"]:
+        results.append(
+            f"energy mismatch: {payload['energy']} vs {ref['energy']}\n"
+        )
+    else:
+        results.append(None)
+
+    if payload["n_bpms"] != ref["n_bpms"]:
+        results.append(
+            f"n_bpms mismatch: {payload['n_bpms']} vs {ref['n_bpms']}\n"
+        )
+    else:
+        results.append(None)
+
+    if payload["n_quads"] != ref["n_quads"]:
+        results.append(
+            f"n_quads mismatch: {payload['n_quads']} vs {ref['n_quads']}\n"
+        )
+    else:
+        results.append(None)
+
+    if payload["bpm_ids"] != ref.get("bpm_ids", []):
+        results.append(
+            "bpm_ids mismatch (order or membership differs from reference)\n"
+        )
+    else:
+        results.append(None)
+
+    if payload["quad_ids"] != ref.get("quad_ids", []):
+        results.append(
+            "quad_ids mismatch (order or membership differs from reference)\n"
+        )
+    else:
+        results.append(None)
+
+    # numeric comparisons
+    Rx_ref = json2numpy(ref["Rx"])
+    Ry_ref = json2numpy(ref["Ry"])
+
+    if Rx.shape != Rx_ref.shape:
+        results.append(
+            f"Rx shape mismatch: {Rx.shape} vs {Rx_ref.shape}\n"
+        )
+    else:
+        results.extend(
+            check_matrix(
+                Rx,
+                Rx_ref,
+                tolerance=1.0e-10,
+                tolerance_type="absolute",
+                assert_info="Rx - ",
+                numerical_zero=1.0e-15,
+            )
+        )
+
+    if Ry.shape != Ry_ref.shape:
+        results.append(
+            f"Ry shape mismatch: {Ry.shape} vs {Ry_ref.shape}\n"
+        )
+    else:
+        results.extend(
+            check_matrix(
+                Ry,
+                Ry_ref,
+                tolerance=1.0e-10,
+                tolerance_type="absolute",
+                assert_info="Ry - ",
+                numerical_zero=1.0e-15,
+            )
+        )
+
+    assert check_result(results)
+
 
 def test_response_matrices(lattice, update_ref_values: bool = False):
     # --- pick elements
@@ -325,7 +552,215 @@ def test_bpm_read_vs_energy(lattice, update_ref_values: bool = False):
     assert check_result(results)
 
 
+def test_build_full_matrix_shape_and_blocks():
+    # S: number of energy settings / runs
+    S = 3
+    Nbpm = 4
+    Nqx = 3
+    Nqy = 3
 
+    # Construct deterministic matrices so we can check blocks
+    Rx_sets = []
+    Ry_sets = []
+    Px_sets = []
+    Py_sets = []
+
+    for s in range(S):
+        # Rx, Ry: (Nbpm, 2)
+        Rx_s = np.full((Nbpm, 2), fill_value=10 + s, dtype=float)
+        Ry_s = np.full((Nbpm, 2), fill_value=20 + s, dtype=float)
+        # Px: (Nbpm, Nqx), Py: (Nbpm, Nqy)
+        Px_s = np.full((Nbpm, Nqx), fill_value=30 + s, dtype=float)
+        Py_s = np.full((Nbpm, Nqy), fill_value=40 + s, dtype=float)
+
+        Rx_sets.append(Rx_s)
+        Ry_sets.append(Ry_s)
+        Px_sets.append(Px_s)
+        Py_sets.append(Py_s)
+
+    A = bba.build_full_matrix(R=(Rx_sets, Ry_sets), P=(Px_sets, Py_sets))
+
+    # Expected overall shape
+    m_exp = 2 * S * Nbpm
+    n_exp = (2 + Nqx + Nbpm) + (2 + Nqy + Nbpm)
+    assert A.shape == (m_exp, n_exp)
+
+    # Rebuild the pieces that build_full_matrix is supposed to form
+    Rx_all = np.vstack(Rx_sets)        # (S*Nbpm, 2)
+    Ry_all = np.vstack(Ry_sets)        # (S*Nbpm, 2)
+    Px_all = np.vstack(Px_sets)        # (S*Nbpm, Nqx)
+    Py_all = np.vstack(Py_sets)        # (S*Nbpm, Nqy)
+
+    I_bpm = -np.eye(Nbpm)
+    Bx_all = np.vstack([I_bpm for _ in range(S)])   # (S*Nbpm, Nbpm)
+    By_all = np.vstack([I_bpm for _ in range(S)])   # (S*Nbpm, Nbpm)
+
+    Ax_ref = np.hstack([Rx_all, Px_all, Bx_all])    # (S*Nbpm, 2+Nqx+Nbpm)
+    Ay_ref = np.hstack([Ry_all, Py_all, By_all])    # (S*Nbpm, 2+Nqy+Nbpm)
+
+    n_x = Ax_ref.shape[1]
+    n_y = Ay_ref.shape[1]
+
+    # Extract blocks from A
+    Ax = A[: S * Nbpm, :n_x]
+    Zxy = A[: S * Nbpm, n_x:]
+    Zyx = A[S * Nbpm :, :n_x]
+    Ay = A[S * Nbpm :, n_x:]
+
+    # Check main blocks match what we expect
+    np.testing.assert_allclose(Ax, Ax_ref)
+    np.testing.assert_allclose(Ay, Ay_ref)
+
+    # Off-diagonal blocks must be exactly zero
+    assert np.allclose(Zxy, 0.0)
+    assert np.allclose(Zyx, 0.0)
+
+def test_build_full_matrix_wrong_shapes_raises():
+    S = 2
+    Nbpm = 4
+
+    # Correct Rx, Ry shapes
+    Rx_sets = [np.zeros((Nbpm, 2)), np.zeros((Nbpm, 2))]
+    Ry_sets = [np.zeros((Nbpm, 2)), np.zeros((Nbpm, 2))]
+
+    # Px has wrong row count for one run
+    Px_good = np.zeros((Nbpm, 3))
+    Px_bad = np.zeros((Nbpm + 1, 3))   # wrong Nbpm
+    Px_sets = [Px_good, Px_bad]
+
+    Py_sets = [np.zeros((Nbpm, 2)), np.zeros((Nbpm, 2))]
+
+    with pytest.raises(ValueError, match="All Px in Px_sets must have Nbpm rows"):
+        bba.build_full_matrix(R=(Rx_sets, Ry_sets), P=(Px_sets, Py_sets))
+
+    # Fix Px, but break Rx shape
+    Px_sets = [Px_good, Px_good]
+    Rx_bad = np.zeros((Nbpm + 1, 2))
+    Rx_sets = [np.zeros((Nbpm, 2)), Rx_bad]
+
+    with pytest.raises(ValueError, match="All Rx in Rx_sets must have shape"):
+        bba.build_full_matrix(R=(Rx_sets, Ry_sets), P=(Px_sets, Py_sets))
+
+def test_solve_svd_vector_rhs_exact_solution():
+    """
+    For a well-conditioned full-rank system (m > n), solve_svd should recover
+    the exact x_true (within numerical precision) for a 1D RHS.
+    """
+    rng = np.random.default_rng(12345)
+
+    m, n = 10, 4
+    A = rng.normal(size=(m, n))
+    # make A reasonably well-conditioned
+    # (random Gaussian is usually fine for this kind of unit test)
+    x_true = rng.normal(size=n)
+    M = A @ x_true
+
+    x_est = bba.solve_svd(A, M, rcutoff=1e-12, print_spectrum=False)
+
+    assert x_est.shape == (n,)
+    np.testing.assert_allclose(x_est, x_true, rtol=1e-10, atol=1e-12)
+
+
+def test_solve_svd_multi_rhs_exact_solution():
+    """
+    For multiple RHS (2D M), solve_svd should solve all systems simultaneously.
+    """
+    rng = np.random.default_rng(54321)
+
+    m, n, k = 12, 5, 3
+    A = rng.normal(size=(m, n))
+    X_true = rng.normal(size=(n, k))
+    M = A @ X_true   # shape (m, k)
+
+    X_est = bba.solve_svd(A, M, rcutoff=1e-12, print_spectrum=False)
+
+    assert X_est.shape == (n, k)
+    np.testing.assert_allclose(X_est, X_true, rtol=1e-10, atol=1e-12)
+
+
+@pytest.mark.parametrize("rcutoff", [1e-2, 1e-4, 1e-8])
+def test_solve_svd_matches_numpy_pinv_rcutoff(rcutoff):
+    """
+    Check that solve_svd(A, M, rcutoff) matches np.linalg.pinv(A, rcond=rcutoff)
+    for both 1D and 2D RHS.
+    """
+    rng = np.random.default_rng(111)
+
+    m, n, k = 8, 6, 2
+    A = rng.normal(size=(m, n))
+
+    # 1D RHS
+    M_vec = rng.normal(size=m)
+    X_ref_vec = np.linalg.pinv(A, rcond=rcutoff) @ M_vec
+    X_est_vec = bba.solve_svd(A, M_vec, rcutoff=rcutoff, print_spectrum=False)
+
+    assert X_est_vec.shape == (n,)
+    np.testing.assert_allclose(X_est_vec, X_ref_vec, rtol=1e-10, atol=1e-12)
+
+    # 2D RHS
+    M_mat = rng.normal(size=(m, k))
+    X_ref_mat = np.linalg.pinv(A, rcond=rcutoff) @ M_mat
+    X_est_mat = bba.solve_svd(A, M_mat, rcutoff=rcutoff, print_spectrum=False)
+
+    assert X_est_mat.shape == (n, k)
+    np.testing.assert_allclose(X_est_mat, X_ref_mat, rtol=1e-10, atol=1e-12)
+
+
+def test_extract_solution_splits_correctly():
+    """
+    Check that extract_solution returns the right slices for a known pattern.
+    """
+    Nquad = 3
+    Nbpm = 4
+    expected_len = 2 * (2 + Nquad + Nbpm)
+
+    # Build X_est with an easy-to-check pattern: X_est[i] = i
+    X_est = np.arange(expected_len, dtype=float)
+
+    (
+        Xinit_est,
+        Yinit_est,
+        qx_est,
+        qy_est,
+        bx_est,
+        by_est,
+    ) = bba.extract_solution(X_est, Nquad=Nquad, Nbpm=Nbpm)
+
+    # Manual reference slices
+    # X plane
+    Xinit_ref = X_est[0:2]
+    qx_ref    = X_est[2 : 2 + Nquad]
+    bx_ref    = X_est[2 + Nquad : 2 + Nquad + Nbpm]
+
+    off = 2 + Nquad + Nbpm
+    Yinit_ref = X_est[off : off + 2]
+    qy_ref    = X_est[off + 2 : off + 2 + Nquad]
+    by_ref    = X_est[off + 2 + Nquad : off + 2 + Nquad + Nbpm]
+
+    np.testing.assert_allclose(Xinit_est, Xinit_ref)
+    np.testing.assert_allclose(Yinit_est, Yinit_ref)
+    np.testing.assert_allclose(qx_est,    qx_ref)
+    np.testing.assert_allclose(qy_est,    qy_ref)
+    np.testing.assert_allclose(bx_est,    bx_ref)
+    np.testing.assert_allclose(by_est,    by_ref)
+
+
+@pytest.mark.parametrize("Nquad, Nbpm", [(1, 1), (5, 2), (3, 7)])
+def test_extract_solution_raises_on_wrong_length(Nquad, Nbpm):
+    """
+    If X_est.size != 2*(2+Nquad+Nbpm) the function must raise ValueError.
+    """
+    expected_len = 2 * (2 + Nquad + Nbpm)
+
+    # too short
+    X_short = np.zeros(expected_len - 1, dtype=float)
+    with pytest.raises(ValueError, match="X_est length mismatch"):
+        bba.extract_solution(X_short, Nquad=Nquad, Nbpm=Nbpm)
+
+    # too long
+    X_long = np.zeros(expected_len + 3, dtype=float)
+    with pytest.raises(ValueError, match="X_est length mismatch"):
+        bba.extract_solution(X_long, Nquad=Nquad, Nbpm=Nbpm)
 
 
 def setup_module(module):
@@ -365,6 +800,8 @@ def test_update_ref_values(lattice, cmdopt):
     update_functions.append('test_twiss')
     update_functions.append("test_read_orbit")
     update_functions.append('test_list_quads_bpms')
+    update_functions.append('test_quad_response_matrix')
+    update_functions.append("test_launch_response_matrix")
     update_functions.append('test_response_matrices')
     update_functions.append("test_bpm_read_vs_energy")
     

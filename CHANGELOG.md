@@ -65,8 +65,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - added LSC for undulators 
 - added in LSC feature to control size of the slice for transverse beam sizes calculation
 - added new feature to show_density(). now it can plot particles with scatter plot and color of the individual particle will correspond to density - slower but maybe can be visual pleasing for presentations
-  
->>>>>>> 6fdd98a24d013057498abd8e9ccf734939ef30e7
+
+- added BBA module with unit test
+- refactored beam.py module - now it is folder with different submodules
 
 - refactored beam.py it was too long about 2800 line of code 
 ### Fixed

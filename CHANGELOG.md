@@ -78,7 +78,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - fixed geometrical angle approximation in get_envelope function 
 - fixed bug with navigator reset_position() method. now it also call physics process .prepare() method
 - fixed bug with MagneticLattice __getitem__ which return None if element is not found
-- 
+- fixed bug in cavity when phase is 90 degree
+- fixed bug in cavity when with negative gain some of the second order terms fall back 0 as it is a drift.
 ### Removed
 
 - None yet.

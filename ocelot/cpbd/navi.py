@@ -44,7 +44,12 @@ class ProcessTable:
 
         _logger_navi.debug(" add_physics_proc: self.proc_list = " + str([p.__class__.__name__ for p in self.proc_list]) + ".append(" + physics_proc.__class__.__name__ + ")" +
                            "; start: " + str(physics_proc.indx0) + " stop: " + str(physics_proc.indx1))
-
+        # check if physics process already was added
+        if any(p is physics_proc for p in self.proc_list):
+            raise ValueError(
+                f"add_physics_proc: instance {physics_proc!r} is already in proc_list. "
+                "Each physics process instance can be added only once."
+            )
         self.proc_list.append(physics_proc)
 
 

@@ -68,15 +68,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - added BBA module with unit test
 - refactored beam.py module - now it is folder with different submodules
-
+- added __iter__ in MagneticLattice. Now we can use 'for e in lat' instead of 'for e in lat.sequence'
 - refactored beam.py it was too long about 2800 line of code 
+- 
 ### Fixed
 
 - fixed bugs in matching function if Drift length is in list of variables. 
 - fixed bug with match function delta constrain
 - fixed geometrical angle approximation in get_envelope function 
 - fixed bug with navigator reset_position() method. now it also call physics process .prepare() method
-
+- fixed bug with MagneticLattice __getitem__ which return None if element is not found
+- 
 ### Removed
 
 - None yet.

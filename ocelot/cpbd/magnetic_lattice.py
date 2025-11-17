@@ -210,9 +210,14 @@ class MagneticLattice:
 
         self.update_transfer_maps()
 
-        self.__hash__ = {}
-        for e in self.sequence:
-            self.__hash__[e] = e
+        self._elem_map = {e: e for e in self.sequence}
+
+    def __getitem__(self, el):
+        # Let KeyError propagate if not found
+        return self._elem_map[el]
+
+    def __iter__(self):
+        return iter(self.sequence)
 
     @property
     def totalLen(self):
@@ -257,12 +262,6 @@ class MagneticLattice:
             )
 
         return seq[id1:id2 + 1]  # inclusive
-
-    def __getitem__(self, el):
-        try:
-            return self.__hash__[el]
-        except:
-            return None
 
     def update_transfer_maps(self):
         for i, element in enumerate(self.sequence):

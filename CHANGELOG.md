@@ -70,6 +70,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - refactored beam.py module - now it is folder with different submodules
 - added __iter__ in MagneticLattice. Now we can use 'for e in lat' instead of 'for e in lat.sequence'
 - refactored beam.py it was too long about 2800 line of code 
+- add_physics_proc() now raises an error if the same element object appears multiple times in the lattice.
 - 
 ### Fixed
 
@@ -88,4 +89,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - None yet.
 
+### Known issues
+ - dispersion calculation from the beam distribution seems to be incorrect in cavities with phase close to 90 deg see https://github.com/ocelot-collab/ocelot/issues/307
 [unreleased]: https://github.com/ocelot-collab/ocelot/compare/dev_2021..HEAD

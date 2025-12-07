@@ -12,6 +12,35 @@ class ProcessTable:
         self.kick_proc_list = []
         self.lat = lattice
 
+    def _find_unique_index(self, elem, arg_name: str) -> int:
+        """
+        Find a unique index of `elem` in lattice.sequence by identity (is).
+
+        If the element is not found or appears more than once,
+        raise a ValueError to avoid ambiguity for physics processes.
+        """
+        matches = [i for i, e in enumerate(self.lat.sequence) if e is elem]
+
+        if not matches:
+            raise ValueError(
+                f"add_physics_proc: element passed as {arg_name} "
+                f"({getattr(elem, 'id', repr(elem))}) is not present in lattice.sequence."
+            )
+
+        if len(matches) > 1:
+            raise ValueError(
+                "add_physics_proc: element passed as "
+                f"{arg_name} ({getattr(elem, 'id', repr(elem))}) appears "
+                f"{len(matches)} times in lattice.sequence. "
+                "This is ambiguous for physics processes. "
+                "Please create separate element instances for each occurrence, e.g.\n"
+                "    q1a = Quadrupole(l=1, k1=1)\n"
+                "    q1b = Quadrupole(l=1, k1=1)\n"
+                "and use those distinct objects in the lattice."
+            )
+
+        return matches[0]
+
     def searching_kick_proc(self, physics_proc, elem1):
         """
         function finds kick physics process. Kick physics process applies kick only once between two elements
@@ -32,18 +61,34 @@ class ProcessTable:
         _logger_navi.debug(" searching_kick_proc: self.kick_proc_list.append(): " + str([p.__class__.__name__ for p in self.kick_proc_list]))
 
     def add_physics_proc(self, physics_proc, elem1, elem2):
-        physics_proc.start_elem = elem1
-        physics_proc.end_elem = elem2
-        physics_proc.indx0 = self.lat.sequence.index(elem1)
-        physics_proc.indx1 = self.lat.sequence.index(elem2)
-        physics_proc.s_start = np.sum(np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx0]]))
-        physics_proc.s_stop = np.sum(np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx1]]))
-        self.searching_kick_proc(physics_proc, elem1)
+        # Find *unique* indices of elem1 and elem2 in the lattice.
+        indx0 = self._find_unique_index(elem1, "start element")
+        indx1 = self._find_unique_index(elem2, "stop element")
+
+        physics_proc.start_elem = self.lat.sequence[indx0]
+        physics_proc.end_elem = self.lat.sequence[indx1]
+        physics_proc.indx0 = indx0
+        physics_proc.indx1 = indx1
+
+        physics_proc.s_start = np.sum(
+            np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx0]])
+        )
+        physics_proc.s_stop = np.sum(
+            np.array([elem.l for elem in self.lat.sequence[:physics_proc.indx1]])
+        )
+
+        self.searching_kick_proc(physics_proc, physics_proc.start_elem)
         physics_proc.counter = physics_proc.step
         physics_proc.prepare(self.lat)
 
-        _logger_navi.debug(" add_physics_proc: self.proc_list = " + str([p.__class__.__name__ for p in self.proc_list]) + ".append(" + physics_proc.__class__.__name__ + ")" +
-                           "; start: " + str(physics_proc.indx0) + " stop: " + str(physics_proc.indx1))
+        _logger_navi.debug(
+            " add_physics_proc: self.proc_list = "
+            + str([p.__class__.__name__ for p in self.proc_list])
+            + ".append(" + physics_proc.__class__.__name__ + ")"
+            + "; start: " + str(physics_proc.indx0)
+            + " stop: " + str(physics_proc.indx1)
+        )
+
         # check if physics process already was added
         if any(p is physics_proc for p in self.proc_list):
             raise ValueError(
@@ -130,6 +175,13 @@ class Navigator:
         :param elem1: The element in the lattice where the physical process starts (applied at the start of elem1).
         :param elem2: The element in the lattice where the physical process stops (applied up to the start of elem2).
                       elem2 can be the same as elem1.
+
+                  IMPORTANT:
+                  elem1 and elem2 must each correspond to a *unique* element
+                  instance in `lattice.sequence`. Re-using the same element
+                  object multiple times in the lattice (e.g. `cell = [d, q, d, q]`
+                  with a single `q = Quadrupole(...)`) is ambiguous for physics
+                  processes and will raise a ValueError.
         :return: None
         """
         _logger_navi.debug(" add_physics_proc: phys proc: " + physics_proc.__class__.__name__)

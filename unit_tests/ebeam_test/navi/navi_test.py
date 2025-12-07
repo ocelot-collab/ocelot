@@ -558,6 +558,47 @@ def test_navigator_add_physics_processes(lattice):
     assert navi.process_table.proc_list[2].indx1 == 9
 
 
+def test_add_physics_proc_raises_on_duplicate_elements():
+    """
+    If the same element instance appears multiple times in the lattice,
+    add_physics_proc(elem1, elem2) must raise ValueError.
+    """
+
+    d = Drift(l=1)
+    q = Quadrupole(l=1, k1=1)
+
+    # The SAME Quadrupole object appears twice
+    cell = [d, q, d, q]
+
+    lat = MagneticLattice(cell)
+    navi = Navigator(lat)
+
+    proc = EmptyProc()
+
+    with pytest.raises(ValueError):
+        navi.add_physics_proc(proc, q, q)
+
+
+def test_add_physics_proc_ok_when_elements_are_unique():
+    """
+    Using distinct element instances must NOT raise an error.
+    """
+
+    d = Drift(l=1)
+    q1 = Quadrupole(l=1, k1=1)
+    q2 = Quadrupole(l=1, k1=1)
+
+    # q1 and q2 are different objects
+    cell = [d, q1, d, q2]
+
+    lat = MagneticLattice(cell)
+    navi = Navigator(lat)
+
+    proc = EmptyProc()
+
+    # Must NOT raise
+    navi.add_physics_proc(proc, q1, q2)
+
 def setup_module(module):
 
     f = open(pytest.TEST_RESULTS_FILE, 'a')

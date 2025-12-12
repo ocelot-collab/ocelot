@@ -1,4 +1,5 @@
 import numpy as np
+from ocelot.common.math_op import get_tilt_matrix
 from ocelot.cpbd.elements.element import Element
 from ocelot.cpbd.tm_params.kick_params import KickParams
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
@@ -9,8 +10,8 @@ from ocelot.cpbd.tm_utils import map_transform_with_offsets
 
 
 class Magnet(Element):
-    def __init__(self, eid=None, has_edge=False):
-        super().__init__(eid=eid, has_edge=has_edge)
+    def __init__(self, eid=None, has_edge=False, **kwargs):
+        super().__init__(eid=eid, has_edge=has_edge, **kwargs)
         self.angle = 0.  # Magnets Drift, Bend, Correctors (just angle)
         self.k1 = 0.  # Magnets quadropole
         self.k2 = 0.  # Magnets Sextupole
@@ -46,3 +47,62 @@ class Magnet(Element):
 
     def create_kick_exit_params(self) -> KickParams:
         return KickParams(dx=self.dx, dy=self.dy, angle=self.angle, tilt=self.tilt, k1=self.k1, k2=self.k2)
+
+    def get_transfer_geometry(self):
+        # 1. Fallback for straight elements
+        if self.angle == 0:
+            return super().get_transfer_geometry()
+
+        # 2. Curved Geometry Logic
+        rho = 0.0
+        if self.l != 0:
+            rho = self.l / self.angle
+
+        # --- A. End Point (Full Angle) ---
+        ca = np.cos(self.angle)
+        sa = np.sin(self.angle)
+
+        R_end = np.array([
+            rho * (ca - 1),
+            0,
+            rho * sa
+        ])
+
+        S_end = np.array([
+            [ca, 0, -sa],
+            [0, 1, 0],
+            [sa, 0, ca]
+        ])
+
+        # --- B. Midpoint (Half Angle) - CRITICAL SECTION ---
+        # Make sure you are NOT doing: R_mid = np.array([0, 0, self.l / 2.0])
+
+        half_angle = self.angle / 2.0
+        ca_mid = np.cos(half_angle)
+        sa_mid = np.sin(half_angle)
+
+        R_mid = np.array([
+            rho * (ca_mid - 1),  # <--- This gives the X offset (Sagitta)
+            0,
+            rho * sa_mid
+        ])
+
+        # Rotation at midpoint
+        S_mid = np.array([
+            [ca_mid, 0, -sa_mid],
+            [0, 1, 0],
+            [sa_mid, 0, ca_mid]
+        ])
+
+        # --- C. Apply Tilt ---
+        if self.tilt != 0:
+            from ocelot.common.math_op import get_tilt_matrix
+            T = get_tilt_matrix(self.tilt)
+
+            R_end = T @ R_end
+            R_mid = T @ R_mid
+
+            S_end = T @ S_end @ T.T
+            S_mid = T @ S_mid @ T.T
+
+        return R_end, S_end, R_mid, S_mid

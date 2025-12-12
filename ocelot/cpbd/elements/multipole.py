@@ -16,11 +16,11 @@ class Multipole(OpticElement):
     kn - list of strengths
     """
 
-    def __init__(self, kn=0., eid=None, tm=MultipoleTM):
+    def __init__(self, kn=0., eid=None, tm=MultipoleTM, **kwargs):
         if tm != MultipoleTM:
             logger.debug("Multipole Element only support Multipole as its transformation. Set tm to MultipoleTM.")
             tm = MultipoleTM
-        super().__init__(MultipoleAtom(kn=kn, eid=eid), tm=tm, default_tm=MultipoleTM)
+        super().__init__(MultipoleAtom(kn=kn, eid=eid, **kwargs), tm=tm, default_tm=MultipoleTM)
 
     def set_tm(self, tm: Transformation):
         logger.debug("Multipole Element only support Multipole as its transformation. Set tm to MultipoleTM.")

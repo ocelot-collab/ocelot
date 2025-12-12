@@ -72,18 +72,52 @@ def test_magnetic_lattice_transfer_maps_each_step(lattice, tws0, method, paramet
     result = check_matrix(brts, brts_ref, TOL, assert_info=' B0 R56 T566 S - ')
     assert check_result(result)
 
-def test_lattice_survey(lattice, tws0, method, parameter=None, update_ref_values=False):
-    """R maxtrix calculation test"""
 
-    x, y, z, _, _ = lattice.survey()
-    xyz = np.vstack([x,y,z])
+def test_lattice_survey(lattice, tws0=None, method=None, parameter=None, update_ref_values=False):
+    """
+    Full Lattice Survey Test.
+    Checks X, Y, Z, Angles (Theta, Phi, Psi), and Direction Cosines (XPD, YPD, ZPD)
+    for both the Midpoint and the Endpoint of every element.
+    """
+
+    # 1. Run the new survey method (returns two lists of dicts)
+    mid_data, end_data = lattice.survey()
+
+    # 2. Helper to flatten list of dicts into a numpy array (9 rows, N columns)
+    def extract_data_matrix(data_list):
+        # Define the exact order of physical quantities to check
+        keys = ['X', 'Y', 'Z', 'THETA', 'PHI', 'PSI', 'XPD', 'YPD', 'ZPD']
+
+        # Create array: shape (9, N_elements)
+        # We build a list of lists: [[all_X], [all_Y], ...], then convert to numpy
+        return np.array([[item[k] for item in data_list] for k in keys])
+
+    # 3. Extract data
+    mat_mid = extract_data_matrix(mid_data)  # Shape (9, N)
+    mat_end = extract_data_matrix(end_data)  # Shape (9, N)
+
+    # 4. Stack them into a single reference matrix (Shape: 18, N)
+    # Rows 0-8:  Midpoint Data
+    # Rows 9-17: Endpoint Data
+    full_matrix = np.vstack([mat_mid, mat_end])
+
+    # 5. Reference File Logic
+    ref_filename = sys._getframe().f_code.co_name
+
     if update_ref_values:
-        return numpy2json(xyz)
+        return numpy2json(full_matrix)
 
-    xyz_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
+    try:
+        full_matrix_ref = json2numpy(json_read(REF_RES_DIR + ref_filename + '.json'))
+    except IOError:
+        raise IOError(f"Reference file for '{ref_filename}' not found. Run test with update_ref_values=True first.")
 
-    result = check_matrix(xyz, xyz_ref, TOL, assert_info=' r_matrix - ')
+    # 6. Comparison
+    # assert_info helps debugging by printing what failed
+    result = check_matrix(full_matrix, full_matrix_ref, TOL, assert_info=' survey_geometry_check ')
+
     assert check_result(result)
+
 
 def test_lattice_save_as_py_file(lattice, tws0, method, parameter=None, update_ref_values=False):
     """R maxtrix calculation test"""

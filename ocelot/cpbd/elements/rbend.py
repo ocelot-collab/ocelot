@@ -23,6 +23,6 @@ class RBend(OpticElement):
     """
 
     def __init__(self, l=0., angle=0., k1=0., k2=0., e1=None, e2=None, tilt=0.,
-                 gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None, tm=TransferMap):
+                 gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None, tm=TransferMap, **kwargs):
         super().__init__(RBendAtom(l=l, angle=angle, e1=e1, e2=e2, k1=k1, k2=k2, tilt=tilt,
-                                   gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid), tm=tm, default_tm=TransferMap)
+                                   gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid, **kwargs), tm=tm, default_tm=TransferMap)

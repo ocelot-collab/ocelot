@@ -21,8 +21,8 @@ class TDCavityAtom(Element):
     default_tm = TransferMap
     additional_tms = [SecondTM]
 
-    def __init__(self, l=0., freq=0.0, phi=0.0, v=0., tilt=0.0, eid=None):
-        Element.__init__(self, eid)
+    def __init__(self, l=0., freq=0.0, phi=0.0, v=0., tilt=0.0, eid=None, **kwargs):
+        super().__init__(eid, **kwargs)
         self.l = l
         self.v = v  # in GV
         self.freq = freq  # Hz

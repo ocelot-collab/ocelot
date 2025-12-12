@@ -12,9 +12,11 @@ class QuadrupoleAtom(Magnet):
     tilt - tilt of lens in [rad].
     """
 
-    def __init__(self, l=0., k1=0, k2=0., tilt=0., eid=None):
-        # Element.__init__(self, eid)
-        super().__init__(eid=eid)
+    def __init__(self, l=0., k1=0, k2=0., tilt=0., eid=None, **kwargs):
+        kwargs.setdefault('width', 0.1)       # Bends are usually wider than 0.05
+        kwargs.setdefault('height', 0.1)
+        kwargs.setdefault('color', 'red') # Standard color for Dipoles
+        super().__init__(eid=eid, **kwargs)
         self.l = l
         self.k1 = k1
         self.k2 = k2

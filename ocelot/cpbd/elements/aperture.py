@@ -12,5 +12,5 @@ class Aperture(OpticElement):
     ymax - half size in vertical plane in [m],
     type - "rect" or "ellipt".
     """
-    def __init__(self, xmax=np.inf, ymax=np.inf, dx=0, dy=0, type="rect", eid=None, tm=TransferMap):
-        super().__init__(ApertureAtom(xmax=xmax, ymax=ymax, dx=dx, dy=dy, type=type, eid=eid), tm=TransferMap, default_tm=TransferMap)
+    def __init__(self, xmax=np.inf, ymax=np.inf, dx=0, dy=0, type="rect", eid=None, tm=TransferMap, **kwargs):
+        super().__init__(ApertureAtom(xmax=xmax, ymax=ymax, dx=dx, dy=dy, type=type, eid=eid, **kwargs), tm=tm, default_tm=TransferMap)

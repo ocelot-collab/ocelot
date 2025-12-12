@@ -10,8 +10,8 @@ class MultipoleAtom(Element):
     kn - list of strengths
     """
 
-    def __init__(self, kn=0., eid=None):
-        Element.__init__(self, eid)
+    def __init__(self, kn=0., eid=None, **kwargs):
+        super().__init__(eid, **kwargs)
         kn = np.array([kn]).flatten()
         if len(kn) < 2:
             self.kn = np.append(kn, [0.])

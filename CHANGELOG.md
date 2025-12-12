@@ -71,7 +71,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - added __iter__ in MagneticLattice. Now we can use 'for e in lat' instead of 'for e in lat.sequence'
 - refactored beam.py it was too long about 2800 line of code 
 - add_physics_proc() now raises an error if the same element object appears multiple times in the lattice.
-- 
+- added helper functions analytically calculate compression
+- reimplemented survey function based on MAD8 approach. lat.survey() is not compatible with older implementation
+- Added to elements **kwargs and now we can define geometrical sizes of elements for future survey display function 
 ### Fixed
 
 - fixed bugs in matching function if Drift length is in list of variables. 

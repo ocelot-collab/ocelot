@@ -24,7 +24,10 @@ class CavityAtom(Element):
     """
 
     def __init__(self, l=0., v=0., phi=0., freq=0., vx_up=0, vy_up=0, vxx_up=0, vxy_up=0,
-                 vx_down=0, vy_down=0, vxx_down=0, vxy_down=0, eid=None):
+                 vx_down=0, vy_down=0, vxx_down=0, vxy_down=0, eid=None, **kwargs):
+        kwargs.setdefault('width', 0.1)       # Bends are usually wider than 0.05
+        kwargs.setdefault('height', 0.1)
+        kwargs.setdefault('color', 'yellow') # Standard color for Dipoles
         super().__init__(eid=eid, has_edge=True)
         self.l = l
         self.v = v  # in GV

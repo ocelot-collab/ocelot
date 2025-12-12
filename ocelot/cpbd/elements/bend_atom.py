@@ -28,8 +28,12 @@ class BendAtom(Magnet):
     """
 
     def __init__(self, l=0., angle=0., k1=0., k2=0., e1=0., e2=0., tilt=0.0,
-                 gap=0., h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None):
-        super().__init__(eid=eid, has_edge=True)
+                 gap=0., h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None, **kwargs):
+        kwargs.setdefault('width', 0.1)       # Bends are usually wider than 0.05
+        kwargs.setdefault('height', 0.1)
+        kwargs.setdefault('color', 'blue') # Standard color for Dipoles
+
+        super().__init__(eid=eid, has_edge=True, **kwargs)
         self.l = l
         self.angle = angle
         self.k1 = k1

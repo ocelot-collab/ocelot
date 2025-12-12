@@ -15,6 +15,19 @@ except ImportError:
     print("math_op.py: module Numba is not installed. Install it if you want speed up correlation calculations")
     numba_avail = False
 
+def get_tilt_matrix(psi):
+    """
+    Returns the rotation matrix T for a tilt of angle psi around the s-axis.
+    MAD-8 Eq. 9.7
+    """
+    c = np.cos(psi)
+    s = np.sin(psi)
+    return np.array([
+        [c, -s, 0],
+        [s,  c, 0],
+        [0,  0, 1]
+    ])
+
 def complete_gamma(a, z):
     """
     return 'complete' gamma function

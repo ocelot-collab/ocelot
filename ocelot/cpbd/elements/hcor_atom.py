@@ -10,8 +10,8 @@ class HcorAtom(CorAtom):
     angle - angle of bend in [rad],
     """
 
-    def __init__(self, l=0., angle=0., eid=None):
-        super().__init__(eid=eid)
+    def __init__(self, l=0., angle=0., eid=None, **kwargs):
+        super().__init__(eid=eid, **kwargs)
         self.has_edge = False
         self.l = l
         self.angle = angle

@@ -17,8 +17,8 @@ class XYQuadrupoleAtom(Magnet):
     tilt - tilt of lens in [rad].
     """
 
-    def __init__(self, l=0., x_offs=0., y_offs=0., k1=0., tilt=0., eid=None):
-        super().__init__(eid=eid)
+    def __init__(self, l=0., x_offs=0., y_offs=0., k1=0., tilt=0., eid=None, **kwargs):
+        super().__init__(eid=eid, **kwargs)
         self.l = l
         self.k1 = k1
         self.x_offs = x_offs

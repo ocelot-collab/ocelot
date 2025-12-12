@@ -12,8 +12,11 @@ class SolenoidAtom(Element):
     k - strength B0/(2B*rho)
     """
 
-    def __init__(self, l=0., k=0., eid=None):
-        Element.__init__(self, eid)
+    def __init__(self, l=0., k=0., eid=None, **kwargs):
+        kwargs.setdefault('width', 0.1)       # Bends are usually wider than 0.05
+        kwargs.setdefault('height', 0.1)
+        kwargs.setdefault('color', 'magenta') # Standard color for Dipoles
+        super().__init__(eid, **kwargs)
         self.k = k  # B0/(2B*rho)
         self.l = l
 

@@ -4,5 +4,5 @@ from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 
 class Marker(OpticElement):
-    def __init__(self, eid=None, tm=TransferMap):
-        super().__init__(MarkerAtom(eid), tm=tm, default_tm=TransferMap)
+    def __init__(self, eid=None, tm=TransferMap, **kwargs):
+        super().__init__(MarkerAtom(eid, **kwargs), tm=tm, default_tm=TransferMap)

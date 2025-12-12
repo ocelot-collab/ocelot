@@ -11,8 +11,11 @@ class OctupoleAtom(Magnet):
     l - length of lens in [m].
     """
 
-    def __init__(self, l=0., k3=0., tilt=0., eid=None):
-        super().__init__(eid)
+    def __init__(self, l=0., k3=0., tilt=0., eid=None, **kwargs):
+        kwargs.setdefault('width', 0.1)       # Bends are usually wider than 0.05
+        kwargs.setdefault('height', 0.1)
+        kwargs.setdefault('color', 'green') # Standard color for Dipoles
+        super().__init__(eid, **kwargs)
         self.l = l
         self.k3 = k3
         self.tilt = tilt

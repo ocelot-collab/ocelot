@@ -10,5 +10,5 @@ class Sextupole(OpticElement):
     k2 - strength of sextupole lens in [1/m^3].
     """
 
-    def __init__(self, l=0., k2=0., tilt=0., eid=None, tm=TransferMap):
-        super().__init__(SextupoleAtom(l=l, k2=k2, tilt=tilt, eid=eid), tm=tm, default_tm=TransferMap)
+    def __init__(self, l=0., k2=0., tilt=0., eid=None, tm=TransferMap, **kwargs):
+        super().__init__(SextupoleAtom(l=l, k2=k2, tilt=tilt, eid=eid, **kwargs), tm=tm, default_tm=TransferMap)

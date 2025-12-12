@@ -264,3 +264,6 @@ class OpticElement:
 
     def __repr__(self):
         return f"<{type(self).__name__}: name={self.id} at {hex(id(self))}>"
+
+    def get_transfer_geometry(self):
+        return self.element.get_transfer_geometry()

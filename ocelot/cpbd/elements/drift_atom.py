@@ -8,8 +8,8 @@ class DriftAtom(Magnet):
     l - length of drift in [m]
     """
 
-    def __init__(self, l=0., eid=None):
-        super().__init__(eid)
+    def __init__(self, l=0., eid=None, **kwargs):
+        super().__init__(eid, **kwargs)
         self.l = l
 
     def __str__(self):

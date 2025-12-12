@@ -15,5 +15,5 @@ class Hcor(OpticElement):
     l - length of magnet in [m],
     angle - angle of bend in [rad],
     """
-    def __init__(self, l=0., angle=0., eid=None, tm=TransferMap):
-        super().__init__(HcorAtom(l=l, angle=angle, eid=eid), tm=tm, default_tm=TransferMap)
+    def __init__(self, l=0., angle=0., eid=None, tm=TransferMap, **kwargs):
+        super().__init__(HcorAtom(l=l, angle=angle, eid=eid, **kwargs), tm=tm, default_tm=TransferMap)

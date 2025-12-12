@@ -170,8 +170,11 @@ class UndulatorAtom(Element):
     eid - id of undulator.
     """
 
-    def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., phase=0, end_poles='1', field_file=None, eid=None):
-        Element.__init__(self, eid)
+    def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., phase=0, end_poles='1', field_file=None, eid=None, **kwargs):
+        kwargs.setdefault('width', 0.1)       # Bends are usually wider than 0.05
+        kwargs.setdefault('height', 0.2)
+        kwargs.setdefault('color', '#87CEEB') # Standard color for Dipoles
+        super().__init__(eid, **kwargs)
         self.lperiod = lperiod
         self.nperiods = nperiods
         self.l = lperiod * nperiods

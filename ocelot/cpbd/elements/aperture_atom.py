@@ -11,8 +11,8 @@ class ApertureAtom(Element):
     type - "rect" or "ellipt".
     """
 
-    def __init__(self, xmax=np.inf, ymax=np.inf, dx=0, dy=0, type="rect", eid=None):
-        Element.__init__(self, eid)
+    def __init__(self, xmax=np.inf, ymax=np.inf, dx=0, dy=0, type="rect", eid=None, **kwargs):
+        super().__init__(eid, **kwargs)
         self.l = 0.
         self.xmax = xmax
         self.ymax = ymax

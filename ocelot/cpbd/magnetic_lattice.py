@@ -374,43 +374,145 @@ class MagneticLattice:
             return Bs, Rs, Ts, S
         return Ba, Ra, Ta
 
-    def survey(self, x0=0, y0=0, z0=0, ang_x=0.0, ang_y=0.0):
+    def survey(self, X0=0, Y0=0, Z0=0, theta0=0, phi0=0, psi0=0):
         """
-        Function calculates coordinates in rectangular coordinates system at the beginning of each element in lattice.
-        we use convention from MAD8 where "a positive bend angle represents a bend to the right,
-        i.e. towards negative x vales" https://project-madwindows.web.cern.ch/MAD-resources/MAD8.13%20User%20Reference%20Manual.pdf
-        :param x0: 0, initial offset in x direction
-        :param y0: 0, initial offset in y direction
-        :param z0: 0, initial offset in z direction
-        :param ang_x: 0, initial angel in horizontal plane
-        :param ang_y: 0, initial angel in vertical plane
-        :return: x, y, z, a_x, a_y - lists of coordinates
+        Calculates the 3D survey using the exact MAD-8 recursive vector/matrix method.
+
+        :param X0, Y0, Z0: Initial global coordinates [m].
+        :param theta0: Initial azimuth angle [rad].
+        :param phi0: Initial elevation angle [rad].
+        :param psi0: Initial roll angle [rad].
+
+        :return: (mid_survey_data, end_survey_data)
+                 Two lists of dictionaries containing survey data.
+                 - mid_survey_data: Calculated at the geometric center of elements (Best for Tables).
+                 - end_survey_data: Calculated at the exit of elements (Best for Plotting).
         """
-        x = [x0]
-        y = [y0]
-        z = [z0]
-        a_x = [ang_x]
-        a_y = [ang_y]
-        for e in self.sequence:
-            if e.__class__ in [Bend, SBend, RBend] and e.angle != 0.:
-                ang_x += -e.angle * 0.5 * np.cos(e.tilt)
-                ang_y += -e.angle * 0.5 * np.sin(e.tilt)
-                s = 2 * e.l * np.sin(e.angle * 0.5) / e.angle
-                x0 += s * np.sin(ang_x)
-                y0 += s * np.sin(ang_y)
-                z0 += s * np.cos(np.sqrt(ang_x ** 2 + ang_y ** 2))
-                ang_x += -e.angle * 0.5 * np.cos(e.tilt)
-                ang_y += -e.angle * 0.5 * np.sin(e.tilt)
-            else:
-                x0 += e.l * np.sin(ang_x)
-                y0 += e.l * np.sin(ang_y)
-                z0 += e.l * np.cos(np.sqrt(ang_x ** 2 + ang_y ** 2))
-            x.append(x0)
-            y.append(y0)
-            z.append(z0)
-            a_x.append(ang_x)
-            a_y.append(ang_y)
-        return x, y, z, a_x, a_y
+
+        V = np.array([X0, Y0, Z0])
+        S_pos = 0.0
+
+        # Initial Matrices
+        M_theta = np.array([[np.cos(theta0), 0, np.sin(theta0)], [0, 1, 0], [-np.sin(theta0), 0, np.cos(theta0)]])
+        M_phi = np.array([[1, 0, 0], [0, np.cos(phi0), np.sin(phi0)], [0, -np.sin(phi0), np.cos(phi0)]])
+
+        # Move import to top of file if possible, otherwise this is fine
+        from ocelot.common.math_op import get_tilt_matrix
+        M_psi = get_tilt_matrix(psi0)
+
+        W = M_theta @ M_phi @ M_psi
+
+        mid_survey_data = []
+        end_survey_data = []
+
+        # Helper to extract angles/directions from a W matrix
+        def get_survey_data(w_mat, v_vec, s_val, el):
+            # 1. Direction Cosines (3rd col of W)
+            xpd, ypd, zpd = w_mat[0, 2], w_mat[1, 2], w_mat[2, 2]
+
+            # 2. Euler Angles
+            val_phi = np.clip(ypd, -1.0, 1.0)
+            phi = np.arcsin(val_phi)  # PHI
+            theta = np.arctan2(xpd, zpd)  # THETA
+
+            # CHI (Roll) - derived from the projection of the Y-axis
+            psi_angle = np.arctan2(w_mat[1, 0], w_mat[1, 1])
+
+            # 3. Extract Element attributes safely
+            length = getattr(el, 'l', 0.0) if el else 0.0
+            tilt = getattr(el, 'tilt', 0.0) if el else 0.0
+
+            return {
+                "LENGTH": length,
+                "TILT": tilt,
+                "S": s_val,
+                "X": v_vec[0], "Y": v_vec[1], "Z": v_vec[2],
+                "THETA": theta, "PHI": phi, "PSI": psi_angle,
+                "XPD": xpd, "YPD": ypd, "ZPD": zpd,
+                "W": w_mat,
+                "element": el
+            }
+
+        # Add Start Point (Entry of line) to both lists
+        start_point_data = get_survey_data(W, V, S_pos, None)
+        mid_survey_data.append(start_point_data)
+        end_survey_data.append(start_point_data)
+
+        for elem in self.sequence:
+            # Expecting 4 values. Ensure Element/Magnet classes are updated!
+            R_end, S_end, R_mid, S_mid = elem.get_transfer_geometry()
+
+            # Save Start Orientation
+            W_start = W.copy()
+            V_start = V.copy()
+
+            # --- 1. CALCULATE MIDPOINT STATE (For Tables) ---
+            V_mid_global = V_start + W_start @ R_mid
+            W_mid_global = W_start @ S_mid
+
+            L = getattr(elem, 'l', 0.0)
+            S_mid_val = S_pos + L / 2.0
+
+            mid_survey_data.append(get_survey_data(W_mid_global, V_mid_global, S_mid_val, elem))
+
+            # --- 2. ADVANCE TO END (For Next Iteration & Plotting) ---
+            V = V_start + W_start @ R_end
+            W = W_start @ S_end
+            S_pos += L
+
+            end_survey_data.append(get_survey_data(W, V, S_pos, elem))
+
+        return mid_survey_data, end_survey_data
+
+
+    def survey_longlist(self, X0=0, Y0=0, Z0=0, theta0=0, phi0=0, psi0=0):
+        """
+        Calculates survey and converts angles/coordinates to the 'LongList' engineering convention.
+
+        Mapping:
+        - THETA (Azimuth)   -> Becomes PHI (Elevation)
+        - PHI (Elevation)   -> Becomes -THETA (-Azimuth)
+        - PSI (Roll)        -> Renamed to CHI
+        - XPD               -> Becomes YPD (Consistent with angle swap)
+        - YPD               -> Becomes -XPD
+        """
+        # 1. Get the raw physics data (Assuming this returns dicts with 'PSI', 'THETA', 'PHI')
+        mid_phys, end_phys = self.survey(X0, Y0, Z0, theta0, phi0, psi0)
+
+        # 2. Define the transformation logic
+        def to_longlist_convention(data_list):
+            new_list = []
+            for item in data_list:
+                # Shallow copy to protect original data
+                new_item = item.copy()
+
+                # --- 1. Rename PSI to CHI ---
+                # .pop('PSI') gets the value AND removes 'PSI' from new_item
+                # This ensures you don't have duplicate keys.
+                new_item['CHI'] = new_item.pop('PSI', 0.0)
+
+                # --- 2. Swap Angles ---
+                mad_theta = item['THETA']
+                mad_phi = item['PHI']
+
+                new_item['THETA'] = mad_phi
+                new_item['PHI'] = -mad_theta
+
+                # --- 3. Swap Direction Cosines (Consistency) ---
+                # If we swap angles, we must swap the unit vectors too.
+                # If Theta -> Phi (X -> Y), then XPD -> YPD.
+                # If Phi -> -Theta (Y -> -X), then YPD -> -XPD.
+                mad_xpd = item['XPD']
+                mad_ypd = item['YPD']
+
+                new_item['XPD'] = mad_ypd
+                new_item['YPD'] = -mad_xpd
+
+                new_list.append(new_item)
+            return new_list
+
+        return to_longlist_convention(mid_phys), to_longlist_convention(end_phys)
+
 
     def print_sequence(self, start: E = None, stop: E = None):
         sequence = self.get_sequence_part(start, stop)

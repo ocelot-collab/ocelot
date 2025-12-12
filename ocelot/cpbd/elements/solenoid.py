@@ -10,5 +10,5 @@ class Solenoid(OpticElement):
     k - strength B0/(2B*rho)
     """
 
-    def __init__(self, l=0., k=0., eid=None, tm=TransferMap):
-        super().__init__(SolenoidAtom(l=l, k=k, eid=eid), tm=tm, default_tm=TransferMap)
+    def __init__(self, l=0., k=0., eid=None, tm=TransferMap, **kwargs):
+        super().__init__(SolenoidAtom(l=l, k=k, eid=eid, **kwargs), tm=tm, default_tm=TransferMap)

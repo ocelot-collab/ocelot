@@ -20,8 +20,8 @@ class TWCavityAtom(Element):
     freq - frequency [Hz]
     phi - phase in [deg]
     """
-    def __init__(self, l=0., v=0., phi=0., freq=0., eid=None):
-        super().__init__(eid=eid, has_edge=True)
+    def __init__(self, l=0., v=0., phi=0., freq=0., eid=None, **kwargs):
+        super().__init__(eid=eid, has_edge=True, **kwargs)
         self.l = l
         self.v = v  # in GV
         self.freq = freq  # Hz

@@ -10,5 +10,5 @@ class Octupole(OpticElement):
     k3 - strength of octupole lens in [1/m^4].
     """
 
-    def __init__(self, l=0., k3=0., tilt=0., eid=None, tm=TransferMap):
-        super().__init__(OctupoleAtom(l=l, k3=k3, tilt=tilt, eid=eid), tm=tm, default_tm=TransferMap)
+    def __init__(self, l=0., k3=0., tilt=0., eid=None, tm=TransferMap, **kwargs):
+        super().__init__(OctupoleAtom(l=l, k3=k3, tilt=tilt, eid=eid, **kwargs), tm=tm, default_tm=TransferMap)

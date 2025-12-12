@@ -15,11 +15,11 @@ class TWCavity(OpticElement):
     freq - frequency [Hz]
     phi - phase in [deg]
     """
-    def __init__(self, l=0., v=0., phi=0., freq=0., eid=None, tm=TWCavityTM):
+    def __init__(self, l=0., v=0., phi=0., freq=0., eid=None, tm=TWCavityTM, **kwargs):
         if tm != TWCavityTM:
             logger.warning("Cavity Element only support TWCavityTM. Set tm to TWCavityTM.")
             tm = TWCavityTM
-        super().__init__(TWCavityAtom(l=l, v=v, phi=phi, freq=freq, eid=eid), tm=tm,
+        super().__init__(TWCavityAtom(l=l, v=v, phi=phi, freq=freq, eid=eid, **kwargs), tm=tm,
                          default_tm=TWCavityTM)
 
     def set_tm(self, tm: Transformation, **params):

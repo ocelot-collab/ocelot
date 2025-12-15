@@ -149,7 +149,6 @@ class MachineLayout:
 
             wb = getattr(b['el'], 'width', 0.0)
             if wb <= 0: wb = min_distance
-            print(wb)
             radius_sum = (wa + wb) / 2.0
 
             # Now: if dist is 0 and radius_sum is 0.1, 0 < 0.1 is True.

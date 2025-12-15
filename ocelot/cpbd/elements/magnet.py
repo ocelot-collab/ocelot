@@ -49,59 +49,75 @@ class Magnet(Element):
         return KickParams(dx=self.dx, dy=self.dy, angle=self.angle, tilt=self.tilt, k1=self.k1, k2=self.k2)
 
     def get_transfer_geometry(self):
-        # 1. Fallback for straight elements
-        if self.angle == 0:
+        """
+        Geometry for magnets.
+
+        - If angle == 0: falls back to straight-element geometry (Element.get_transfer_geometry()).
+        - If angle != 0: uses a sector-like arc in the local x-s plane (y is vertical).
+          Then applies TILT as a rotation around local s, which rotates the bending plane:
+            * tilt = 0      -> horizontal bend (x-s plane)
+            * tilt = pi/2   -> vertical bend (y-s plane)
+
+        Returns:
+            (R_end, S_end, R_mid, S_mid) in local coordinates.
+
+        Important:
+            - For dipoles, TILT *does* affect the reference trajectory (bending plane rotation),
+              hence both R_* and S_* are rotated by the roll matrix.
+            - For quadrupoles/sextupoles (angle==0), TILT should NOT change trajectory;
+              it is handled in the map/field and/or drawing.
+        """
+        # 1) Straight / non-bending magnet
+        if getattr(self, "angle", 0.0) == 0.0:
             return super().get_transfer_geometry()
 
-        # 2. Curved Geometry Logic
-        rho = 0.0
-        if self.l != 0:
-            rho = self.l / self.angle
+        L = float(getattr(self, "l", 0.0))
+        ang = float(getattr(self, "angle", 0.0))
 
-        # --- A. End Point (Full Angle) ---
-        ca = np.cos(self.angle)
-        sa = np.sin(self.angle)
+        # Guard against division by zero; a "bend" with L==0 is degenerate
+        if abs(ang) < 1e-15 or abs(L) < 1e-15:
+            return super().get_transfer_geometry()
 
-        R_end = np.array([
-            rho * (ca - 1),
-            0,
-            rho * sa
-        ])
+        # Curvature radius (sector-like)
+        rho = L / ang
 
+        # --- A) End point (full angle) in the *un-tilted* x-s plane ---
+        ca = np.cos(ang)
+        sa = np.sin(ang)
+
+        R_end = np.array([rho * (ca - 1.0), 0.0, rho * sa], dtype=float)
+
+        # Rotation of the local frame at the end of a bend (about local y)
         S_end = np.array([
-            [ca, 0, -sa],
-            [0, 1, 0],
-            [sa, 0, ca]
-        ])
+            [ca, 0.0, -sa],
+            [0.0, 1.0, 0.0],
+            [sa, 0.0, ca]
+        ], dtype=float)
 
-        # --- B. Midpoint (Half Angle) - CRITICAL SECTION ---
-        # Make sure you are NOT doing: R_mid = np.array([0, 0, self.l / 2.0])
+        # --- B) Midpoint (half angle) ---
+        half = 0.5 * ang
+        ca2 = np.cos(half)
+        sa2 = np.sin(half)
 
-        half_angle = self.angle / 2.0
-        ca_mid = np.cos(half_angle)
-        sa_mid = np.sin(half_angle)
+        R_mid = np.array([rho * (ca2 - 1.0), 0.0, rho * sa2], dtype=float)
 
-        R_mid = np.array([
-            rho * (ca_mid - 1),  # <--- This gives the X offset (Sagitta)
-            0,
-            rho * sa_mid
-        ])
-
-        # Rotation at midpoint
         S_mid = np.array([
-            [ca_mid, 0, -sa_mid],
-            [0, 1, 0],
-            [sa_mid, 0, ca_mid]
-        ])
+            [ca2, 0.0, -sa2],
+            [0.0, 1.0, 0.0],
+            [sa2, 0.0, ca2]
+        ], dtype=float)
 
-        # --- C. Apply Tilt ---
-        if self.tilt != 0:
+        # --- C) Apply TILT (roll about local s-axis) to rotate bending plane ---
+        tilt = float(getattr(self, "tilt", 0.0))
+        if tilt != 0.0:
             from ocelot.common.math_op import get_tilt_matrix
-            T = get_tilt_matrix(self.tilt)
+            T = get_tilt_matrix(tilt)  # roll about s
 
+            # Rotate the arc displacement into the tilted plane
             R_end = T @ R_end
             R_mid = T @ R_mid
 
+            # Similarity transform rotates the bend rotation into the tilted plane
             S_end = T @ S_end @ T.T
             S_mid = T @ S_mid @ T.T
 

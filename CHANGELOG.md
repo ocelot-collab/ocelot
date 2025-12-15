@@ -74,6 +74,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - added helper functions analytically calculate compression
 - reimplemented survey function based on MAD8 approach. lat.survey() is not compatible with older implementation
 - Added to elements **kwargs and now we can define geometrical sizes of elements for future survey display function 
+- added layout.py module to cpbd and class MachineLayout to deal with different beamlines 
+- added survey plotting functions 2D and 3D 
 ### Fixed
 
 - fixed bugs in matching function if Drift length is in list of variables. 

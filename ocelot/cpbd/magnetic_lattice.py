@@ -388,15 +388,12 @@ class MagneticLattice:
                  - mid_survey_data: Calculated at the geometric center of elements (Best for Tables).
                  - end_survey_data: Calculated at the exit of elements (Best for Plotting).
         """
-
         V = np.array([X0, Y0, Z0])
         S_pos = 0.0
 
         # Initial Matrices
         M_theta = np.array([[np.cos(theta0), 0, np.sin(theta0)], [0, 1, 0], [-np.sin(theta0), 0, np.cos(theta0)]])
         M_phi = np.array([[1, 0, 0], [0, np.cos(phi0), np.sin(phi0)], [0, -np.sin(phi0), np.cos(phi0)]])
-
-        # Move import to top of file if possible, otherwise this is fine
         from ocelot.common.math_op import get_tilt_matrix
         M_psi = get_tilt_matrix(psi0)
 
@@ -405,65 +402,71 @@ class MagneticLattice:
         mid_survey_data = []
         end_survey_data = []
 
-        # Helper to extract angles/directions from a W matrix
-        def get_survey_data(w_mat, v_vec, s_val, el):
-            # 1. Direction Cosines (3rd col of W)
+        # Helper: Now accepts v_start and v_end vectors
+        def get_survey_data(w_mat, w_start, v_start, v_end, s_val, el):
+            # 1. Scalars for Excel/Pandas
             xpd, ypd, zpd = w_mat[0, 2], w_mat[1, 2], w_mat[2, 2]
-
-            # 2. Euler Angles
             val_phi = np.clip(ypd, -1.0, 1.0)
-            phi = np.arcsin(val_phi)  # PHI
-            theta = np.arctan2(xpd, zpd)  # THETA
-
-            # CHI (Roll) - derived from the projection of the Y-axis
+            phi = np.arcsin(val_phi)
+            theta = np.arctan2(xpd, zpd)
             psi_angle = np.arctan2(w_mat[1, 0], w_mat[1, 1])
 
-            # 3. Extract Element attributes safely
             length = getattr(el, 'l', 0.0) if el else 0.0
             tilt = getattr(el, 'tilt', 0.0) if el else 0.0
 
             return {
+                # --- Excel/Table Data (Scalars) ---
                 "LENGTH": length,
                 "TILT": tilt,
                 "S": s_val,
-                "X": v_vec[0], "Y": v_vec[1], "Z": v_vec[2],
+                "X": v_end[0], "Y": v_end[1], "Z": v_end[2],  # Current position
                 "THETA": theta, "PHI": phi, "PSI": psi_angle,
                 "XPD": xpd, "YPD": ypd, "ZPD": zpd,
-                "W": w_mat,
+
+                # --- Layout/Plotting Data (Vectors/Matrices) ---
+                "W": w_mat.copy(),  # end or mid
+                "W_start": w_start.copy(),
+                "r_start": v_start.copy(),  # Vector [x,y,z] at element start
+                "r_end": v_end.copy(),  # Vector [x,y,z] at element end
+
                 "element": el
             }
 
-        # Add Start Point (Entry of line) to both lists
-        start_point_data = get_survey_data(W, V, S_pos, None)
+        # Add Start Point
+        # Start/End are same for the zero-length marker at 0.0
+        start_point_data = get_survey_data(W, W, V, V, S_pos, None)
         mid_survey_data.append(start_point_data)
         end_survey_data.append(start_point_data)
 
         for elem in self.sequence:
-            # Expecting 4 values. Ensure Element/Magnet classes are updated!
             R_end, S_end, R_mid, S_mid = elem.get_transfer_geometry()
 
-            # Save Start Orientation
             W_start = W.copy()
             V_start = V.copy()
 
-            # --- 1. CALCULATE MIDPOINT STATE (For Tables) ---
+            # --- 1. MIDPOINT (For Tables) ---
             V_mid_global = V_start + W_start @ R_mid
             W_mid_global = W_start @ S_mid
 
             L = getattr(elem, 'l', 0.0)
             S_mid_val = S_pos + L / 2.0
 
-            mid_survey_data.append(get_survey_data(W_mid_global, V_mid_global, S_mid_val, elem))
+            # For midpoint data, 'r_end' is the center, 'r_start' is entry
+            mid_survey_data.append(get_survey_data(W_mid_global,W_start, V_start, V_mid_global, S_mid_val, elem))
 
-            # --- 2. ADVANCE TO END (For Next Iteration & Plotting) ---
-            V = V_start + W_start @ R_end
-            W = W_start @ S_end
+            # --- 2. ENDPOINT (For Layouts/Connectivity) ---
+            V_end_global = V_start + W_start @ R_end
+            W_end_global = W_start @ S_end
             S_pos += L
 
-            end_survey_data.append(get_survey_data(W, V, S_pos, elem))
+            # For endpoint data, we have the full element segment
+            end_survey_data.append(get_survey_data(W_end_global, W_start, V_start, V_end_global, S_pos, elem))
+
+            # Update state
+            V = V_end_global
+            W = W_end_global
 
         return mid_survey_data, end_survey_data
-
 
     def survey_longlist(self, X0=0, Y0=0, Z0=0, theta0=0, phi0=0, psi0=0):
         """

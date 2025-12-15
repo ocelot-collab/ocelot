@@ -26,8 +26,8 @@ class Element:
         self.tilt = 0.  # rad, pi/4 to turn positive quad into negative skew
         self.dx = 0.
         self.dy = 0.
-        self.w = kwargs.pop('width', 0.)    # transverse width of the element. it used only in the beamline plotting
-        self.h = kwargs.pop('height', 0.)     # transverse width of the element. it used only in the beamline plotting
+        self.width = kwargs.pop('width', 0.05)    # transverse width of the element. it used only in the beamline plotting
+        self.height = kwargs.pop('height', 0.05)     # transverse height of the element. it used only in the beamline plotting
         self.color = kwargs.pop('color', None) # color of element. it used only in the beamline plotting
         self.params = {}
 
@@ -77,30 +77,29 @@ class Element:
 
     def get_transfer_geometry(self):
         """
+        Geometry for straight elements.
+
         Returns:
-        R_end: Displacement to end [x, y, s]
-        S_end: Rotation at end
-        R_mid: Displacement to midpoint [x, y, s]
-        S_mid: Rotation at midpoint
+            R_end: displacement from entrance to exit in the *local* frame [x, y, s]
+            S_end: rotation of the *local frame* at exit relative to entrance
+            R_mid: displacement from entrance to geometric center in the *local* frame
+            S_mid: rotation of the *local frame* at midpoint relative to entrance
+
+        Notes (MAD-style):
+            - For straight elements, TILT does NOT change the reference trajectory.
+            - Therefore, R_* is purely along +s.
+            - S_* is identity (no change of the reference frame).
+            - If you want the *magnet body* (box/cylinder) to appear rotated (e.g. skew quad),
+              apply TILT in the plotting stage (extra roll around s for the mesh), not here.
         """
-        # 1. Straight Element Logic
-        R_end = np.array([0, 0, self.l])
-        R_mid = np.array([0, 0, self.l / 2.0])
-        S_end = np.eye(3)
-        S_mid = np.eye(3)  # No rotation halfway through a straight line
+        L = getattr(self, "l", 0.0)
 
-        # 2. Apply Tilt
-        if self.tilt != 0:
-            from ocelot.common.math_op import get_tilt_matrix
-            T = get_tilt_matrix(self.tilt)
+        # Straight trajectory along local s
+        R_end = np.array([0.0, 0.0, L], dtype=float)
+        R_mid = np.array([0.0, 0.0, 0.5 * L], dtype=float)
 
-            R_end = T @ R_end
-            R_mid = T @ R_mid
-
-            # S = T @ I @ T.T = I, so S doesn't change for straight elements
-            # UNLESS you want to track the frame roll explicitly.
-            # But usually Tilt is static for the element.
-            # We keep S as Identity for straight elements relative to the trajectory.
-            pass
+        # No rotation of the reference frame for a straight segment
+        S_end = np.eye(3, dtype=float)
+        S_mid = np.eye(3, dtype=float)
 
         return R_end, S_end, R_mid, S_mid

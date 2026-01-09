@@ -112,7 +112,7 @@ class TestSurveyLongList(unittest.TestCase):
         lat = MagneticLattice([bend])
 
         mid_std, _ = lat.survey()
-        mid_long, _ = lat.survey_longlist(X0=0, Y0=0, Z0=0, theta0=0, phi0=0, psi0=0)
+        mid_long, _ = lat.survey_longlist(X0=0, Y0=0, Z0=0, theta0=0, phi0=0, chi0=0)
 
         item_std = mid_std[0]
         item_long = mid_long[0]

@@ -468,7 +468,18 @@ class MagneticLattice:
 
         return mid_survey_data, end_survey_data
 
-    def survey_longlist(self, X0=0, Y0=0, Z0=0, theta0=0, phi0=0, psi0=0):
+    def survey_longlist(
+        self,
+        X0=0,
+        Y0=0,
+        Z0=0,
+        theta0=0,
+        phi0=0,
+        chi0=0,
+        xpd0=None,
+        ypd0=None,
+        zpd0=None,
+    ):
         """
         Calculates survey and converts angles/coordinates to the 'LongList' engineering convention.
 
@@ -479,8 +490,18 @@ class MagneticLattice:
         - XPD               -> Becomes YPD (Consistent with angle swap)
         - YPD               -> Becomes -XPD
         """
+        if xpd0 is not None and ypd0 is not None and zpd0 is not None:
+            val_phi = np.clip(ypd0, -1.0, 1.0)
+            phi0 = np.arcsin(val_phi)
+            theta0 = np.arctan2(xpd0, zpd0)
+
+        # Convert LongList input angles to MAD-8 convention for survey()
+        mad_theta0 = -phi0
+        mad_phi0 = theta0
+        mad_psi0 = chi0
+
         # 1. Get the raw physics data (Assuming this returns dicts with 'PSI', 'THETA', 'PHI')
-        mid_phys, end_phys = self.survey(X0, Y0, Z0, theta0, phi0, psi0)
+        mid_phys, end_phys = self.survey(X0, Y0, Z0, mad_theta0, mad_phi0, mad_psi0)
 
         # 2. Define the transformation logic
         def to_longlist_convention(data_list):

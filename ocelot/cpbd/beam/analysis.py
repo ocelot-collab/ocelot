@@ -782,8 +782,8 @@ def bunching_at_klist_2(z, k_list):
         b.append(np.exp(-1j * k * z).mean())
     return np.array(b)
 
-@njit
-def bunching_at_klist(z, k_list):
+
+def bunching_at_klist_py(z, k_list):
     N = z.size
     out = np.empty(k_list.size, dtype=np.complex128)
     for i in range(k_list.size):
@@ -793,6 +793,37 @@ def bunching_at_klist(z, k_list):
             s += np.exp(-1j * k * z[j])
         out[i] = s / N
     return out
+
+
+def bunching_at_klist_np(z, k_list):
+    """
+    Pure NumPy implementation of
+    b(k) = <exp(-i k z)>
+
+    Parameters
+    ----------
+    z : array, shape (N,)
+        Longitudinal coordinates
+    k_list : array, shape (M,)
+        Wavenumbers
+
+    Returns
+    -------
+    out : array, shape (M,)
+        Complex bunching factor
+    """
+    z = np.asarray(z)
+    k_list = np.asarray(k_list)
+    return np.exp(-1j * np.outer(k_list, z)).mean(axis=1)
+
+
+# final dispatch
+if nb_flag:
+    bunching_at_klist = nb.jit(
+        nopython=True, cache=True, fastmath=True
+    )(bunching_at_klist_py)
+else:
+    bunching_at_klist = bunching_at_klist_np
 
 
 def spectrum_to_z(spectrum_k, M, Lwin):

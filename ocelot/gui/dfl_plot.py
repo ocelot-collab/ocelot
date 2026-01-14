@@ -1351,6 +1351,7 @@ def plot_dfl_waistscan(sc_res, fig_name=None, figsize=4, showfig=True, savefig=F
     ax_int.plot(sc_res.z_pos, sc_res.phdens_max, 'k', label='max', linewidth=2)
     ax_int.plot(sc_res.z_pos, sc_res.phdens_onaxis, 'grey', label='on-axis')
     ax_int.set_xlabel('z [m]')
+    ax_int.set_ylim(ymin=0)
     ax_int.set_ylabel('photon density [arb.units]')
     ax_int.legend(loc='lower left')
     ax_size = ax_int.twinx()
@@ -1358,7 +1359,7 @@ def plot_dfl_waistscan(sc_res, fig_name=None, figsize=4, showfig=True, savefig=F
     ax_size.plot(sc_res.z_pos, sc_res.fwhm_y * 1e6, 'b--', label='fwhm_y')
     ax_size.plot(sc_res.z_pos, sc_res.std_x * 1e6, 'g:', label='std_x')
     ax_size.plot(sc_res.z_pos, sc_res.std_y * 1e6, 'b:', label='std_y')
-
+    ax_size.set_ylim(ymin=0)
     ax_size.set_ylabel('size [um]')
     ax_size.legend(loc='lower right')
 

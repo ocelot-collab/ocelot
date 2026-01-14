@@ -72,7 +72,7 @@ class Genesis4Simulation:
 
         self.mpiParameters = ''
         if ginp is not None:
-            ginp.check_consistency_round2()
+            # ginp.check_consistency_round2()
             self.ginp = ginp
         else:
             self.ginp = Genesis4Input()
@@ -1979,21 +1979,116 @@ def dpa42edist(dpa, n_part=None, fill_gaps=False):
 
     return edist
 
+# def write_dpa4parray(parray, filepath, lslice):
+    # # _logger.info('writing parray as dpa to filepath')
+    # #p_array_tmp = deepcopy(parray)
+    # #p_array_tmp.sort('t')
+    # ss = parray.t - parray.t.min()
+    # slicenum = ss // lslice
+    # slicenum = slicenum.astype(int)
+    # phase = ss % lslice / lslice * 2 * np.pi - np.pi
+    # e0 = parray.E * 1e9 #[eV]
+    # p0 = np.sqrt( (e0**2 - m_e_eV**2) / speed_of_light**2 )
+    # gamma = (parray.rparticles[5] * p0 * speed_of_light + e0) / m_e_eV
+    # with h5py.File(filepath, 'w') as h5:
+        # h5.create_dataset('beamletsize', data=np.array([1]))
+        # h5.create_dataset('one4one', data=np.array([1]))
+        # h5.create_dataset('refposition', data=np.array([0]))
+        # h5.create_dataset('slicecount', data=np.array([slicenum.max()]))
+        # h5.create_dataset('slicelength', data=np.array([lslice]))
+        # h5.create_dataset('slicespacing', data=np.array([lslice*2]))
+        # for slice_n in range(0, slicenum.max()):
+            # npart_sl = len(np.where(slicenum == slice_n)[0])
+            # # _logger.debug(f'slice = {slice_n:06d} out of {slicenum.max()}, npart = {npart_sl}')
+            # #print(f'slice = {slice_n:06d} out of {slicenum.max()}, npart = {npart_sl}')
+            # if npart_sl > 0:
+                # idx = np.where(slicenum == slice_n)[0]
+                # slgrp = h5.create_group(f'slice{slice_n:06d}')
+                # slgrp.create_dataset('current',data = npart_sl * q_e / lslice * speed_of_light)
+                # slgrp.create_dataset('x',data = parray.rparticles[0][idx].T)
+                # slgrp.create_dataset('y',data = parray.rparticles[2][idx].T)
+                # slgrp.create_dataset('px',data = parray.rparticles[1][idx].T * gamma[idx].T)
+                # slgrp.create_dataset('py',data = parray.rparticles[3][idx].T * gamma[idx].T)
+                # slgrp.create_dataset('gamma',data = gamma[idx].T)
+                # slgrp.create_dataset('theta',data = phase[idx].T)
+            # else:
+                # slgrp = h5.create_group(f'slice{slice_n:06d}')
+                # slgrp.create_dataset('current',data = [])
+                # slgrp.create_dataset('x',data = [])
+                # slgrp.create_dataset('y',data = [])
+                # slgrp.create_dataset('px',data = [])
+                # slgrp.create_dataset('py',data = [])
+                # slgrp.create_dataset('gamma',data = [])
+                # slgrp.create_dataset('theta',data = [])
+
+
+def write_dpa4parray(parray, filepath, slicelength, sample=1):
+    _logger.info('writing gen4 .dpa file')
+    _logger.info(ind_str + f'filepath: {filepath}')
+    writing_time = time.time()
+    
+    ss = parray.t.max()-parray.t
+    slicenum = (ss // slicelength / sample).astype(int)
+    max_slice = slicenum.max()
+    phase = ((ss % slicelength) / slicelength * 2 * np.pi - np.pi) * sample
+    e0 = parray.E * 1e9  # [eV]
+    p0 = np.sqrt((e0 ** 2 - m_e_eV ** 2) / speed_of_light ** 2)
+    gamma = (parray.rparticles[5] * p0 * speed_of_light + e0) / m_e_eV
+    prp1 = parray.rparticles[1] * gamma
+    prp3 = parray.rparticles[3] * gamma
+    from collections import defaultdict
+    slice_indices = defaultdict(list)
+    for i, s in enumerate(slicenum):
+        slice_indices[s].append(i)
+    with h5py.File(filepath, 'w', libver='latest') as h5:
+        h5.create_dataset('beamletsize', data=[1])
+        h5.create_dataset('one4one', data=[1])
+        h5.create_dataset('refposition', data=[0])
+        h5.create_dataset('slicecount', data=[max_slice])
+        h5.create_dataset('slicelength', data=[slicelength])
+        h5.create_dataset('slicespacing', data=[slicelength * sample])
+        for slice_n in range(max_slice + 1):
+            if slice_n % max(1, (max_slice // 10)) == 0:
+                percent = int(slice_n / max_slice * 100)
+                #_logger.debug(ind_str + f"[{percent:>3}%] Processing slice {slice_n} of {max_slice}")
+            idx = slice_indices.get(slice_n, [])
+            if idx:
+                # idx = np.array(idx)
+                idx = np.fromiter(idx, dtype=np.int64, count=len(idx))
+                slgrp = h5.create_group(f'slice{slice_n:06d}')
+                # data_map = {
+                    # 'x': parray.rparticles[0][idx],
+                    # 'y': parray.rparticles[2][idx],
+                    # 'px': prp1[idx],
+                    # 'py': prp3[idx],
+                    # 'gamma': gamma[idx],
+                    # 'theta': phase[idx],
+                # for name, arr in data_map.items():
+                    # slgrp.create_dataset(name, data=arr)
+                slgrp.create_dataset('current', data=[len(idx) * q_e / slicelength / sample * speed_of_light])
+                slgrp.create_dataset('x', data=parray.rparticles[0][idx])
+                slgrp.create_dataset('y', data=parray.rparticles[2][idx])
+                slgrp.create_dataset('px', data=prp1[idx])
+                slgrp.create_dataset('py', data=prp3[idx])
+                slgrp.create_dataset('gamma', data=gamma[idx])
+                slgrp.create_dataset('theta', data=phase[idx])
+            else:
+                slgrp = h5.create_group(f'slice{slice_n:06d}')
+                for name in ['current', 'x', 'y', 'px', 'py', 'gamma', 'theta']:
+                    slgrp.create_dataset(name, data=[])
+    _logger.info(ind_str + f'done in {(time.time() - writing_time)/60 :2f} minutes')
+
 
 def read_dpa42parray(filePath, N_part=None, fill_gaps=True):
     _logger.info('reading gen4 .dpa file into parray')
     _logger.warning(ind_str + 'in beta, fix situation with harmonic jump resulting in sepslice > lslice')
     _logger.debug(ind_str + 'reading from ' + filePath)
-
     import random
     N_part = None
-
     # N_part = 100000
     fill_gaps = True
     _logger.debug('fill_gaps = ' + str(fill_gaps))
-
     h5 = h5py.File(filePath, 'r')
-
     nslice = int(h5.get('slicecount')[0])
     lslice = h5.get('slicelength')[0]
     sepslice = h5.get('slicespacing')[0]
@@ -2092,13 +2187,13 @@ def read_dpa42parray(filePath, N_part=None, fill_gaps=True):
 def write_edist_hdf5(edist, filepath, exist_ok=True):
     _logger.info('writing electron distribution to {}'.format(filepath))
     os.makedirs(filepath[:filepath.rindex(os.path.sep)], exist_ok=True)
-    with h5py.File(filepath, 'w') as h5:
-        h5.create_dataset('p', data=edist.g)
-        h5.create_dataset('t', data=-edist.t)
-        h5.create_dataset('x', data=edist.x)
-        h5.create_dataset('y', data=edist.y)
-        h5.create_dataset('xp', data=edist.xp)
-        h5.create_dataset('yp', data=edist.yp)
+    with h5py.File(filepath, 'w', libver='latest') as h5:
+        h5.create_dataset('p', data=edist.g, compression=None)
+        h5.create_dataset('t', data=-edist.t, compression=None)
+        h5.create_dataset('x', data=edist.x, compression=None)
+        h5.create_dataset('y', data=edist.y, compression=None)
+        h5.create_dataset('xp', data=edist.xp, compression=None)
+        h5.create_dataset('yp', data=edist.yp, compression=None)
         # h5.create_dataset('charge', data=[edist.charge()])
         # h5.create_dataset('part_charge', data=[edist.part_charge])
     _logger.debug(ind_str + 'done')

@@ -669,6 +669,14 @@ def mut_coh_func_py(J, fld, norm=1):
 mut_coh_func = nb.jit('void(complex128[:,:,:,:], complex128[:,:,:], int32)', nopython=True, nogil=True)(mut_coh_func_py) \
                 if numba_avail else mut_coh_func_py
 
+@nb.njit(parallel=True)
+def add_smear_parallel(arrays, stds, seed=123):
+    for i in nb.prange(len(arrays)):
+        arr = arrays[i]
+        std = stds[i]
+        if std > 0:
+            np.random.seed(seed)
+            arr += np.random.normal(0.0, std, size=arr.shape)
 
 def gauss_fit(X, Y):
     def gauss(x, p):  # p[0]==mean, p[1]==stdev p[2]==peak

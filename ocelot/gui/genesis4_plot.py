@@ -111,7 +111,7 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
         savefig = 'png'
 
     if choice == 'all':
-        choice = (1, 1, 0, 0, 6, 1, 1, 1, 1, 0, 1, 6, 0)
+        choice = (1, 1, 0, 0, 6, 1, 1, 1, 1, 1, 1, 6, 0)
     elif choice == 'gen':
         choice = (1, 1, 1, 1, 10, 0, 0, 0, 0, 0, 0, 0, 0)
     elif choice == 'dfl':
@@ -243,26 +243,21 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
             #if os.path.isfile(handle.filePath.replace('.out.h5', '.par.h5')) and (choice[9] or choice[10]):
                 #dpa = read_dpa4(handle.filePath.replace('.out.h5', '.par.h5'),  estimate_npart=1, partskip=100)
             if choice[9]:
-                try:
-                    if handle.one4one:
-                        edist = dpa42edist(handle)
-                    else:
-                        edist = dpa42edist(handle, n_part=5e4, fill_gaps=1)
-                    f9 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=100, debug=debug)
-                except:
-                    _logger.warning('could not plot smeared edist')
+                if handle.one4one:
+                    edist = dpa42edist(handle)
+                else:
+                    edist = dpa42edist(handle, n_part=5e4, fill_gaps=1)
+                f9 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig, bins=100, debug=debug)
+                    # _logger.warning('could not plot smeared edist')
             if choice[10]:
-                try:
-                    if handle.one4one:
-                        edist = dpa42edist(handle)
-                    else:
-                        edist = dpa42edist(handle, n_part=5e4, fill_gaps=1)
-                        
-                    f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig,
-                                     bins=(50, 50, 300, 300), debug=debug)
-                except:
-                    _logger.warning('could not plot unsmeared edist')
-
+                if handle.one4one:
+                    edist = dpa42edist(handle)
+                else:
+                    edist = dpa42edist(handle, n_part=5e4, fill_gaps=1)
+                f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig,
+                                     bins=(100, 100, 200, 200), debug=debug)
+                # except:
+                    # _logger.warning('could not plot unsmeared edist')
     if savefig != False:
         if debug > 0:
             _logger.info('{}plots recorded to *. {} files'.format(ind_str, savefig))

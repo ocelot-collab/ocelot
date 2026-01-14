@@ -2,6 +2,8 @@
 user interface for viewing/editing electron optics layouts
 """
 
+from __future__ import annotations
+
 from ocelot.cpbd.physics_proc import *
 from scipy import stats
 from ocelot.cpbd.beam import global_slice_analysis
@@ -22,6 +24,8 @@ from ocelot.cpbd.optics import *
 import numpy as np
 from ocelot.cpbd.elements import *
 from copy import deepcopy
+
+
 
 
 import matplotlib.font_manager as font_manager

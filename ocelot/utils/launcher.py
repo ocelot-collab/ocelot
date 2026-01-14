@@ -108,20 +108,24 @@ class MpiLauncher(Launcher):
         self.argument = ""
         self.nproc = 0
         self.mpiParameters = ""
+        self.mpiexec = "`which mpirun` "
         
     def prepare(self):
         return False
-
+        
+    def command(self):
+        return 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; '+ self.mpiexec + str(self.mpiParameters) + " " + self.program + " " + self.argument
+    
     def launch(self):
         t1 = time.time()
         _logger.info('launching mpi job')
-        if hasattr(self, 'command'):
-            command = self.command #command override
-        else:
-            command = 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; '+ "`which mpirun` " + str(self.mpiParameters) + " " + self.program + " " + self.argument
-        _logger.info(ind_str + 'launcher command "{}"'.format(command))
+        # if hasattr(self, 'command'):
+            # command = self.command #command override
+        # else:
+            # command = 'mkdir -p '+ self.dir + '; ' + 'cd '+ self.dir + '; '+ self.mpiexec + str(self.mpiParameters) + " " + self.program + " " + self.argument
+        _logger.info(ind_str + 'launcher command "{}"'.format(self.command()))
         # print (command)
-        os.system(command)
+        os.system(self.command())
         t2 = time.time()
         _logger.info(ind_str + 'execution time {:} sec'.format(t2 - t1))
             

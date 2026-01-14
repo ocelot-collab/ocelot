@@ -17,6 +17,7 @@ from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.rad.undulator_params import UndulatorParameters
 # from ocelot.optics.utils import calc_ph_sp_dens
 from ocelot.common.ocelog import *
+from ocelot.common.math_op import  numba_avail, add_smear_parallel
 
 _logger = logging.getLogger(__name__) 
 
@@ -2624,11 +2625,16 @@ def disperse_edist(edist, R56, debug=1):
     
     return edist_out
     
+# @numba.njit(parallel=True)
+# def smear_attribute(array, std_val, smear):
+    # n = array.shape[0]
+    # for i in numba.prange(n):
+        # noise = np.random.normal(0, std_val * smear)
+        # out_array[i] += noise
     
-    
-def repeat_edist(edist, repeats, smear=1e-3, not_smear=[]):
+def repeat_edist_old(edist, repeats, smear=1e-1, not_smear=[], dtype = np.float32):
     '''
-    dublicates the GenesisElectronDist() by given factor
+    dublicates particles in GenesisElectronDist() by given factor
     repeats  - the number of repetitions
     smear - smear new particles by x of global standard deviation of parameter
     '''
@@ -2643,33 +2649,139 @@ def repeat_edist(edist, repeats, smear=1e-3, not_smear=[]):
         
     edist_out = GenesisElectronDist()
     edist_out.filePath = edist.filePath
-
-    edist_out.x = np.repeat(edist.x, repeats)
-    edist_out.y = np.repeat(edist.y, repeats)
-    edist_out.xp = np.repeat(edist.xp, repeats)
-    edist_out.yp = np.repeat(edist.yp, repeats)
-    edist_out.t = np.repeat(edist.t, repeats)
-    edist_out.g = np.repeat(edist.g, repeats)
+    
+    edist_out.x = np.repeat(edist.x.astype(dtype), repeats)
+    edist_out.y = np.repeat(edist.y.astype(dtype), repeats)
+    edist_out.xp = np.repeat(edist.xp.astype(dtype), repeats)
+    edist_out.yp = np.repeat(edist.yp.astype(dtype), repeats)
+    edist_out.t = np.repeat(edist.t.astype(dtype), repeats)
+    edist_out.g = np.repeat(edist.g.astype(dtype), repeats)
     edist_out.part_charge = edist.part_charge / repeats
-
-    if smear:
+    
+    if smear>0:
         n_par = edist_out.len()
-        smear_factor = 1e-3  # smear new particles by smear_factor of standard deviation of parameter
+        #smear = 1e-3  # smear new particles by smear_factor of standard deviation of parameter
         
         for attr in ['x','y','xp','yp','t','g']:
             if attr not in not_smear:
                 val = getattr(edist_out, attr)
-                val += np.random.normal(scale=np.std(val) * smear_factor, size=n_par)
+                val += np.random.normal(scale=np.std(getattr(edist, attr).astype(dtype)) * smear, size=n_par)
                 setattr(edist_out, attr, val)
-        # edist_out.x += np.random.normal(scale=np.std(edist_out.x) * smear_factor, size=n_par)
-        # edist_out.y += np.random.normal(scale=np.std(edist_out.y) * smear_factor, size=n_par)
-        # edist_out.xp += np.random.normal(scale=np.std(edist_out.xp) * smear_factor, size=n_par)
-        # edist_out.yp += np.random.normal(scale=np.std(edist_out.yp) * smear_factor, size=n_par)
-        # edist_out.t += np.random.normal(scale=np.std(edist_out.t) * smear_factor, size=n_par)
-        # edist_out.g += np.random.normal(scale=np.std(edist_out.g) * smear_factor, size=n_par)
+                _logger.info(ind_str + f'attr {attr} of 6 done')
+    return edist_out
+
+def repeat_edist(edist, repeats, smear=1e-1, not_smear=[], dtype = np.float32):
+    '''
+    dublicates particles in GenesisElectronDist() by given factor
+    repeats  - the number of repetitions
+    smear - smear new particles by x of global standard deviation of parameter
+    '''
+    _logger.info('repeating edist by factor of {}'.format(repeats))
+    if numba_avail:
+        _logger.debug(ind_str + 'using jit')
+        return repeat_edist_nb(edist, repeats, smear=smear, not_smear=not_smear, dtype=dtype)
+    else:
+        return repeat_edist_fast(edist, repeats, smear=smear, not_smear=not_smear, dtype=dtype)
+    
+    # if not isinstance(edist, GenesisElectronDist):
+        # raise ValueError('out is neither GenesisOutput() nor a valid path')
+        
+    # if repeats < 1:
+        # raise ValueError('repeats cannot be smaller that 1')
+
+    # stds = {attr: np.std(getattr(edist, attr).astype(dtype)) * smear
+        # for attr in ['x','y','xp','yp','t','g'] if attr not in not_smear}
+    
+    # edist_out = GenesisElectronDist()
+    # edist_out.filePath = edist.filePath
+    
+    
+    # edist_out.x = np.repeat(edist.x.astype(dtype), repeats)
+    # edist_out.y = np.repeat(edist.y.astype(dtype), repeats)
+    # edist_out.xp = np.repeat(edist.xp.astype(dtype), repeats)
+    # edist_out.yp = np.repeat(edist.yp.astype(dtype), repeats)
+    # edist_out.t = np.repeat(edist.t.astype(dtype), repeats)
+    # edist_out.g = np.repeat(edist.g.astype(dtype), repeats)
+    # edist_out.part_charge = edist.part_charge / repeats
+    
+    
+    # if smear>0:
+        # # n_par = edist_out.len()
+        # #smear = 1e-3  # smear new particles by smear_factor of standard deviation of parameter
+        
+        # for attr in ['x','y','xp','yp','t','g']:
+            # if attr not in not_smear:
+                # val = getattr(edist_out, attr)
+                # val += np.random.normal(0, stds[attr], val.shape)
+                # # val += np.random.normal(scale=np.std(getattr(edist, attr).astype(dtype)) * smear, size=n_par)
+                # setattr(edist_out, attr, val)
+                # _logger.debug(ind_str + f'attr {attr} of 6 done')
+    return edist_out
+    
+def repeat_edist_fast(edist, repeats, smear=1e-1, not_smear=[], dtype=np.float32):
+    if repeats < 1:
+        raise ValueError('repeats must be >= 1')
+
+    edist_out = edist.__class__()  # створюємо такий же об’єкт
+    edist_out.filePath = edist.filePath
+    edist_out.part_charge = edist.part_charge / repeats
+
+    # Попереднє приведення типу та створення повторів
+    base_attrs = {}
+    for attr in ['x', 'y', 'xp', 'yp', 't', 'g']:
+        arr = getattr(edist, attr).astype(dtype, copy=False)
+        base_attrs[attr] = arr
+        setattr(edist_out, attr, np.tile(arr, repeats))
+
+    if smear > 0:
+        n_par = edist_out.len()
+
+        # Попереднє обчислення std для атрибутів, які треба "розмазати"
+        stds = {attr: np.std(base_attrs[attr]) * smear
+                for attr in base_attrs if attr not in not_smear}
+
+        # Додавання шуму векторизовано
+        for attr, std in stds.items():
+            arr = getattr(edist_out, attr)
+            arr += np.random.normal(0.0, std, arr.shape)
 
     return edist_out
 
+
+
+def repeat_edist_nb(edist, repeats, smear=1e-1, not_smear=[], dtype=np.float32, seed=12345):
+    if repeats < 1:
+        raise ValueError('repeats must be >= 1')
+    edist_out = edist.__class__()
+    edist_out.filePath = edist.filePath
+    edist_out.part_charge = edist.part_charge / repeats
+    
+    base_attrs = {}
+    for attr in ['x', 'y', 'xp', 'yp', 't', 'g']:
+        arr = getattr(edist, attr).astype(dtype, copy=False)
+        base_attrs[attr] = arr
+        setattr(edist_out, attr, np.tile(arr, repeats))
+    
+    if smear > 0:
+        smear_attrs = [attr for attr in base_attrs if attr not in not_smear]
+        n_par = edist_out.len()
+        stds = np.array([np.std(base_attrs[attr]) * smear for attr in smear_attrs], dtype=dtype)
+        arrays = [getattr(edist_out, attr) for attr in smear_attrs]
+        add_smear_parallel(arrays, stds, seed=seed)
+    
+    return edist_out
+
+
+def edist2one4one(edist, smear=1e-4):
+    _logger.info('converting edist to one4one')
+    repeats = edist.part_charge / q_e
+    _logger.info(ind_str + f'repeats = {repeats}')
+    if abs(repeats - 1) < 0.1:
+        _logger.info('macroparticle number close to q_e, skipping')
+        return edist
+    if repeats < 20: 
+        _logger.warning('current error > 5%')
+    return repeat_edist(edist, repeats, smear)
 
 def write_edist_file(edist, filePath=None, debug=1):
     '''
@@ -3867,7 +3979,11 @@ def rematch_edist(edist, tws, s=None):
     mean_ypy = np.mean(y * yp)
     mean_g = np.mean(edist_out.g)
     
-    beam = edist2beam(edist_out)
+    len_edist = edist_out.s.max() - edist_out.s.min()
+    if len_edist < 1e-6:
+        beam = edist2beam(edist_out, step=len_edist/10)
+    else:
+        beam = edist2beam(edist_out)
     
     if s is None:
         tws0 = Twiss(beam.pk())

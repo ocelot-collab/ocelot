@@ -2768,7 +2768,6 @@ def repeat_edist_nb(edist, repeats, smear=1e-1, not_smear=[], dtype=np.float32, 
         stds = np.array([np.std(base_attrs[attr]) * smear for attr in smear_attrs], dtype=dtype)
         arrays = [getattr(edist_out, attr) for attr in smear_attrs]
         add_smear_parallel(arrays, stds, seed=seed)
-    
     return edist_out
 
 

@@ -241,6 +241,8 @@ class MagneticLattice:
             Sub-list of elements from start to stop (inclusive).
         """
         seq = self.sequence
+        if len(seq) == 0:
+            raise ValueError("No elements in sequence.")
 
         try:
             id1 = seq.index(start) if start is not None else 0

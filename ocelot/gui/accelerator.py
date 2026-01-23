@@ -580,8 +580,8 @@ def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12,
         axes = (ax_extra, ax_xy)
 
     else:
-        rect2 = [left, 0.19, width, 0.69]  # ax_xy
-        rect3 = [left, 0.07, width, 0.10]  # ax_el
+        rect2 = [left, 0.33, width, 0.6]  # ax_xy
+        rect3 = [left, 0.12, width, 0.20]  # ax_el
         ax_xy = fig.add_axes(rect2)
         ax_el = fig.add_axes(rect3, sharex=ax_xy)
 

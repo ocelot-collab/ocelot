@@ -200,8 +200,8 @@ class SectionTrack:
         self.tws_file = None
 
         #self.data_dir = "."
-        self.particle_dir = data_dir + "/particles/"
-        self.tws_dir = data_dir + "/tws/"
+        self.particle_dir = os.path.join(data_dir, "particles/")
+        self.tws_dir = os.path.join(data_dir, "tws/")
 
         self.physics_processes_array = []  # list of physics process
         self.method = {'global': SecondTM}
@@ -390,7 +390,6 @@ class SectionTrack:
     def read_beam_file(self):
 
         particles = None
-
         try:
             particles = load_particle_array(self.input_beam_file)
         

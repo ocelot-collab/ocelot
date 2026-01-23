@@ -1,6 +1,5 @@
 import numpy as np
 import ocelot.common.globals as glb
-from numba import njit
 
 from . import beam_utils
 from . import core
@@ -19,7 +18,6 @@ except:
 
 try:
     import numba as nb
-
     nb_flag = True
 except:
     _logger.info("beam.py: module NUMBA is not installed. Install it to speed up calculation")

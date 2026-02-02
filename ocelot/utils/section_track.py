@@ -118,6 +118,8 @@ class SectionLattice:
                     sec.apply_matching(bounds=bounds, remove_offsets=remove_offsets)
                 if "SC" in conf.keys():
                     sec.sc_flag = conf["SC"]
+                if "LSC" in conf.keys():
+                    sec.lsc_flag = conf["LSC"]
                 if "CSR" in conf.keys():
                     sec.csr_flag = conf["CSR"]
                 if "smooth" in conf.keys():
@@ -206,6 +208,7 @@ class SectionTrack:
         self.physics_processes_array = []  # list of physics process
         self.method = {'global': SecondTM}
         self.sc_flag = True
+        self.lsc_flag = False
         self.csr_flag = True
         self.wake_flag = True
         self.bt_flag = True
@@ -362,7 +365,10 @@ class SectionTrack:
 
         # init physics processes
         for physics_process in self.physics_processes_array:
-            if (physics_process[0].__class__ == SpaceCharge or physics_process[0].__class__ == LSC) and self.sc_flag:
+            if physics_process[0].__class__ == SpaceCharge and self.sc_flag:
+                self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
+
+            if physics_process[0].__class__ == LSC and self.lsc_flag:
                 self.navigator.add_physics_proc(physics_process[0], physics_process[1], physics_process[2])
 
             if physics_process[0].__class__ == CSR and self.csr_flag:

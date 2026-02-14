@@ -13,21 +13,21 @@ class Quadrupole(OpticElement):
     k2 - strength of sextupole lens in [1/m^3],
     tilt - tilt of lens in [rad].
     """
-    def __init__(self, l=0., k1=0, k2=0., tilt=0., eid=None, tm=TransferMap, **kwargs):
+    def __init__(self, l: float = 0., k1: float = 0, k2: float = 0., tilt: float = 0., eid: str | None = None, tm=TransferMap, **kwargs):
         super().__init__(QuadrupoleAtom(l=l, k1=k1, k2=k2, tilt=tilt, eid=eid, **kwargs), tm=tm, default_tm=TransferMap)
 
     @property
-    def k1l(self):
+    def k1l(self) -> float:
         return self.k1 * self.l
 
     @k1l.setter
-    def k1l(self, value):
+    def k1l(self, value: float) -> None:
         self.k1 = value / self.l
 
     @property
-    def k2l(self):
+    def k2l(self) -> float:
         return self.k2 * self.l
 
     @k2l.setter
-    def k2l(self, value):
+    def k2l(self, value: float) -> None:
         self.k2 = value / self.l

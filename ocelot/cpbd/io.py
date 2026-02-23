@@ -25,10 +25,14 @@ except ImportError:
 
 from ocelot.cpbd.beam import ParticleArray, Twiss, Beam
 
-try:
-    from mpi4py import MPI
-except ImportError:
-    pass
+# Import mpi4py only in MPI runs; importing mpi4py initializes MPI.
+MPI = None
+if "OMPI_COMM_WORLD_SIZE" in os.environ:
+    try:
+        from mpi4py import MPI as _MPI
+    except ImportError:
+        _MPI = None
+    MPI = _MPI
 
 HAS_H5PY = True
 try:
@@ -47,6 +51,8 @@ if HAS_H5PY:
     class HDF5FileWithMaybeMPI(h5py.File):
         def __init__ (self, *args, **kwargs):
             if is_an_mpi_process():
+                if MPI is None:
+                    raise ImportError("MPI process detected but mpi4py is unavailable for MPI-enabled HDF5.")
                 _logger.debug("Opening h5py with mpi enabled")
                 kwargs.update({"driver": "mpio", "comm": MPI.COMM_WORLD})
             # self.f = h5py.File(*args, **kwargs)

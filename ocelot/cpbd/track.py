@@ -31,18 +31,21 @@ try:
 except:
     extrema_chk = 0
 
-try:
-    from mpi4py import MPI
-except ImportError:
-    IS_MPI = False
-else:
-    if is_an_mpi_process():
+# Avoid importing mpi4py in non-MPI runs: mpi4py auto-initializes MPI at import.
+IS_MPI = False
+COMM = None
+N_CORES = 1
+RANK = 0
+if is_an_mpi_process():
+    try:
+        from mpi4py import MPI
+    except ImportError:
+        _logger.warning("MPI environment detected but mpi4py is not installed; MPI features are disabled.")
+    else:
         IS_MPI = True
         COMM = MPI.COMM_WORLD
         N_CORES = COMM.Get_size()
         RANK = COMM.Get_rank()
-    else:
-        IS_MPI = False
 
 def aperture_limit(lat, xlim = 1, ylim = 1):
     tws=twiss(lat, Twiss(), nPoints=1000)

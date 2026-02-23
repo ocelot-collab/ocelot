@@ -1,6 +1,7 @@
 """
 user interface for viewing/editing electron optics layouts
 """
+from __future__ import annotations
 
 from ocelot.cpbd.physics_proc import *
 from scipy import stats

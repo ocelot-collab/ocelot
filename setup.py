@@ -6,7 +6,7 @@ long_description = (this_directory / "README.md").read_text(encoding='utf-8')
 
 setup(
     name='ocelot-collab',
-    version='25.12.0',
+    version='26.03.0',
     description='Accelerator, radiation and x-ray optics simulation framework',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -27,5 +27,5 @@ setup(
         'ocelot': ['py.typed']
     },
     license="GNU General Public License v3.0",
-    python_requires=">=3.9"
+    python_requires=">=3.10"
 )

@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from pathlib import Path
+import hashlib
+import json
+import pickle
 import numpy as np
 from ocelot import MagneticLattice, Quadrupole, Monitor, Twiss, twiss
 from ocelot.gui import plot_opt_func
@@ -346,6 +350,43 @@ def get_random_offsets(
     return x, y
 
 
+def _twiss_signature(tws0: Optional[Twiss]) -> Optional[Dict[str, Optional[float]]]:
+    if tws0 is None:
+        return None
+    keys = ("beta_x", "beta_y", "alpha_x", "alpha_y", "E", "Dx", "Dy", "Dxp", "Dyp")
+    out: Dict[str, Optional[float]] = {}
+    for key in keys:
+        value = getattr(tws0, key, None)
+        out[key] = None if value is None else float(value)
+    return out
+
+
+def _response_cache_payload(
+    lat: MagneticLattice,
+    quads: Sequence[Quadrupole],
+    bpms: Sequence[Monitor],
+    energies: Sequence[float],
+    Eref: float,
+    tws0: Optional[Twiss],
+) -> Dict[str, Any]:
+    lat_sequence_ids = []
+    for i, elem in enumerate(lat.sequence):
+        elem_id = getattr(elem, "id", "")
+        if elem_id in ("", None):
+            elem_id = f"{type(elem).__name__}_{i}"
+        lat_sequence_ids.append(str(elem_id))
+    return {
+        "algo": "generate_response_matrices_for_energies_cached_v1",
+        "lat_sequence_ids": lat_sequence_ids,
+        "quad_ids": [str(getattr(q, "id", f"quad_{i}")) for i, q in enumerate(quads)],
+        "quad_k1": [float(q.k1) for q in quads],
+        "bpm_ids": [str(getattr(b, "id", f"bpm_{i}")) for i, b in enumerate(bpms)],
+        "energies": [float(e) for e in energies],
+        "Eref": float(Eref),
+        "tws0": _twiss_signature(tws0),
+    }
+
+
 def generate_response_matrices_for_energies(
     lat: MagneticLattice,
     quads: List[Quadrupole],
@@ -413,7 +454,108 @@ def generate_response_matrices_for_energies(
     return Rx, Ry, Px, Py
 
 
-def build_full_matrix(R, P):
+def generate_response_matrices_for_energies_cached(
+    lat: MagneticLattice,
+    quads: List[Quadrupole],
+    bpms: List[Monitor],
+    energies: List[float],
+    Eref: float,
+    plot: bool = False,
+    tws0: Twiss = None,
+    cache_dir: Union[str, Path] = ".cache",
+    force: bool = False,
+    verbose: bool = True,
+) -> Tuple[List[np.ndarray], List[np.ndarray], List[np.ndarray], List[np.ndarray]]:
+    """
+    Generate response matrices for multiple energies using on-disk caching.
+
+    This helper wraps `generate_response_matrices_for_energies()` and avoids
+    recomputing matrices when the effective lattice/input signature is unchanged.
+
+    Parameters
+    ----------
+    lat, quads, bpms, energies, Eref, plot, tws0
+        Same as in `generate_response_matrices_for_energies`.
+    cache_dir : str | pathlib.Path, optional
+        Directory where cache files are stored. Default: ``.cache``.
+    force : bool, optional
+        If True, ignore existing cache and recompute.
+    verbose : bool, optional
+        If True, print cache hit/miss/save messages.
+
+    Returns
+    -------
+    Rx, Ry, Px, Py : tuple of list[np.ndarray]
+        Same output as `generate_response_matrices_for_energies`.
+
+    Notes
+    -----
+    Cache files are Python pickles and should only be loaded from trusted paths.
+    """
+    payload = _response_cache_payload(
+        lat=lat,
+        quads=quads,
+        bpms=bpms,
+        energies=energies,
+        Eref=Eref,
+        tws0=tws0,
+    )
+    payload_str = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    cache_key = hashlib.sha256(payload_str.encode("utf-8")).hexdigest()[:16]
+    cache_path = Path(cache_dir) / f"response_matrices_{cache_key}.pkl"
+
+    if cache_path.exists() and not force:
+        try:
+            with cache_path.open("rb") as f:
+                cached = pickle.load(f)
+            needed = ("Rxs", "Rys", "Pxs", "Pys")
+            if all(k in cached for k in needed):
+                if verbose:
+                    print(f"Loaded response matrices from cache: {cache_path}")
+                return cached["Rxs"], cached["Rys"], cached["Pxs"], cached["Pys"]
+            if verbose:
+                print(f"Cache file missing required keys, recomputing: {cache_path}")
+        except Exception as exc:
+            if verbose:
+                print(f"Failed to load cache ({cache_path}), recomputing: {exc}")
+
+    if verbose:
+        print("Cache miss or forced recompute. Building response matrices...")
+    Rxs, Rys, Pxs, Pys = generate_response_matrices_for_energies(
+        lat=lat,
+        quads=quads,
+        bpms=bpms,
+        energies=energies,
+        Eref=Eref,
+        plot=plot,
+        tws0=tws0,
+    )
+
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = cache_path.with_suffix(cache_path.suffix + ".tmp")
+    with tmp_path.open("wb") as f:
+        pickle.dump(
+            {
+                "payload": payload,
+                "Rxs": Rxs,
+                "Rys": Rys,
+                "Pxs": Pxs,
+                "Pys": Pys,
+            },
+            f,
+            protocol=pickle.HIGHEST_PROTOCOL,
+        )
+    tmp_path.replace(cache_path)
+    if verbose:
+        print(f"Saved response matrices cache: {cache_path}")
+    return Rxs, Rys, Pxs, Pys
+
+
+def build_full_matrix(
+    R,
+    P,
+    per_measurement_launch: bool = False,
+):
     """
     Build the full design matrix A for the linear system:
         A @ params = X
@@ -431,6 +573,11 @@ def build_full_matrix(R, P):
         Px_sets: list of S arrays, each shape (Nbpm, Nqx)
         Py_sets: list of S arrays, each shape (Nbpm, Nqy)
         Each row maps quadrupole offsets to BPM readouts.
+    per_measurement_launch : bool, optional
+        If False (default), use one shared launch vector (2 parameters per plane)
+        across all measurements/energies.
+        If True, use an independent launch vector for each measurement
+        (2*S parameters per plane).
 
     Returns
     -------
@@ -442,9 +589,14 @@ def build_full_matrix(R, P):
             Ax = [Rx_all  Px_all  -I_bpm_repeated]
             Ay = [Ry_all  Py_all  -I_bpm_repeated]
         Dimensions:
-            Ax: (S*Nbpm, 2 + Nqx + Nbpm)
-            Ay: (S*Nbpm, 2 + Nqy + Nbpm)
-            A : (2*S*Nbpm, 2+Nqx+Nbpm + 2+Nqy+Nbpm)
+            shared launch (per_measurement_launch=False):
+                Ax: (S*Nbpm, 2 + Nqx + Nbpm)
+                Ay: (S*Nbpm, 2 + Nqy + Nbpm)
+                A : (2*S*Nbpm, 2+Nqx+Nbpm + 2+Nqy+Nbpm)
+            per-measurement launch (per_measurement_launch=True):
+                Ax: (S*Nbpm, 2*S + Nqx + Nbpm)
+                Ay: (S*Nbpm, 2*S + Nqy + Nbpm)
+                A : (2*S*Nbpm, 2*S+Nqx+Nbpm + 2*S+Nqy+Nbpm)
     """
     Rx_sets, Ry_sets = R
     Px_sets, Py_sets = P
@@ -468,10 +620,23 @@ def build_full_matrix(R, P):
 
     Nqx = Px_sets[0].shape[1]
     Nqy = Py_sets[0].shape[1]
+    if any(p.shape[1] != Nqx for p in Px_sets):
+        raise ValueError("All Px in Px_sets must have same number of columns.")
+    if any(p.shape[1] != Nqy for p in Py_sets):
+        raise ValueError("All Py in Py_sets must have same number of columns.")
+
+    def _assemble_launch_block(R_sets, S):
+        if not per_measurement_launch:
+            return np.vstack(R_sets)  # (S*Nbpm, 2)
+        launch_block = np.zeros((S * Nbpm, 2 * S))  # (S*Nbpm, 2*S)
+        for i, Ri in enumerate(R_sets):
+            row0 = i * Nbpm
+            launch_block[row0: row0 + Nbpm, 2 * i: 2 * i + 2] = Ri
+        return launch_block
 
     # --- stack response matrices over runs ---
-    Rx_all = np.vstack(Rx_sets)          # (S*Nbpm, 2)
-    Ry_all = np.vstack(Ry_sets)          # (S*Nbpm, 2)
+    Rx_all = _assemble_launch_block(Rx_sets, Sx)
+    Ry_all = _assemble_launch_block(Ry_sets, Sy)
     Px_all = np.vstack(Px_sets)          # (S*Nbpm, Nqx)
     Py_all = np.vstack(Py_sets)          # (S*Nbpm, Nqy)
 
@@ -710,7 +875,9 @@ def solve_svd(
 def extract_solution(
     X_est: NDArray[np.floating],
     Nquad: int,
-    Nbpm: int
+    Nbpm: int,
+    n_measurements: int = 1,
+    per_measurement_launch: bool = False,
 ) -> Tuple[
     NDArray[np.floating],  # Xinit_est
     NDArray[np.floating],  # Yinit_est
@@ -724,39 +891,64 @@ def extract_solution(
         X-launch, Y-launch, qx, qy, bx, by
 
     Structure of the solution vector:
-        X_est = [ Xinit(2), q_dx(Nq), b_dx(Nb),
-                   Yinit(2), q_dy(Nq), b_dy(Nb) ]
+        per_measurement_launch=False:
+            X_est = [ Xinit(2), q_dx(Nq), b_dx(Nb),
+                      Yinit(2), q_dy(Nq), b_dy(Nb) ]
+        per_measurement_launch=True:
+            X_est = [ Xinit(2*S), q_dx(Nq), b_dx(Nb),
+                      Yinit(2*S), q_dy(Nq), b_dy(Nb) ]
 
     Parameters
     ----------
-    X_est : np.ndarray, shape (2 + Nquad + Nbpm)*2
+    X_est : np.ndarray
         Flattened solution vector from SVD solver.
     Nquad : int
         Number of quadrupoles (offset parameters).
     Nbpm : int
         Number of BPMs (offset parameters).
+    n_measurements : int, optional
+        Number of measurements/energies S. Used only when
+        per_measurement_launch=True.
+    per_measurement_launch : bool, optional
+        If True, split launch blocks into S pairs and return arrays with shape
+        (S, 2). If False, return launch vectors with shape (2,).
 
     Returns
     -------
     Xinit_est, Yinit_est, qx_est, qy_est, bx_est, by_est : np.ndarray
         Estimated components of the full solution.
     """
-    expected_len = 2 * (2 + Nquad + Nbpm)
+    if n_measurements < 1:
+        raise ValueError("`n_measurements` must be >= 1.")
+
+    n_launch = 2 * n_measurements if per_measurement_launch else 2
+    expected_len = 2 * (n_launch + Nquad + Nbpm)
     if X_est.size != expected_len:
+        msg = f"X_est length mismatch: expected {expected_len}, got {X_est.size}"
+        if per_measurement_launch:
+            msg += ". For per_measurement_launch=True, pass n_measurements=len(energies)."
+            remainder = X_est.size - 2 * (Nquad + Nbpm)
+            if remainder > 0 and remainder % 4 == 0:
+                inferred = remainder // 4
+                msg += f" This vector suggests n_measurements={inferred}."
         raise ValueError(
-            f"X_est length mismatch: expected {expected_len}, got {X_est.size}"
+            msg
         )
 
     # X-plane
-    Xinit_est = X_est[0:2]
-    qx_est = X_est[2 : 2 + Nquad]
-    bx_est = X_est[2 + Nquad : 2 + Nquad + Nbpm]
+    Xinit_est = X_est[0:n_launch]
+    qx_est = X_est[n_launch : n_launch + Nquad]
+    bx_est = X_est[n_launch + Nquad : n_launch + Nquad + Nbpm]
 
     # Y-plane
-    off = 2 + Nquad + Nbpm
-    Yinit_est = X_est[off : off + 2]
-    qy_est = X_est[off + 2 : off + 2 + Nquad]
-    by_est = X_est[off + 2 + Nquad : off + 2 + Nquad + Nbpm]
+    off = n_launch + Nquad + Nbpm
+    Yinit_est = X_est[off : off + n_launch]
+    qy_est = X_est[off + n_launch : off + n_launch + Nquad]
+    by_est = X_est[off + n_launch + Nquad : off + n_launch + Nquad + Nbpm]
+
+    if per_measurement_launch:
+        Xinit_est = Xinit_est.reshape(n_measurements, 2)
+        Yinit_est = Yinit_est.reshape(n_measurements, 2)
 
     return Xinit_est, Yinit_est, qx_est, qy_est, bx_est, by_est
 

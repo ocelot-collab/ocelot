@@ -471,6 +471,104 @@ def test_response_matrices(lattice, update_ref_values: bool = False):
     assert check_result(results)
 
 
+def test_generate_response_matrices_for_energies_cached(tmp_path, monkeypatch):
+    class _Elem:
+        def __init__(self, eid: str, k1: float = 0.0):
+            self.id = eid
+            self.k1 = k1
+
+    q1 = _Elem("Q1", k1=1.0)
+    q2 = _Elem("Q2", k1=-2.0)
+    b1 = _Elem("B1")
+    b2 = _Elem("B2")
+    lat = type("Lat", (), {"sequence": [q1, b1, q2, b2]})()
+    quads = [q1, q2]
+    bpms = [b1, b2]
+    energies = [10.0, 12.0]
+    Eref = 14.0
+
+    expected = (
+        [np.full((2, 2), 1.0), np.full((2, 2), 2.0)],  # Rxs
+        [np.full((2, 2), 3.0), np.full((2, 2), 4.0)],  # Rys
+        [np.full((2, 2), 5.0), np.full((2, 2), 6.0)],  # Pxs
+        [np.full((2, 2), 7.0), np.full((2, 2), 8.0)],  # Pys
+    )
+    calls = {"n": 0}
+
+    def _fake_generate(
+        lat,
+        quads,
+        bpms,
+        energies,
+        Eref,
+        plot=False,
+        tws0=None,
+    ):
+        calls["n"] += 1
+        return expected
+
+    monkeypatch.setattr(bba, "generate_response_matrices_for_energies", _fake_generate)
+
+    out1 = bba.generate_response_matrices_for_energies_cached(
+        lat=lat,
+        quads=quads,
+        bpms=bpms,
+        energies=energies,
+        Eref=Eref,
+        cache_dir=tmp_path,
+        force=False,
+        verbose=False,
+    )
+    assert calls["n"] == 1
+
+    # Second call with identical signature should come from cache.
+    out2 = bba.generate_response_matrices_for_energies_cached(
+        lat=lat,
+        quads=quads,
+        bpms=bpms,
+        energies=energies,
+        Eref=Eref,
+        cache_dir=tmp_path,
+        force=False,
+        verbose=False,
+    )
+    assert calls["n"] == 1
+
+    # Force=True must recompute.
+    out3 = bba.generate_response_matrices_for_energies_cached(
+        lat=lat,
+        quads=quads,
+        bpms=bpms,
+        energies=energies,
+        Eref=Eref,
+        cache_dir=tmp_path,
+        force=True,
+        verbose=False,
+    )
+    assert calls["n"] == 2
+
+    # Changing signature (energies) must create a different cache key and recompute.
+    _ = bba.generate_response_matrices_for_energies_cached(
+        lat=lat,
+        quads=quads,
+        bpms=bpms,
+        energies=[10.0, 13.0],
+        Eref=Eref,
+        cache_dir=tmp_path,
+        force=False,
+        verbose=False,
+    )
+    assert calls["n"] == 3
+
+    for out in (out1, out2, out3):
+        for got_group, exp_group in zip(out, expected):
+            assert len(got_group) == len(exp_group)
+            for got, exp in zip(got_group, exp_group):
+                np.testing.assert_allclose(got, exp)
+
+    assert any(tmp_path.glob("response_matrices_*.pkl"))
+
+
 def test_bpm_read_vs_energy(lattice, update_ref_values: bool = False):
 
     # --- pick elements
@@ -615,6 +713,68 @@ def test_build_full_matrix_shape_and_blocks():
     assert np.allclose(Zxy, 0.0)
     assert np.allclose(Zyx, 0.0)
 
+
+def test_build_full_matrix_per_measurement_launch_shape_and_blocks():
+    # S: number of energy settings / runs
+    S = 3
+    Nbpm = 4
+    Nqx = 3
+    Nqy = 3
+
+    # Construct deterministic matrices so we can check block placement
+    Rx_sets = []
+    Ry_sets = []
+    Px_sets = []
+    Py_sets = []
+
+    for s in range(S):
+        Rx_sets.append(np.full((Nbpm, 2), fill_value=10 + s, dtype=float))
+        Ry_sets.append(np.full((Nbpm, 2), fill_value=20 + s, dtype=float))
+        Px_sets.append(np.full((Nbpm, Nqx), fill_value=30 + s, dtype=float))
+        Py_sets.append(np.full((Nbpm, Nqy), fill_value=40 + s, dtype=float))
+
+    A = bba.build_full_matrix(
+        R=(Rx_sets, Ry_sets),
+        P=(Px_sets, Py_sets),
+        per_measurement_launch=True,
+    )
+
+    # Expected overall shape with 2*S launch parameters per plane
+    m_exp = 2 * S * Nbpm
+    n_exp = (2 * S + Nqx + Nbpm) + (2 * S + Nqy + Nbpm)
+    assert A.shape == (m_exp, n_exp)
+
+    # Build expected launch blocks: block-diagonal in measurement index
+    Lx_ref = np.zeros((S * Nbpm, 2 * S))
+    Ly_ref = np.zeros((S * Nbpm, 2 * S))
+    for s in range(S):
+        r0 = s * Nbpm
+        Lx_ref[r0 : r0 + Nbpm, 2 * s : 2 * s + 2] = Rx_sets[s]
+        Ly_ref[r0 : r0 + Nbpm, 2 * s : 2 * s + 2] = Ry_sets[s]
+
+    Px_all = np.vstack(Px_sets)
+    Py_all = np.vstack(Py_sets)
+
+    I_bpm = -np.eye(Nbpm)
+    Bx_all = np.vstack([I_bpm for _ in range(S)])
+    By_all = np.vstack([I_bpm for _ in range(S)])
+
+    Ax_ref = np.hstack([Lx_ref, Px_all, Bx_all])
+    Ay_ref = np.hstack([Ly_ref, Py_all, By_all])
+
+    n_x = Ax_ref.shape[1]
+
+    Ax = A[: S * Nbpm, :n_x]
+    Zxy = A[: S * Nbpm, n_x:]
+    Zyx = A[S * Nbpm :, :n_x]
+    Ay = A[S * Nbpm :, n_x:]
+
+    np.testing.assert_allclose(Ax, Ax_ref)
+    np.testing.assert_allclose(Ay, Ay_ref)
+    assert np.allclose(Zxy, 0.0)
+    assert np.allclose(Zyx, 0.0)
+
+
 def test_build_full_matrix_wrong_shapes_raises():
     S = 2
     Nbpm = 4
@@ -745,6 +905,47 @@ def test_extract_solution_splits_correctly():
     np.testing.assert_allclose(by_est,    by_ref)
 
 
+def test_extract_solution_per_measurement_launch_splits_correctly():
+    Nquad = 3
+    Nbpm = 4
+    S = 3
+    n_launch = 2 * S
+    expected_len = 2 * (n_launch + Nquad + Nbpm)
+
+    X_est = np.arange(expected_len, dtype=float)
+
+    (
+        Xinit_est,
+        Yinit_est,
+        qx_est,
+        qy_est,
+        bx_est,
+        by_est,
+    ) = bba.extract_solution(
+        X_est,
+        Nquad=Nquad,
+        Nbpm=Nbpm,
+        n_measurements=S,
+        per_measurement_launch=True,
+    )
+
+    Xinit_ref = X_est[0:n_launch].reshape(S, 2)
+    qx_ref = X_est[n_launch : n_launch + Nquad]
+    bx_ref = X_est[n_launch + Nquad : n_launch + Nquad + Nbpm]
+
+    off = n_launch + Nquad + Nbpm
+    Yinit_ref = X_est[off : off + n_launch].reshape(S, 2)
+    qy_ref = X_est[off + n_launch : off + n_launch + Nquad]
+    by_ref = X_est[off + n_launch + Nquad : off + n_launch + Nquad + Nbpm]
+
+    np.testing.assert_allclose(Xinit_est, Xinit_ref)
+    np.testing.assert_allclose(Yinit_est, Yinit_ref)
+    np.testing.assert_allclose(qx_est, qx_ref)
+    np.testing.assert_allclose(qy_est, qy_ref)
+    np.testing.assert_allclose(bx_est, bx_ref)
+    np.testing.assert_allclose(by_est, by_ref)
+
+
 @pytest.mark.parametrize("Nquad, Nbpm", [(1, 1), (5, 2), (3, 7)])
 def test_extract_solution_raises_on_wrong_length(Nquad, Nbpm):
     """
@@ -761,6 +962,33 @@ def test_extract_solution_raises_on_wrong_length(Nquad, Nbpm):
     X_long = np.zeros(expected_len + 3, dtype=float)
     with pytest.raises(ValueError, match="X_est length mismatch"):
         bba.extract_solution(X_long, Nquad=Nquad, Nbpm=Nbpm)
+
+
+def test_extract_solution_per_measurement_launch_raises_on_wrong_length():
+    Nquad = 3
+    Nbpm = 4
+    S = 3
+    n_launch = 2 * S
+    expected_len = 2 * (n_launch + Nquad + Nbpm)
+
+    X_short = np.zeros(expected_len - 1, dtype=float)
+    with pytest.raises(ValueError, match="X_est length mismatch"):
+        bba.extract_solution(
+            X_short,
+            Nquad=Nquad,
+            Nbpm=Nbpm,
+            n_measurements=S,
+            per_measurement_launch=True,
+        )
+
+    with pytest.raises(ValueError, match="n_measurements"):
+        bba.extract_solution(
+            np.zeros(expected_len, dtype=float),
+            Nquad=Nquad,
+            Nbpm=Nbpm,
+            n_measurements=0,
+            per_measurement_launch=True,
+        )
 
 
 def setup_module(module):

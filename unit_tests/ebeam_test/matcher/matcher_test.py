@@ -103,7 +103,7 @@ def test_twiss_target_on_element():
 def test_vary_drift_length_with_finite_limits():
     lat, _start, dvar, end = _simple_drift_lattice(3.0)
     problem = MatchProblem(lat, _twiss_seed())
-    problem.vary_element(dvar, "l", limits=(2.0, 5.0), name="D1_l")
+    problem.vary_element(dvar, quantity="l", limits=(2.0, 5.0), name="D1_l")
     problem.target_twiss(end, "s", value=4.2, weight=1.0e6, tol=0.0)
 
     result = problem.solve(solver="ls_trf", max_iter=120, tol=1.0e-12)
@@ -284,7 +284,7 @@ def test_power_supply_linked_variable():
     lat = SimpleMagneticLattice((start, q1, q2, end))
 
     problem = MatchProblem(lat, _twiss_seed())
-    ps = problem.vary_linked_elements([q1, q2], scales=[1.0, -1.0], name="PS_Q12")
+    ps = problem.vary_linked_elements([q1, q2], scales=[1.0, -1.0], quantity="k1", name="PS_Q12")
 
     ps.set(2.0)
     assert np.isclose(q1.k1, 2.0, atol=1.0e-12)
@@ -361,7 +361,7 @@ def test_match_end_twiss_by_varying_initial_twiss():
     tw0.alpha_x = 0.0
 
     problem = MatchProblem(lat, tw0, periodic=False)
-    problem.vary_twiss("beta_x", limits=(1.0, 50.0), name="bx0")
+    problem.vary_twiss(quantity="beta_x", limits=(1.0, 50.0), name="bx0")
     problem.target_twiss(end, "alpha_x", value=-0.5, weight=1.0e6)
 
     result = problem.solve(solver="ls_trf", max_iter=120, tol=1.0e-12)

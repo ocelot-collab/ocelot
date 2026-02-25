@@ -7,8 +7,8 @@ Example
 -------
 ```python
 problem = MatchProblem(lat, tw0, periodic=False)
-problem.vary_element(q1, "k1", limits=(-10, 10), name="Q1")
-problem.vary_linked_elements([q2, q3], scales=[1.0, -1.0], name="PS_Q23")
+problem.vary_element(q1, quantity="k1", limits=(-10, 10), name="Q1")
+problem.vary_linked_elements([q2, q3], scales=[1.0, -1.0], quantity="k1", name="PS_Q23")
 problem.target_twiss(end, "beta_x", value=12.0, tol=1e-3)
 problem.target_twiss_delta(m1, m2, "muy", value=3*np.pi/2, wrap_phase=True)
 problem.target_rmatrix(m1, m2, i=0, j=1, value=8.0)
@@ -100,7 +100,7 @@ class PowerSupplyVary(Vary):
         self,
         name: str,
         elements: Sequence[Any],
-        attr: str = "k1",
+        quantity: str = "k1",
         scales: Optional[Sequence[float]] = None,
         limits: Optional[Tuple[Optional[float], Optional[float]]] = None,
         step: Optional[float] = None,
@@ -119,7 +119,7 @@ class PowerSupplyVary(Vary):
             raise ValueError("PowerSupplyVary scale cannot be zero")
 
         channels: List[Tuple[Any, str, float]] = [
-            (elements[i], attr, float(scales[i])) for i in range(len(elements))
+            (elements[i], quantity, float(scales[i])) for i in range(len(elements))
         ]
 
         def _getter() -> float:
@@ -755,7 +755,7 @@ class MatchProblem:
     def vary_element(
         self,
         element: Any,
-        attr: str = "k1",
+        quantity: str = "k1",
         name: Optional[str] = None,
         limits: Optional[Tuple[Optional[float], Optional[float]]] = None,
         step: Optional[float] = None,
@@ -764,23 +764,23 @@ class MatchProblem:
         active: bool = True,
         tag: str = "",
     ) -> Vary:
-        """Add one variable controlling one element attribute.
+        """Add one variable controlling one element quantity.
 
-        Example attributes are ``k1``, ``angle``, ``l``. For ``l`` a default
+        Example quantities are ``k1``, ``angle``, ``l``. For ``l`` a default
         lower bound of ``0`` is applied when limits are not provided.
         """
 
-        if limits is None and attr == "l":
+        if limits is None and quantity == "l":
             limits = (0.0, None)
 
         def _getter() -> float:
-            return float(getattr(element, attr))
+            return float(getattr(element, quantity))
 
         def _setter(x: float) -> None:
-            setattr(element, attr, float(x))
+            setattr(element, quantity, float(x))
 
         var = Vary(
-            name=name or f"{getattr(element, 'id', element)}.{attr}",
+            name=name or f"{getattr(element, 'id', element)}.{quantity}",
             getter=_getter,
             setter=_setter,
             limits=limits,
@@ -794,7 +794,7 @@ class MatchProblem:
 
     def vary_twiss(
         self,
-        attr: str,
+        quantity: str,
         name: Optional[str] = None,
         limits: Optional[Tuple[Optional[float], Optional[float]]] = None,
         step: Optional[float] = None,
@@ -803,20 +803,20 @@ class MatchProblem:
         active: bool = True,
         tag: str = "",
     ) -> Vary:
-        """Add one variable controlling an initial Twiss attribute.
+        """Add one variable controlling an initial Twiss quantity.
 
-        Typical attributes: ``beta_x``, ``alpha_x``, ``beta_y``, ``alpha_y``,
+        Typical quantities: ``beta_x``, ``alpha_x``, ``beta_y``, ``alpha_y``,
         ``Dx``, ``Dxp``.
         """
 
         def _getter() -> float:
-            return float(getattr(self.twiss0, attr))
+            return float(getattr(self.twiss0, quantity))
 
         def _setter(x: float) -> None:
-            setattr(self.twiss0, attr, float(x))
+            setattr(self.twiss0, quantity, float(x))
 
         var = Vary(
-            name=name or f"twiss0.{attr}",
+            name=name or f"twiss0.{quantity}",
             getter=_getter,
             setter=_setter,
             limits=limits,
@@ -832,7 +832,7 @@ class MatchProblem:
         self,
         elements: Sequence[Any],
         scales: Optional[Sequence[float]] = None,
-        attr: str = "k1",
+        quantity: str = "k1",
         name: str = "linked_elements",
         limits: Optional[Tuple[Optional[float], Optional[float]]] = None,
         step: Optional[float] = None,
@@ -844,13 +844,13 @@ class MatchProblem:
         """Add one shared variable coupled to many elements.
 
         This models a common hardware channel (for example one power supply).
-        Each element gets ``attr = knob * scale``.
+        Each element gets ``quantity = knob * scale``.
         """
 
         var = PowerSupplyVary(
             name=name,
             elements=elements,
-            attr=attr,
+            quantity=quantity,
             scales=scales,
             limits=limits,
             step=step,

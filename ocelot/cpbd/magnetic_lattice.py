@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.elements.element import Element
 from ocelot.cpbd.elements.marker import Marker

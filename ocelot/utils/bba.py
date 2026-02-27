@@ -802,9 +802,12 @@ def solve_svd(
     M: NDArray[np.floating],
     rcutoff: Optional[float] = None,
     print_spectrum: bool = True,
+    sigma: Optional[NDArray[np.floating]] = None,
+    row_weights: Optional[NDArray[np.floating]] = None,
 ) -> NDArray[np.floating]:
     """
     Solve A * X = M using SVD with relative cutoff.
+    Optionally solves a weighted least-squares problem.
 
     Parameters
     ----------
@@ -817,17 +820,68 @@ def solve_svd(
         If None -> 1e-12.
     print_spectrum : bool
         Print singular values and cutoff info.
+    sigma : array, shape (m,), optional
+        Per-row RMS uncertainties of M. If provided, weighted solve is done
+        by minimizing || (A X - M) / sigma ||_2.
+        Must be finite and strictly positive.
+    row_weights : array, shape (m,), optional
+        Per-row weights for weighted least-squares:
+        minimize || W (A X - M) ||_2 with W = diag(row_weights).
+        Must be finite and strictly positive.
+        Cannot be used together with ``sigma``.
 
     Returns
     -------
     X_est : array, shape (n,) or (n, k)
         Estimated parameter vector(s), matching RHS multiplicity.
     """
+    if sigma is not None and row_weights is not None:
+        raise ValueError("Use either `sigma` or `row_weights`, not both.")
+
+    m = A.shape[0]
+    Mt = M if M.ndim == 2 else M[:, None]  # shape (m, k)
+    if Mt.shape[0] != m:
+        raise ValueError(
+            f"Shape mismatch: A has {m} rows but M has {Mt.shape[0]} rows."
+        )
+
+    # Optional weighted least-squares by row scaling.
+    # minimize ||W (A X - M)||_2 with W = diag(w).
+    w = None
+    if sigma is not None:
+        sigma_arr = np.asarray(sigma, dtype=float).reshape(-1)
+        if sigma_arr.size != m:
+            raise ValueError(
+                f"`sigma` length mismatch: expected {m}, got {sigma_arr.size}."
+            )
+        if not np.all(np.isfinite(sigma_arr)) or np.any(sigma_arr <= 0):
+            raise ValueError("`sigma` must contain finite, strictly positive values.")
+        w = 1.0 / sigma_arr
+    elif row_weights is not None:
+        w = np.asarray(row_weights, dtype=float).reshape(-1)
+        if w.size != m:
+            raise ValueError(
+                f"`row_weights` length mismatch: expected {m}, got {w.size}."
+            )
+        if not np.all(np.isfinite(w)) or np.any(w <= 0):
+            raise ValueError(
+                "`row_weights` must contain finite, strictly positive values."
+            )
+
+    if w is not None:
+        Aw = w[:, None] * A
+        Mw = w[:, None] * Mt
+    else:
+        Aw = A
+        Mw = Mt
+
     # SVD
-    U, S, Vt = np.linalg.svd(A, full_matrices=False)  # U:(m,r), S:(r,), Vt:(r,n)
+    U, S, Vt = np.linalg.svd(Aw, full_matrices=False)  # U:(m,r), S:(r,), Vt:(r,n)
 
     if print_spectrum:
         print("---- SVD spectrum ----")
+        if w is not None:
+            print("Mode: weighted least-squares")
         print("Singular values:")
         print(S)
         print()
@@ -855,8 +909,7 @@ def solve_svd(
     # Build pseudoinverse: A_pinv = V * diag(1/S) * U^T (with cutoff)
     # Instead of forming A_pinv explicitly, apply it to M efficiently.
     # Step 1: U^T @ M
-    Mt = M if M.ndim == 2 else M[:, None]              # shape (m, k)
-    UtM = U.T @ Mt                                      # shape (r, k)
+    UtM = U.T @ Mw                                      # shape (r, k)
 
     # Step 2: diag(1/S) @ (U^T M), with cutoff
     Sinv = np.zeros_like(S)

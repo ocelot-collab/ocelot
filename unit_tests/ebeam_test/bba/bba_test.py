@@ -866,6 +866,92 @@ def test_solve_svd_matches_numpy_pinv_rcutoff(rcutoff):
     np.testing.assert_allclose(X_est_mat, X_ref_mat, rtol=1e-10, atol=1e-12)
 
 
+def test_solve_svd_sigma_matches_explicit_row_scaling():
+    """
+    With sigma provided, solve_svd should match solving the explicitly
+    row-scaled system:
+        Aw = diag(1/sigma) @ A
+        Mw = diag(1/sigma) @ M
+    """
+    rng = np.random.default_rng(2026)
+
+    m, n = 11, 5
+    A = rng.normal(size=(m, n))
+    M = rng.normal(size=m)
+    sigma = np.linspace(0.2, 1.8, m)
+    rcutoff = 1e-7
+
+    Aw = (1.0 / sigma)[:, None] * A
+    Mw = (1.0 / sigma) * M
+
+    X_ref = np.linalg.pinv(Aw, rcond=rcutoff) @ Mw
+    X_est = bba.solve_svd(A, M, rcutoff=rcutoff, print_spectrum=False, sigma=sigma)
+
+    assert X_est.shape == (n,)
+    np.testing.assert_allclose(X_est, X_ref, rtol=1e-10, atol=1e-12)
+
+
+def test_solve_svd_row_weights_matches_explicit_row_scaling_multi_rhs():
+    """
+    With row_weights provided, solve_svd should match solving the explicitly
+    row-scaled system for multiple RHS.
+    """
+    rng = np.random.default_rng(2027)
+
+    m, n, k = 13, 6, 3
+    A = rng.normal(size=(m, n))
+    M = rng.normal(size=(m, k))
+    row_weights = np.linspace(0.3, 2.1, m)
+    rcutoff = 1e-7
+
+    Aw = row_weights[:, None] * A
+    Mw = row_weights[:, None] * M
+
+    X_ref = np.linalg.pinv(Aw, rcond=rcutoff) @ Mw
+    X_est = bba.solve_svd(
+        A,
+        M,
+        rcutoff=rcutoff,
+        print_spectrum=False,
+        row_weights=row_weights,
+    )
+
+    assert X_est.shape == (n, k)
+    np.testing.assert_allclose(X_est, X_ref, rtol=1e-10, atol=1e-12)
+
+
+def test_solve_svd_sigma_and_row_weights_are_equivalent():
+    """
+    sigma and row_weights are equivalent when:
+        row_weights = 1 / sigma
+    """
+    rng = np.random.default_rng(2028)
+
+    m, n = 12, 5
+    A = rng.normal(size=(m, n))
+    M = rng.normal(size=m)
+    sigma = np.linspace(0.15, 1.5, m)
+    row_weights = 1.0 / sigma
+    rcutoff = 1e-8
+
+    X_sigma = bba.solve_svd(
+        A,
+        M,
+        rcutoff=rcutoff,
+        print_spectrum=False,
+        sigma=sigma,
+    )
+    X_weights = bba.solve_svd(
+        A,
+        M,
+        rcutoff=rcutoff,
+        print_spectrum=False,
+        row_weights=row_weights,
+    )
+
+    np.testing.assert_allclose(X_sigma, X_weights, rtol=1e-10, atol=1e-12)
+
+
 def test_extract_solution_splits_correctly():
     """
     Check that extract_solution returns the right slices for a known pattern.

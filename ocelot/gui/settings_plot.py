@@ -8,6 +8,14 @@ from copy import copy, deepcopy
 from ocelot.common.ocelog import ind_str
 from matplotlib.colors import LinearSegmentedColormap
 
+headless = (
+    os.environ.get("DISPLAY") is None and
+    os.environ.get("WAYLAND_DISPLAY") is None
+)
+
+if headless:
+    matplotlib.use("Agg")
+
 #in order to run decorators properly
 import functools
 

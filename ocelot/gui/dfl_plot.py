@@ -806,6 +806,9 @@ def plot_wigner_z(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,
     
     if v_lim[0] is None:
         v_min = -wigner_lim
+        if hasattr(wig_or_out, 'is_spectrogram'):
+            if wig_or_out.is_spectrogram:
+                v_min = 0
     else:
         v_min = v_lim[0]
     

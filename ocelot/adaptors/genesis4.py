@@ -4,6 +4,8 @@ import sys
 import socket
 import copy
 
+
+
 try:
     import h5py
 
@@ -14,6 +16,7 @@ except ImportError:
 
 import numpy as np
 
+import ocelot
 from ocelot import ParticleArray
 from ocelot.optics.wave import calc_ph_sp_dens, RadiationField
 from ocelot.common.globals import *
@@ -1020,7 +1023,7 @@ def write_gen4_lat(lattices, filepath, zstop=np.inf, cb_latline=None):
     _logger.debug(ind_str + 'writing to ' + filepath)
     _logger.debug('lattices = {}'.format(str(lattices)))
     f = open(filepath, 'w')  # erasing file content
-    f.write('# generated with Ocelot\n')
+    f.write(f'# generated with Ocelot v{ocelot.__version__}\n')
 
     if not isinstance(zstop, dict):
         if type(lattices) != dict:

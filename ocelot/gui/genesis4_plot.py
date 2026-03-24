@@ -169,7 +169,7 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
                 
             elif handle.endswith('par.h5'):
                 try:
-                    handle = read_dpa4(handle, partskip=10)#TODO: fix partskip reading, then may switch back to 100
+                    handle = read_dpa4(handle, partskip=100)#TODO: fix partskip reading, then may switch back to 100
                 except (IOError, ValueError):
                     _logger.debug('could not read ' + str(handle))
                     pass
@@ -251,10 +251,11 @@ def plot_gen4_out_all(handle=None, savefig='png', showfig=False, choice=(1, 1, 0
                     # _logger.warning('could not plot smeared edist')
             if choice[10]:
                 if handle.one4one:
-                    edist = dpa42edist(handle)
+                    pass
+                    #edist = dpa42edist(handle)
                 else:
                     edist = dpa42edist(handle, n_part=5e4, fill_gaps=1)
-                f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig,
+                    f10 = plot_edist(edist, figsize=3, fig_name=None, savefig=savefig, showfig=showfig,
                                      bins=(100, 100, 200, 200), debug=debug)
                 # except:
                     # _logger.warning('could not plot unsmeared edist')

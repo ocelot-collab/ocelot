@@ -509,7 +509,11 @@ class Beam:
 
         if self.tlen not in [None, 0, np.inf]:
             beam_slen = self.tlen * 1e-15 * speed_of_light
-            Ipeak_pos = (np.amax(beam_arr.s) - np.amin(beam_arr.s)) / 2
+            if hasattr(self, 'peakposition'):
+                Ipeak_pos = self.peakposition
+            else:
+                Ipeak_pos = (np.amax(beam_arr.s) - np.amin(beam_arr.s)) / 2
+            
             if self.shape == 'gaussian':
                 beam_arr.I = self.I * np.exp(-(beam_arr.s - Ipeak_pos) ** 2 / (2 * beam_slen ** 2))
             elif self.shape == 'flattop':
@@ -2545,7 +2549,7 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
             beam.dg = value / m_e_GeV
 
     if 'l_window' not in kwargs:
-        if beam.shape is ['gaussian', 'gauss', 'g']:
+        if beam.shape in ['gaussian', 'gauss', 'g']:
             l_window = l_beam * 6
         elif beam.shape in ['flattop', 'ft']:
             l_window = l_beam * 2
@@ -2553,6 +2557,21 @@ def generate_beam(E, I=5000, l_beam=3e-6, **kwargs):
             raise ValueError('Beam() shape can be either "gaussian" or "flattop"')
     else:
         l_window = kwargs['l_window']
+
+    if 'peakposition' not in kwargs:
+        beam.peakposition = l_window / 2
+    else:
+        beam.peakposition = kwargs['peakposition']
+
+    if 'window_autoshift' in kwargs:
+        if 'window_autoshift' = 1:
+            if beam.shape in ['gaussian', 'gauss', 'g']:
+                beam.peakposition = l_beam * 3
+            elif beam.shape in ['flattop', 'ft']:
+                beam.peakposition = l_beam
+            else:
+                raise ValueError('Beam() shape can be either "gaussian" or "flattop"')
+
 
     beam_arr = beam.to_array(nslice, l_window)
 

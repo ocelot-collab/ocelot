@@ -11,9 +11,16 @@ from ocelot.cpbd.tm_utils import map_transform_with_offsets
 
 class Element:
     """
-    Element is a basic beamline building element
-    Accelerator optics elements are subclasses of Element
-    Arbitrary set of additional parameters can be attached if necessary
+    Minimal physics implementation object used by CPBD transformations.
+
+    In the current wrapper/atom architecture this class is not usually the
+    public object users hold in a lattice. Public wrappers such as
+    ``Quadrupole`` or ``Cavity`` own framework state, while ``Element`` and its
+    subclasses own the physics state and the ``create_*_params(...)`` hooks.
+
+    The default implementations below are generic fallbacks. They make simple
+    element families immediately usable, but they should not be mistaken for a
+    full family-specific model.
     """
 
     def __init__(self, eid=None, has_edge=False, **kwargs):
@@ -46,6 +53,8 @@ class Element:
         return np.dot((np.eye(6) - R), np.array([[self.dx], [0.], [self.dy], [0.], [0.], [0.]]))
 
     def create_first_order_main_params(self, energy: float, delta_length: float = None) -> FirstOrderParams:
+        # Generic straight-element first-order fallback used when a concrete
+        # family does not override the main map construction.
         if self.l == 0:
             hx = 0.
         else:
@@ -59,6 +68,8 @@ class Element:
         return FirstOrderParams(R, B, self.tilt)
 
     def create_second_order_main_params(self, energy: float, delta_length: float = 0.0) -> SecondOrderParams:
+        # Generic straight-element second-order fallback. Families with custom
+        # nonlinear behavior should override this instead of relying on it.
         T = t_nnn(delta_length if delta_length is not None else self.l, 0., 0., 0.,
                   energy)
         first_order_params = self.create_first_order_main_params(energy, delta_length)
@@ -70,6 +81,8 @@ class Element:
         return SecondOrderParams(R, B, T, self.tilt, self.dx, self.dy)
 
     def create_delta_e(self, total_length, delta_length=0.0):
+        # Passive default: only active RF-like families are expected to
+        # override the reference-energy change.
         return 0.0
 
     def __repr__(self):

@@ -1,5 +1,8 @@
 from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.elements.sbend_atom import SBendAtom
+from ocelot.cpbd.transformations.runge_kutta import RungeKuttaTM
+from ocelot.cpbd.transformations.runge_kutta_tr import RungeKuttaTrTM
+from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 
@@ -20,6 +23,8 @@ class SBend(OpticElement):
     h_pole1 - the curvature (1/r) of the entrance face
     h_pole2 - the curvature (1/r) of the exit face
     """
+    default_tm = TransferMap
+    supported_tms = {TransferMap, SecondTM, RungeKuttaTM, RungeKuttaTrTM}
 
     def __init__(self, l=0., angle=0.0, k1=0.0, k2=0., e1=0.0, e2=0.0, tilt=0.0,
                  gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None, tm=TransferMap, **kwargs):

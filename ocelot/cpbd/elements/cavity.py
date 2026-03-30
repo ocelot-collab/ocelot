@@ -1,11 +1,9 @@
-import logging
+import warnings
 
-from ocelot.cpbd.transformations.transformation import Transformation
 from ocelot.cpbd.elements.cavity_atom import CavityAtom
 from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.transformations.cavity import CavityTM
-
-logger = logging.getLogger(__name__)
+from ocelot.cpbd.transformations.transformation import Transformation
 
 
 class Cavity(OpticElement):
@@ -17,17 +15,30 @@ class Cavity(OpticElement):
     vx_{up/down}, vy_{up/down} - zero order kick of a {up/down}stream coupler
     vxx_{up/down}, vxy_{up/down} - first order kick  a {up/down}stream coupler
     """
+    default_tm = CavityTM
+    supported_tms = {CavityTM}
 
     def __init__(self, l=0., v=0., phi=0., freq=0., vx_up=0, vy_up=0, vxx_up=0, vxy_up=0,
                  vx_down=0, vy_down=0, vxx_down=0, vxy_down=0, eid=None, tm=CavityTM, **kwargs):
         if tm != CavityTM:
-            logger.warning("Cavity Element only support CavityTM. Set tm to CavityTM.")
+            warnings.warn(
+                "Cavity does not declare support for "
+                f"{tm.__name__}; falling back to default {CavityTM.__name__}.",
+                stacklevel=2,
+            )
             tm = CavityTM
         super().__init__(CavityAtom(l=l, v=v, phi=phi, freq=freq, vx_up=vx_up, vy_up=vy_up, vxx_up=vxx_up, vxy_up=vxy_up,
                                     vx_down=vx_down, vy_down=vy_down, vxx_down=vxx_down, vxy_down=vxy_down, eid=eid, **kwargs), tm=tm, default_tm=CavityTM)
 
     def set_tm(self, tm: Transformation, **params):
-        logger.debug("Cavity Element only support CavityTM. Set tm to CavityTM.")
+        """Pin the wrapper to CavityTM to preserve current RF tracking behavior."""
+        if tm != CavityTM:
+            warnings.warn(
+                "Cavity does not declare support for "
+                f"{tm.__name__}; falling back to default {CavityTM.__name__}.",
+                stacklevel=2,
+            )
+        return super().set_tm(CavityTM, **params)
 
     def remove_coupler_kick(self):
         self.vx_up = 0

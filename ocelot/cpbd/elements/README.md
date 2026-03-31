@@ -1,13 +1,18 @@
-# CPBD Element Architecture: Current Contract and Safer Transition Plan
+# CPBD Element Architecture: Current Contract and Improvement Plan
 
 This note is for developers working inside `ocelot.cpbd`.
 
 It has two goals:
 
 1. explain how the current element machinery really works
-2. describe a redesign path that improves clarity without breaking user-visible behavior
+2. describe an improvement path that makes the current architecture clearer without breaking user-visible behavior
 
 The public Ocelot docs already explain how to use elements such as `Bend`, `SBend`, `RBend`, `Cavity`, and `Quadrupole`. What is harder to understand from the outside is the internal contract between wrappers, atoms, parameter containers, and transformations. That contract is the important part to preserve before any architecture change.
+
+In this note:
+
+- `wrapper` means the public element object that users and lattices usually hold, typically an `OpticElement` subclass such as `Quadrupole` or `Cavity`
+- `atom` means the internal physics object stored on the wrapper, usually as `wrapper.element`
 
 ## Bottom Line
 
@@ -21,16 +26,16 @@ The main problem is not the split itself. The main problem is that the split is 
 
 Today a new developer has to discover several important rules by reading code:
 
-- `OpticElement` is not just a thin wrapper; it owns cache invalidation, method selection, slicing, and public compatibility behavior
-- many subsystems still expect the wrapper object and often also expect `wrapper.element`
+- `OpticElement` is not just a thin public facade; it owns cache invalidation, method selection, slicing, and public compatibility behavior
+- the public wrapper object is still the compatibility surface used across CPBD, even though known serializer/adaptor cases have now been migrated away from direct `wrapper.element` access
 - transformation support is declared inconsistently: sometimes by hook presence, sometimes by wrapper overrides, sometimes by warning-and-fallback behavior
 
-That means the safest first step is not a direct redesign. The safest first step is:
+That means the safest first step is not a new architecture. The safest first step is:
 
 1. document the current contract precisely
 2. freeze it with unit tests
 3. make capabilities explicit
-4. only then try a simpler internal architecture
+4. only then simplify the current architecture where it really helps
 
 Users should not notice this work unless a future architecture delivers a clear benefit and preserves current physics results within tolerance.
 
@@ -49,6 +54,58 @@ In short:
 - atom = physics state and element-specific formulas
 - `TMParams` = typed data contract between element physics and tracking
 - transformation = algorithm that applies the map
+
+Every public element wrapper also has a family default active tracking method
+(`default_tm`).
+
+- for many families this default is `TransferMap`, meaning the first-order linear map
+- some families use a different default, for example `CavityTM`, `TWCavityTM`, or `MultipoleTM`
+
+If the user does not request anything else, the wrapper starts with that family
+default.
+
+There are three common ways to request a different active TM:
+
+1. at construction time:
+
+```python
+from ocelot.cpbd.elements import Quadrupole, Octupole
+from ocelot.cpbd.transformations.second_order import SecondTM
+from ocelot.cpbd.transformations.kick import KickTM
+
+quad = Quadrupole(l=0.4, k1=1.2, tm=SecondTM)
+octu = Octupole(l=0.2, k3=3.0, tm=KickTM)
+```
+
+2. on an existing element:
+
+```python
+from ocelot.cpbd.transformations.second_order import SecondTM
+
+quad.set_tm(SecondTM)
+```
+
+3. for a whole lattice or selected element families through `MagneticLattice`:
+
+```python
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.transformations.second_order import SecondTM
+from ocelot.cpbd.transformations.kick import KickTM
+from ocelot.cpbd.elements import Octupole
+
+lat = MagneticLattice(cell, method={"global": SecondTM, Octupole: KickTM, "nkick": 5})
+```
+
+If `method` is changed after lattice construction, call:
+
+```python
+lat.update_transfer_maps()
+```
+
+Important:
+
+- not every family allows every TM to stay active
+- pinned families such as `Cavity`, `TWCavity`, `Multipole`, and `XYQuadrupole` may warn and normalize the request back to their family `default_tm`
 
 This is the central call chain:
 
@@ -207,6 +264,20 @@ The atom owns:
 
 Important hook families include:
 
+Here `*` is a placeholder for the map location:
+
+- `main` for the body of the element
+- `entrance` for the entrance edge
+- `exit` for the exit edge
+
+So, for example, `create_first_order_*_params(...)` means methods such as:
+
+- `create_first_order_main_params(...)`
+- `create_first_order_entrance_params(...)`
+- `create_first_order_exit_params(...)`
+
+Elements without edges usually implement only the `main` variant.
+
 - `create_first_order_*_params(...)`
 - `create_second_order_*_params(...)`
 - `create_cavity_tm_*_params(...)`
@@ -262,7 +333,7 @@ Examples:
 
 ## What Is Good About The Current Design
 
-Before discussing redesign, it is important to preserve the advantages that already exist.
+Before discussing further cleanup, it is important to preserve the advantages that already exist.
 
 ### 1. Physics and algorithm are separated
 
@@ -294,7 +365,7 @@ The wrapper owns important framework behavior:
 - slice construction in `get_section_tms(...)`
 - public attribute forwarding
 
-So a redesign cannot simply "remove the wrapper" unless that behavior is moved somewhere explicit and every caller still gets the same semantics.
+So cleanup cannot simply "remove the wrapper" unless that behavior is moved somewhere explicit and every caller still gets the same semantics.
 
 ### 2. Unsupported transformation behavior is inconsistent
 
@@ -305,19 +376,19 @@ Current behavior depends on the element:
 - `Multipole` forces `MultipoleTM`
 - warnings and fallbacks are not standardized
 
-This is one of the first areas that should be cleaned up before deeper redesign.
+This is one of the first areas that should be cleaned up before deeper architectural changes.
 
-### 3. Other subsystems still depend on `wrapper.element`
+### 3. The wrapper/atom split is still externally relevant
 
-This is a critical compatibility point.
+This is still a critical compatibility point.
 
-Several parts of CPBD and related adaptors inspect `element.element` directly, for example:
+Historically, parts of CPBD and related adaptors inspected `element.element` directly. The known serializer/adaptor cases have been migrated to the public wrapper API, so this is no longer the main blocker. The split is still not an implementation detail because:
 
-- lattice serialization in `latticeIO.py`
-- some adaptor code
-- code paths that assume an `OpticElement` instance rather than a raw physics object
+- `OpticElement` itself stores physics on `self.element`
+- wrapper forwarding and cache invalidation depend on that split
+- some code paths still assume an `OpticElement` instance rather than a raw physics object
 
-That means a direct one-class element design is not only a local change inside `elements/`. It affects serialization, adaptors, and compatibility surfaces.
+That means a direct one-class element design is not only a local change inside `elements/`. It still affects compatibility surfaces even after those serializer/adaptor cleanups.
 
 ### 4. Hook-based capability discovery is hard to read
 
@@ -350,25 +421,9 @@ This split is reasonable:
 - the atom computes `R`, `B`, and cavity-specific metadata
 - the transformation implements the nonlinear cavity update
 
-### What `cavity_new.py` shows
-
-`CavityNew` and `DirectOpticElement` are useful as experiments, but they should currently be treated as prototypes, not as a migration target.
-
-They show two useful ideas:
-
-- explicit `default_tm` and `supported_tms`
-- a more direct public element object
-
-But they also show two current redesign risks:
-
-1. they duplicate a large part of `OpticElement` instead of extracting shared framework behavior
-2. they do not solve the broader compatibility surface that still expects `OpticElement` and `wrapper.element`
-
-So the prototype is valuable as a design probe, but not yet as an architectural answer.
-
 ## Important Invariants To Preserve
 
-Any future redesign should preserve the following behavior.
+Any future cleanup should preserve the following behavior.
 
 ### User-facing invariants
 
@@ -384,11 +439,11 @@ Any future redesign should preserve the following behavior.
 - sliced tracking preserves current semantics
 - `create_delta_e(...)` scales correctly for sliced maps
 - caches are invalidated when tracking-relevant physics parameters change
-- the serialization and adaptor surfaces that currently expect `wrapper.element` remain supported until deliberately migrated
+- the public wrapper API used by serialization and adaptor code remains stable
 
-## Recommended Transition Plan
+## Recommended Improvement Plan
 
-The safest transition is staged.
+The safest improvement path is staged.
 
 ### Phase 0: Freeze the current contract
 
@@ -402,16 +457,21 @@ Goal:
 
 - remove guesswork about what the existing system guarantees
 
-### Phase 1: Make capabilities explicit
+### Phase 1: Finish making capabilities explicit
 
-Each element family should declare, in a predictable place:
+This is now part of the main architecture, not just a future idea.
 
-- `default_tm`
-- `supported_tms`
+Current state:
+
+- representative public wrappers already declare `default_tm`
+- representative public wrappers already declare `supported_tms`
+- architecture contract tests already freeze that behavior
+
+What still needs to be completed:
+
 - what its `TransferMap` / `first_order_tms` optics path means
 - `has_edge`
-
-This can be introduced without redesigning the whole hierarchy.
+- which edge hooks exist and how `ENTRANCE -> MAIN -> EXIT` is formed for that family
 
 Current policy in the main architecture:
 
@@ -427,7 +487,28 @@ Goal:
 - make supported behavior visible without relying on missing-method exceptions
 - later remove constructor duplication by letting `tm=None` resolve to the class `default_tm` instead of repeating the same TM in both the `__init__` signature and the class metadata
 
-### Phase 2: Standardize unsupported-TM policy
+### Phase 2: Make edge behavior more explicit
+
+The next high-value clarification is edge behavior.
+
+Current situation:
+
+- `has_edge` already controls whether `ENTRANCE` and `EXIT` maps are built
+- that behavior is important, but it is still easy to miss by just reading wrappers
+- slicing rules in `get_section_tms(...)` depend on it directly
+
+What to improve:
+
+- make `has_edge` visually obvious in the family inventory
+- document which families really implement entrance and exit hooks
+- keep dedicated tests for `ENTRANCE -> MAIN -> EXIT` semantics
+- avoid hidden assumptions that every magnetic family behaves like a bend
+
+Goal:
+
+- make edge-aware behavior readable without digging through hook names
+
+### Phase 3: Standardize unsupported-TM policy
 
 Current rule:
 
@@ -442,9 +523,34 @@ Goal:
 
 - make method selection readable and testable
 
-### Phase 3: Extract the framework contract before merging classes
+### Phase 4: Review `TMParams` containers carefully
 
-Do not start by replacing wrapper-plus-atom everywhere.
+`TMParams` already does something useful: it gives an explicit boundary between
+atom physics code and transformation code.
+
+Potential benefits of dataclasses:
+
+- clearer field lists
+- less boilerplate in simple containers
+- easier debugging and repr output
+
+Current risks / limits:
+
+- some params classes already have behavior, not just fields
+- inheritance is used (`SecondOrderParams` extends `FirstOrderParams`)
+- refactoring them now gives less value than clarifying TM selection and edge behavior
+
+Recommended approach:
+
+- do not start with a broad dataclass conversion
+- if this is revisited later, start with the simplest leaf containers first
+- keep the current constructor contract stable until tests clearly freeze it
+
+Goal:
+
+- improve readability of params objects without creating churn in a stable boundary
+
+### Phase 5: Extract the framework contract only if needed
 
 Instead, identify the exact framework services currently provided by `OpticElement`:
 
@@ -458,40 +564,11 @@ Then extract that contract into a reusable base or protocol.
 
 Goal:
 
-- avoid copying `OpticElement` logic into a second architecture
-
-### Phase 4: Pilot only on simple elements
-
-If an experimental direct architecture is still desired, try it first on:
-
-- `Marker`
-- `Monitor`
-- `Drift`
-- `Aperture`
-
-Do not start with `Cavity`, `Bend`, or `Undulator`.
-
-Goal:
-
-- validate the new shape on low-risk elements
-
-### Phase 5: Compare architectures on evidence
-
-Before project-wide migration, compare:
-
-- readability
-- amount of duplicated code
-- test coverage
-- compatibility cost
-- numerical behavior
-
-Goal:
-
-- make the migration decision from evidence, not taste
+- make the current architecture easier to understand before considering deeper refactoring
 
 ## What To Do If You Add A New Element Today
 
-Until the architecture is redesigned, the safest extension path is still the current one:
+Until the architecture is improved further, the safest extension path is still the current one:
 
 1. start from the closest existing family
 2. keep the wrapper-plus-atom split
@@ -503,7 +580,7 @@ Until the architecture is redesigned, the safest extension path is still the cur
 
 For new work today, that is lower risk than creating new public direct-style elements.
 
-## Unit Tests Needed Before Redesign
+## Unit Tests That Protect Future Cleanup
 
 The most useful tests are not only physics regression tests. We also need framework-contract tests.
 
@@ -539,7 +616,7 @@ These tests protect the current public behavior and should be added first.
 
 ### B. Slice and edge contract
 
-These tests are high value because slicing is easy to break during redesign.
+These tests are high value because slicing is easy to break during cleanup.
 
 1. No-edge element:
    `get_section_tms(...)` returns only one `MAIN` map.
@@ -560,7 +637,7 @@ These tests are high value because slicing is easy to break during redesign.
 
 ### C. Energy-gain contract
 
-These tests protect redesigns around cavities and other active elements.
+These tests protect cleanup around cavities and other active elements.
 
 1. Only the `MAIN` map contributes `delta_e`.
 
@@ -579,7 +656,7 @@ Recommended coverage:
 - `Bend` or `SBend`: edge-aware magnetic element
 - `Cavity`: edge-aware RF element with custom transformation and energy gain
 - `Multipole`: element that restricts the active transformation strongly
-- `Undulator` or another nontrivial custom-tracking family when redesign work reaches that area
+- `Undulator` or another nontrivial custom-tracking family when cleanup reaches that area
 
 ### E. Cavity-specific contract tests
 
@@ -609,21 +686,7 @@ Recommended coverage:
 
 2. `latticeIO` still serializes representative elements correctly.
 
-3. Any code path that depends on `wrapper.element` continues to work until explicitly migrated.
-
-## If `CavityNew` Stays In The Tree
-
-If the prototype remains in the repository, it should also be tested as a prototype rather than left as an undocumented alternative.
-
-Useful prototype tests:
-
-1. `CavityNew.R(...)`, `B(...)`, and `create_delta_e(...)` match `Cavity` for the same parameters.
-
-2. `CavityNew.get_section_tms(...)` matches the current slice semantics expected from `Cavity`.
-
-3. Any known differences from `Cavity` are documented intentionally rather than discovered accidentally later.
-
-If those tests are not desired, the prototype should stay clearly labeled as experimental and non-public.
+3. Public wrapper based serialization / adaptor paths continue to work without reintroducing direct `wrapper.element` access.
 
 ## Problems In The Previous Version Of This Note
 
@@ -631,23 +694,26 @@ The earlier README was directionally useful, but it had several weaknesses.
 
 ### 1. It repeated itself
 
-There were multiple sections saying similar things about redesign, explicit capabilities, and templates. That made the document longer without making the contract clearer.
+There were multiple sections saying similar things about architecture changes, explicit capabilities, and templates. That made the document longer without making the contract clearer.
 
 ### 2. It described the split more cleanly than the code actually behaves
 
 The old note described wrappers mainly as facades, while current code shows that `OpticElement` still owns important framework behavior.
 
-### 3. It moved toward a one-class redesign too quickly
+### 3. It moved toward architecture replacement too quickly
 
-The earlier version mentioned the direct-style prototype as a reasonable next phase before fully freezing the current contract. That is premature given the existing compatibility surface.
+The earlier version talked too much about replacing the structure before finishing the basic clarity work on the current implementation.
 
 ### 4. It did not emphasize external compatibility enough
 
-The previous note did not clearly say that other modules still depend on `OpticElement` and `wrapper.element`.
+The previous note did not clearly separate two facts:
 
-### 5. It mixed extension guidance with redesign advocacy
+- external code still depends on public wrapper objects
+- the known serializer/adaptor cases no longer need direct `wrapper.element` access
 
-Those are related topics, but they should not be confused. The current extension path and the future redesign path are not the same thing.
+### 5. It mixed extension guidance with architecture replacement
+
+Those are related topics, but they should not be confused. The current extension path and the future cleanup path are not the same thing.
 
 ## Recommendation
 
@@ -659,6 +725,6 @@ The project should move toward:
 - consistent TM selection behavior
 - stronger architecture tests
 - less hidden wrapper magic
-- eventually, possibly, a simpler internal model
+- maybe later, if clearly justified, a simpler internal model
 
-But the immediate next step should be test-first hardening of the current contract, not replacing the architecture by intuition.
+But the immediate next step should be test-first hardening and clearer documentation of the current contract, not replacing the architecture by intuition.

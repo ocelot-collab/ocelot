@@ -118,6 +118,35 @@ class ElegantLatticeConverter:
         
         return value
 
+    @staticmethod
+    def _set_ocelot_value(element, target, value):
+        """Assign a converted Elegant parameter through the public Ocelot wrapper."""
+        if target.__class__ == list:
+            if len(target) == 2:
+                setattr(element, target[0], value * float(target[1]))
+            elif len(target) == 3:
+                getattr(element, target[0])[target[1], target[2]] = value
+            return
+
+        if element.__class__ == Cavity and target == 'phi':
+            value = 90.0 - value
+
+        setattr(element, target, value)
+
+    @staticmethod
+    def _get_ocelot_value(element, target):
+        """Read an Elegant-mapped parameter through the public Ocelot wrapper."""
+        if target.__class__ == list:
+            if len(target) == 2:
+                return getattr(element, target[0]) / float(target[1])
+            if len(target) == 3:
+                return getattr(element, target[0])[target[1], target[2]]
+
+        if element.__class__ == Cavity and target == 'phi':
+            return 90.0 - getattr(element, target)
+
+        return getattr(element, target)
+
         
     def elegant2ocelot(self, file_name):
         """
@@ -238,20 +267,9 @@ class ElegantLatticeConverter:
                             tmp = self.elegant_matrix[param[0]]['params'][result[0]]
 
                             val = self.convert_val(result[1], constants, elem)
-
-                            if tmp.__class__ == list:
-                                if len(tmp) == 2:
-                                    elements_list[elem].element.__dict__[tmp[0]] = val * float(tmp[1])
-                                elif len(tmp) == 3:
-                                    print(elements_list[elem].element, tmp)
-                                    elements_list[elem].element.__dict__[tmp[0]][tmp[1], tmp[2]] = val
-                            else:
-                                # fix for phi cavity
-                                if elements_list[elem].__class__ == Cavity and tmp == 'phi':
-                                    val = 90.0 - val
-                                elements_list[elem].element.__dict__[tmp] = val
+                            self._set_ocelot_value(elements_list[elem], tmp, val)
                     if elements_list[elem].__class__ == Undulator:
-                        elements_list[elem].element.lperiod = elements_list[elem].element.l/elements_list[elem].element.nperiods
+                        elements_list[elem].lperiod = elements_list[elem].l / elements_list[elem].nperiods
                 # replace element by Drift (if it has L) or skip
                 else:
                     elements_list[elem] = None
@@ -396,28 +414,16 @@ class ElegantLatticeConverter:
                 # check parameter 'L' and print it first
                 if 'L' in self.elegant_matrix[reverse_matrix[element_class]]['params']:
                     tmp = self.elegant_matrix[reverse_matrix[element_class]]['params']['L']
-                    lines += ',L=' + str(elem.element.__dict__[tmp])
+                    lines += ',L=' + str(self._get_ocelot_value(elem, tmp))
 
                 # print other parameters
                 for param in self.elegant_matrix[reverse_matrix[element_class]]['params']:
                     if param == 'L':
                         continue
                     tmp = self.elegant_matrix[reverse_matrix[element_class]]['params'][param]
-                    if tmp.__class__ == list:
-                        if len(tmp) == 2:
-                            lines += ',' + param + '=' + str(elem.element.__dict__[tmp[0]]/float(tmp[1]))
-                        elif len(tmp) == 3:
-                            lines += ',' + param + '=' + str(elem.element.__dict__[tmp[0]][tmp[1], tmp[2]])
-                    else:
-                        # fix for phi cavity
-                        if elem.__class__ == Cavity and tmp == 'phi':
-                            lines += ',' + param + '=' + str(90.0 - elem.element.__dict__[tmp])
-                            lines += ',CHANGE_P0=1,END1_FOCUS=1,END2_FOCUS=1,BODY_FOCUS_MODEL="SRS"'
-                        elif elem.__class__ == Matrix and "rm" in tmp:
-                            i, j = int(int(param[-2]) - 1), int(int(param[-1]) - 1)
-                            lines += ',' + param + '=' + str(elem.element.__dict__["r"][i, j])
-                        else:
-                            lines += ',' + param + '=' + str(elem.element.__dict__[tmp])
+                    lines += ',' + param + '=' + str(self._get_ocelot_value(elem, tmp))
+                    if elem.__class__ == Cavity and tmp == 'phi':
+                        lines += ',CHANGE_P0=1,END1_FOCUS=1,END2_FOCUS=1,BODY_FOCUS_MODEL="SRS"'
                 lines += '\n'
 
         # save cell

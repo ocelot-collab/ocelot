@@ -13,31 +13,47 @@ In this note:
 
 - `wrapper` means the public element object that users and lattices usually hold, typically an `OpticElement` subclass such as `Quadrupole` or `Cavity`
 - `atom` means the internal physics object stored on the wrapper, usually as `wrapper.element`
+- `parameter container` or `TMParams` means the structured data object built by the atom and passed to a transformation, for example `FirstOrderParams`, `SecondOrderParams`, or `CavityParams`
+- `transformation` means the tracking algorithm object built from the element hooks and `TMParams`, for example `TransferMap`, `SecondTM`, `KickTM`, or `CavityTM`
 
 ## Bottom Line
 
-The current architecture is not fundamentally wrong. In fact, one part of it is quite strong:
+The current architecture already has several strong sides that are worth
+keeping:
 
-- element physics is separated from tracking algorithms
-- the same element family can support more than one tracking method
-- first-order optics can stay available even when active tracking uses a different method
+- element physics lives on atoms, while tracking algorithms live in transformations
+- one element family can support more than one active tracking method
+- first-order optics can stay available even when active tracking uses another TM
+- the public wrapper preserves a stable user-facing API across lattice and tracking code
 
-The main problem is not the split itself. The main problem is that the split is too implicit.
+The main weakness is not the overall split. The main weakness is that too much
+of the contract is implicit.
 
-Today a new developer has to discover several important rules by reading code:
+In the current code, a developer still has to discover important rules by
+reading implementation details:
 
-- `OpticElement` is not just a thin public facade; it owns cache invalidation, method selection, slicing, and public compatibility behavior
-- the public wrapper object is still the compatibility surface used across CPBD, even though known serializer/adaptor cases have now been migrated away from direct `wrapper.element` access
-- transformation support is declared inconsistently: sometimes by hook presence, sometimes by wrapper overrides, sometimes by warning-and-fallback behavior
+- `OpticElement` is part of the real framework behavior, not just a thin facade
+- wrapper forwarding hides where physics state actually lives
+- TM support and edge behavior have historically been inferred from hook presence, wrapper restrictions, and fallback rules
+- some family behavior is clear only after reading both the wrapper and the atom
 
-That means the safest first step is not a new architecture. The safest first step is:
+So the current goal is not to redesign the architecture first. The current goal
+is to make the existing architecture clearer, safer, and easier to work with.
 
-1. document the current contract precisely
-2. freeze it with unit tests
-3. make capabilities explicit
-4. only then simplify the current architecture where it really helps
+That improvement work already started in three ways:
 
-Users should not notice this work unless a future architecture delivers a clear benefit and preserves current physics results within tolerance.
+1. the current contract is being documented explicitly in this note
+2. architecture-level unit tests now freeze the important behavior
+3. wrapper TM declarations and edge behavior are being made more explicit
+
+The next steps should continue in the same direction:
+
+1. finish making per-family capabilities visible
+2. keep tightening contract tests around edge and TM behavior
+3. simplify local parts of the current design only where that improves clarity without changing physics
+
+Users should not notice these changes except through clearer developer-facing
+behavior, safer maintenance, and preserved physics results within tolerance.
 
 ## The Current Runtime Model
 
@@ -105,7 +121,7 @@ lat.update_transfer_maps()
 Important:
 
 - not every family allows every TM to stay active
-- pinned families such as `Cavity`, `TWCavity`, `Multipole`, and `XYQuadrupole` may warn and normalize the request back to their family `default_tm`
+- pinned families such as `Cavity`, `TWCavity`, `Multipole`, and `XYQuadrupole` use `tm_policy = "pinned"` and normalize the request back to their family `default_tm`
 
 This is the central call chain:
 
@@ -118,6 +134,30 @@ MagneticLattice.update_transfer_maps()
     -> TMParams
     -> Transformation.map_function(...)
 ```
+
+## Edge Contract
+
+`has_edge` is not cosmetic metadata. It changes how CPBD builds both the
+always-available optics path and the active tracking path.
+
+- `has_edge = False` means the element builds only one `MAIN` map
+- `has_edge = True` means the element builds a three-map sequence:
+  `ENTRANCE -> MAIN -> EXIT`
+- this rule applies to `first_order_tms` as well as to the active `tms`
+- therefore an edge-aware family must always provide first-order entrance and
+  exit hooks, even if its active tracking TM is a custom family-specific one
+
+For slices built with `get_section_tms(...)`, the current contract is:
+
+- `start_l == 0` includes `ENTRANCE`
+- `start_l + delta_l == l` includes `EXIT`
+- middle slices rebuild only the `MAIN` map for the requested `delta_l`
+- copied edge maps are not rescaled
+- `ignore_edges=True` suppresses entrance and exit maps explicitly
+
+If a family declares support for a TM and also has `has_edge=True`, then that
+TM must be able to build entrance, main, and exit maps from the atom hooks.
+If it cannot, that is a bug in the wrapper contract, not a user mistake.
 
 ## TM Roles
 
@@ -191,37 +231,37 @@ The columns below deliberately separate:
 
 ### Passive and utility families
 
-| Family | Linear optics / Twiss path | Declared / selectable active TMs | Extra internal or legacy-buildable paths | Notes |
-| --- | --- | --- | --- | --- |
-| `Aperture` | `TransferMap` via generic `Element` first-order fallback | `TransferMap`, `SecondTM` | none | No dedicated aperture-specific transformation; mainly a holder for aperture metadata and offsets. |
-| `Marker` | `TransferMap` via generic `Element` first-order fallback | `TransferMap`, `SecondTM` | none | Zero-length reference point. |
-| `Monitor` | `TransferMap` via generic `Element` first-order fallback | `TransferMap`, `SecondTM` | none | Diagnostic state such as `x`, `y`, `x_ref`, `y_ref` lives on the atom. |
-| `Matrix` | `TransferMap` from stored `R` / `B` data | `TransferMap`, `SecondTM` | none | Sliced sections currently fall back to a drift-like first-order map rather than slicing the stored matrix. |
-| `UnknownElement` | `TransferMap` via inherited `Magnet` first-order hook | no audited `supported_tms` declaration yet | generic wrapper still lets `TransferMap`, `SecondTM`, and `KickTM` activate today | Legacy placeholder family rather than a clearly modeled element type. |
-| `Pulse` | n/a | n/a | n/a | Separate helper object for time-dependent kicks; not part of the `OpticElement` wrapper/atom/TM stack. |
+| Family | Has edge | Linear optics / Twiss path | Declared / selectable active TMs | Extra internal or legacy-buildable paths | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `Aperture` | No | `TransferMap` via generic `Element` first-order fallback | `TransferMap`, `SecondTM` | none | No dedicated aperture-specific transformation; mainly a holder for aperture metadata and offsets. |
+| `Marker` | No | `TransferMap` via generic `Element` first-order fallback | `TransferMap`, `SecondTM` | none | Zero-length reference point. |
+| `Monitor` | No | `TransferMap` via generic `Element` first-order fallback | `TransferMap`, `SecondTM` | none | Diagnostic state such as `x`, `y`, `x_ref`, `y_ref` lives on the atom. |
+| `Matrix` | No | `TransferMap` from stored `R` / `B` data | `TransferMap`, `SecondTM` | none | Sliced sections currently fall back to a drift-like first-order map rather than slicing the stored matrix. |
+| `UnknownElement` | No | `TransferMap` via inherited `Magnet` first-order hook | no audited `supported_tms` declaration yet | generic wrapper still lets `TransferMap`, `SecondTM`, and `KickTM` activate today | Legacy placeholder family rather than a clearly modeled element type. |
+| `Pulse` | n/a | n/a | n/a | n/a | Separate helper object for time-dependent kicks; not part of the `OpticElement` wrapper/atom/TM stack. |
 
 ### Magnet-like families
 
-| Family | Linear optics / Twiss path | Declared / selectable active TMs | Extra internal or legacy-buildable paths | Notes |
-| --- | --- | --- | --- | --- |
-| `Drift` | `TransferMap` via `DriftAtom` first-order hook | `TransferMap`, `SecondTM`, `KickTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | none | Useful no-edge reference family. |
-| `Quadrupole` | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `SecondTM`, `KickTM` | none | Wrapper also exposes convenience properties `k1l` and `k2l`. |
-| `Sextupole` | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `SecondTM`, `KickTM` | none | `KickTM` is the important nonlinear tracking path here. |
-| `Octupole` | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `KickTM` | inherited `SecondTM` can still be built on the generic wrapper path today, but it is not declared as audited octupole physics | `k3` only enters the dedicated kick path. |
-| `Solenoid` | `TransferMap` via solenoid-specific first-order hook | `TransferMap`, `SecondTM` | none | `SecondTM` currently comes from the generic `Element` second-order fallback, not from a solenoid-specific nonlinear model. |
-| `Hcor` / `Vcor` | `TransferMap` via `CorAtom` first-order hook | `TransferMap`, `SecondTM` | none | These are not `Magnet` subclasses, so they do not inherit generic kick hooks. |
-| `XYQuadrupole` | `TransferMap` via `XYQuadrupoleAtom` first-order hook | `TransferMap` only | the atom also has `SecondTM` and inherited `KickTM` hook surface, but the wrapper intentionally pins tracking to first order | Important wrapper-level exception. |
-| `Bend`, `SBend`, `RBend` | `TransferMap` via bend entrance/main/exit first-order hooks | `TransferMap`, `SecondTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | `KickTM` can still be built mechanically through inherited `Magnet` hooks, but `kick.py` explicitly says it does not work for dipoles, so it is intentionally not declared | Edge maps are part of the real family behavior, not metadata. |
+| Family | Has edge | Linear optics / Twiss path | Declared / selectable active TMs | Extra internal or legacy-buildable paths | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `Drift` | No | `TransferMap` via `DriftAtom` first-order hook | `TransferMap`, `SecondTM`, `KickTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | none | Useful no-edge reference family. |
+| `Quadrupole` | No | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `SecondTM`, `KickTM` | none | Wrapper also exposes convenience properties `k1l` and `k2l`. |
+| `Sextupole` | No | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `SecondTM`, `KickTM` | none | `KickTM` is the important nonlinear tracking path here. |
+| `Octupole` | No | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `KickTM` | inherited `SecondTM` can still be built on the generic wrapper path today, but it is not declared as audited octupole physics | `k3` only enters the dedicated kick path. |
+| `Solenoid` | No | `TransferMap` via solenoid-specific first-order hook | `TransferMap`, `SecondTM` | none | `SecondTM` currently comes from the generic `Element` second-order fallback, not from a solenoid-specific nonlinear model. |
+| `Hcor` / `Vcor` | No | `TransferMap` via `CorAtom` first-order hook | `TransferMap`, `SecondTM` | none | These are not `Magnet` subclasses, so they do not inherit generic kick hooks. |
+| `XYQuadrupole` | No | `TransferMap` via `XYQuadrupoleAtom` first-order hook | `TransferMap` only | the atom also has `SecondTM` and inherited `KickTM` hook surface, but the wrapper intentionally pins tracking to first order | Important wrapper-level exception. |
+| `Bend`, `SBend`, `RBend` | Yes | `TransferMap` via bend entrance/main/exit first-order hooks | `TransferMap`, `SecondTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | `KickTM` can still be built mechanically through inherited `Magnet` hooks, but `kick.py` explicitly says it does not work for dipoles, so it is intentionally not declared | Edge maps are part of the real family behavior, not metadata. |
 
 ### RF, field-integrated, and special families
 
-| Family | Linear optics / Twiss path | Declared / selectable active TMs | Extra internal or legacy-buildable paths | Notes |
-| --- | --- | --- | --- | --- |
-| `Cavity` | `TransferMap` via cavity-specific first-order entrance/main/exit hooks | `CavityTM` only | first-order `TransferMap` exists for optics but is not kept as the active tracking method | Most important complex reference family for edge handling and `delta_e`. |
-| `TWCavity` | `TransferMap` via traveling-wave cavity first-order hooks | `TWCavityTM` only | first-order `TransferMap` exists for optics but is not kept as the active tracking method | The atom currently warns that this family is unfinished. |
-| `TDCavity` | `TransferMap` via `TDCavityAtom` first-order hook | `TransferMap`, `SecondTM` | none | The atom's `additional_tms = [SecondTM]` is informational only; `OpticElement` does not consume it. |
-| `Undulator` | `TransferMap` via `UndulatorAtom` first-order hook | `TransferMap`, `RungeKuttaTM`, `RungeKuttaTrTM`, `UndulatorTestTM` | none | `MagneticLattice.update_transfer_maps()` also has special-case length handling when a field map is attached. |
-| `Multipole` | `TransferMap` via `MultipoleAtom` first-order hook | `MultipoleTM` only | first-order `TransferMap` exists for optics but the wrapper intentionally pins active tracking to `MultipoleTM` | This first-order path is a linearized multipole optics map, not a pure drift. |
+| Family | Has edge | Linear optics / Twiss path | Declared / selectable active TMs | Extra internal or legacy-buildable paths | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `Cavity` | Yes | `TransferMap` via cavity-specific first-order entrance/main/exit hooks | `CavityTM` only | first-order `TransferMap` exists for optics but is not kept as the active tracking method | Most important complex reference family for edge handling and `delta_e`. |
+| `TWCavity` | Yes | `TransferMap` via traveling-wave cavity first-order hooks | `TWCavityTM` only | first-order `TransferMap` exists for optics but is not kept as the active tracking method | The atom currently warns that this family is unfinished. |
+| `TDCavity` | No | `TransferMap` via `TDCavityAtom` first-order hook | `TransferMap`, `SecondTM` | none | The atom's `additional_tms = [SecondTM]` is informational only; `OpticElement` does not consume it. |
+| `Undulator` | No | `TransferMap` via `UndulatorAtom` first-order hook | `TransferMap`, `RungeKuttaTM`, `RungeKuttaTrTM`, `UndulatorTestTM` | none | `MagneticLattice.update_transfer_maps()` also has special-case length handling when a field map is attached. |
+| `Multipole` | No | `TransferMap` via `MultipoleAtom` first-order hook | `MultipoleTM` only | first-order `TransferMap` exists for optics but the wrapper intentionally pins active tracking to `MultipoleTM` | This first-order path is a linearized multipole optics map, not a pure drift. |
 
 ## Layer 1: Public Wrapper
 
@@ -244,6 +284,27 @@ That wrapper does more than just forward constructor arguments. It is responsibl
 - building partial element slices for `get_section_tms(...)`
 
 This point is easy to underestimate. The wrapper is currently part of the framework contract, not just syntactic sugar.
+
+### Public attribute access rule
+
+Code outside the element internals should use the public element API, not raw
+storage.
+
+- read parameters with `elem.k1` or `getattr(elem, "k1")`
+- write parameters with `elem.k1 = value` or `setattr(elem, "k1", value)`
+- do not use `elem.__dict__["k1"]` for wrappers
+
+Why this matters:
+
+- physics state may live on the atom, not in the wrapper `__dict__`
+- wrapper forwarding makes `elem.k1` work even when storage lives on `elem.element`
+- `setattr(...)` goes through wrapper cache invalidation, while direct `__dict__` writes bypass it
+
+For generic serializer or adaptor code, the safe pattern is:
+
+1. discover public constructor or exported fields
+2. read them with `getattr(...)`
+3. write them with `setattr(...)`
 
 ## Layer 2: Atom
 
@@ -367,16 +428,18 @@ The wrapper owns important framework behavior:
 
 So cleanup cannot simply "remove the wrapper" unless that behavior is moved somewhere explicit and every caller still gets the same semantics.
 
-### 2. Unsupported transformation behavior is inconsistent
+### 2. TM selection policy must stay explicit
 
-Current behavior depends on the element:
+This part of the architecture used to be inconsistent. The current direction is
+to keep it explicit and centralized in `OpticElement`.
 
-- generic `OpticElement.set_tm(...)` relies on transformation construction and fallback
-- `Cavity` forces `CavityTM`
-- `Multipole` forces `MultipoleTM`
-- warnings and fallbacks are not standardized
+Current policy types:
 
-This is one of the first areas that should be cleaned up before deeper architectural changes.
+- `tm_policy = "generic"` means the wrapper allows declared TMs and keeps the legacy hook-based fallback path for undeclared requests
+- `tm_policy = "pinned"` means the wrapper always normalizes active tracking back to its `default_tm`
+
+This removes the need for family-specific warning and fallback code in wrappers
+such as `Cavity`, `TWCavity`, `Multipole`, and `XYQuadrupole`.
 
 ### 3. The wrapper/atom split is still externally relevant
 
@@ -465,6 +528,7 @@ Current state:
 
 - representative public wrappers already declare `default_tm`
 - representative public wrappers already declare `supported_tms`
+- representative pinned wrappers already declare `tm_policy = "pinned"`
 - architecture contract tests already freeze that behavior
 
 What still needs to be completed:
@@ -477,10 +541,12 @@ Current policy in the main architecture:
 
 - `default_tm` is the family fallback for active tracking
 - `supported_tms`, when declared, should list wrapper-selectable active tracking TMs
+- `tm_policy = "generic"` means the wrapper allows declared TMs and keeps the legacy undeclared-request fallback path
+- `tm_policy = "pinned"` means the wrapper normalizes active tracking back to `default_tm`
 - the `TransferMap` optics path used by `first_order_tms` is a separate concept and may exist even when `TransferMap` is not an allowed active TM for the wrapper
 - declared TMs must actually build from the atom hooks; otherwise that is treated as a bug in the declaration
-- generic wrappers still keep the legacy hook-based path for undeclared requests, with a warning
-- pinned wrappers such as `Cavity`, `TWCavity`, `Multipole`, and `XYQuadrupole` intentionally normalize undeclared requests back to `default_tm`
+- generic wrappers still warn before using the legacy undeclared-request path
+- pinned wrappers warn and normalize active tracking back to `default_tm`
 
 Goal:
 
@@ -508,20 +574,20 @@ Goal:
 
 - make edge-aware behavior readable without digging through hook names
 
-### Phase 3: Standardize unsupported-TM policy
+### Phase 3: Keep TM-selection policy centralized
 
 Current rule:
 
 - declared support that cannot be built raises clearly
 - undeclared requests on generic wrappers warn and use the existing hook-based fallback behavior
-- undeclared requests on pinned wrappers warn and fall back to `default_tm`
+- pinned wrappers warn and normalize active tracking back to `default_tm`
 
 This keeps user-facing behavior conservative while still making bad
 declarations fail fast in tests and development.
 
 Goal:
 
-- make method selection readable and testable
+- keep method selection readable, centralized, and testable
 
 ### Phase 4: Review `TMParams` containers carefully
 

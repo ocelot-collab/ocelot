@@ -31,13 +31,18 @@ class OpticElement:
     ``default_tm`` remains the family fallback for active tracking. If a
     wrapper also declares ``supported_tms``, those entries should be read as
     wrapper-selectable active tracking methods, not as a list of every
-    internal first-order path that exists for optics. Generic wrappers still
-    keep the legacy hook-based fallback path for undeclared requests, while
-    pinned families may override ``set_tm`` more strictly.
+    internal first-order path that exists for optics. ``tm_policy`` makes the
+    public selection rule explicit:
+
+    - ``generic`` wrappers allow declared TMs and keep the legacy hook-based
+      fallback path for undeclared requests
+    - ``pinned`` wrappers always normalize active tracking back to their
+      ``default_tm``
     """
 
     default_tm = TransferMap
     supported_tms = None
+    tm_policy = "generic"
 
     __is_init = False  # needed to disable __getattr__ and __setattr__ until __init__ is executed
 
@@ -62,10 +67,16 @@ class OpticElement:
         self.default_tm = default_tm
         self._validate_tm_declarations()
         # First-order maps are always available because optics/Twiss code uses
-        # them even when the active tracking method is something else.
-        self._first_order_tms = self._create_tms(self.element, TransferMap)
+        # them even when the active tracking method is something else. For
+        # ``has_edge=True`` families this also means the atom must always
+        # provide the first-order entrance/exit hooks.
+        try:
+            self._first_order_tms = self._create_tms(self.element, TransferMap)
+        except (AttributeError, NotImplementedError) as exc:
+            raise self._tm_contract_error(TransferMap, first_order_only=True) from exc
         self._kwargs = params  # Storing transforamtion sp
-        self._activate_tm(tm, **params)
+        requested_tm = self._normalize_tm_request(tm, stacklevel=5)
+        self._activate_tm(requested_tm, **params)
         self.__is_init = True  # needed to disable __getattr__ and __setattr__ in __init__ phase. Do not add new attributes after.
 
     def __getattr__(self, name):
@@ -181,12 +192,9 @@ class OpticElement:
         try:
             self._tms = self._create_tms(self.element, tm, **params)
             self._tm_class_type = tm
-        except AttributeError as exc:
+        except (AttributeError, NotImplementedError) as exc:
             if self._is_declared_tm(tm) or tm == self.default_tm:
-                raise RuntimeError(
-                    f"{self.__class__.__name__} declares support for {tm.__name__}, "
-                    "but its atom does not implement the required create_*_params hooks."
-                ) from exc
+                raise self._tm_contract_error(tm) from exc
             warnings.warn(
                 f"Can't set {tm.__name__} for {self.__class__.__name__}; "
                 f"falling back to default {self.default_tm.__name__}.",
@@ -196,10 +204,20 @@ class OpticElement:
 
     def _validate_tm_declarations(self) -> None:
         """Check that the family default is part of the declared TM contract."""
+        if self.tm_policy not in {"generic", "pinned"}:
+            raise RuntimeError(
+                f"{self.__class__.__name__} declares unsupported tm_policy={self.tm_policy!r}. "
+                "Expected 'generic' or 'pinned'."
+            )
         if self.supported_tms is not None and self.default_tm not in self.supported_tms:
             raise RuntimeError(
                 f"{self.__class__.__name__} declares default_tm={self.default_tm.__name__}, "
                 "but default_tm is missing from supported_tms."
+            )
+        if self.tm_policy == "pinned" and self.supported_tms != {self.default_tm}:
+            raise RuntimeError(
+                f"{self.__class__.__name__} uses tm_policy='pinned', so supported_tms must be "
+                f"exactly {{{self.default_tm.__name__}}}."
             )
 
     def _is_declared_tm(self, tm: Type[Transformation]) -> bool:
@@ -214,6 +232,65 @@ class OpticElement:
                 "trying legacy hook-based fallback.",
                 stacklevel=3,
             )
+
+    def _warn_pinned_tm_request(self, tm: Type[Transformation], stacklevel: int) -> None:
+        """Warn when a pinned wrapper is asked to use a non-default active TM."""
+        warnings.warn(
+            f"{self.__class__.__name__} pins active tracking to {self.default_tm.__name__}; "
+            f"requested {tm.__name__} falls back to default {self.default_tm.__name__}.",
+            stacklevel=stacklevel,
+        )
+
+    def _normalize_tm_request(self, tm: Type[Transformation], stacklevel: int) -> Type[Transformation]:
+        """Normalize TM requests according to the wrapper's explicit policy."""
+        if self.tm_policy == "pinned" and tm != self.default_tm:
+            self._warn_pinned_tm_request(tm, stacklevel=stacklevel)
+            return self.default_tm
+        return tm
+
+    @staticmethod
+    def _tm_hook_family(tm: Type[Transformation]) -> str:
+        """Return the hook family the TM expects from the atom."""
+        if tm is TransferMap:
+            return "create_first_order_*_params(...)"
+        if tm is SecondTM:
+            return "create_second_order_*_params(...)"
+        tm_name = tm.__name__
+        if "RungeKutta" in tm_name:
+            return "create_runge_kutta_*_params(...)"
+        if "Kick" in tm_name:
+            return "create_kick_*_params(...)"
+        if "Cavity" in tm_name:
+            return "create_cavity_tm_*_params(...)"
+        if "Multipole" in tm_name:
+            return "create_multipole_tm_main_params(...)"
+        if "UndulatorTest" in tm_name:
+            return "create_undulator_test_tm_main_params(...)"
+        return "create_*_params(...)"
+
+    def _tm_contract_error(self, tm: Type[Transformation], first_order_only: bool = False) -> RuntimeError:
+        """Explain which hook family is missing for the requested TM build."""
+        hook_family = self._tm_hook_family(tm)
+        if first_order_only and self.element.has_edge:
+            return RuntimeError(
+                f"{self.__class__.__name__} has has_edge=True, so its atom must implement "
+                f"{hook_family} for ENTRANCE, MAIN, and EXIT. "
+                "CPBD could not build the required first_order_tms optics path."
+            )
+        if first_order_only:
+            return RuntimeError(
+                f"{self.__class__.__name__} could not build its required first_order_tms optics path. "
+                f"Its atom must implement {hook_family}."
+            )
+        if self.element.has_edge:
+            return RuntimeError(
+                f"{self.__class__.__name__} declares support for {tm.__name__} and has has_edge=True, "
+                f"so its atom must implement {hook_family} for ENTRANCE, MAIN, and EXIT."
+            )
+        return RuntimeError(
+            f"{self.__class__.__name__} declares support for {tm.__name__}, "
+            f"but its atom does not implement the required {hook_family} hooks."
+        )
 
     def _activate_tm(self, tm: Type[Transformation], **params) -> None:
         """Build and store the active TM sequence for the normalized request."""
@@ -234,17 +311,18 @@ class OpticElement:
         """
         Set the active tracking method for the wrapper.
 
-        Declared support is expected to be buildable. Undeclared requests keep
-        the legacy generic fallback path unless a concrete wrapper pins the
-        family more strictly.
+        Declared support is expected to be buildable. ``tm_policy='generic'``
+        keeps the legacy undeclared-request fallback path. ``tm_policy='pinned'``
+        always normalizes active tracking back to ``default_tm``.
         """
+        requested_tm = self._normalize_tm_request(tm, stacklevel=4)
         new_kwargs = params if params and params != self._kwargs else None
-        if tm != self._tm_class_type or new_kwargs:
+        if requested_tm != self._tm_class_type or new_kwargs:
             if new_kwargs:
-                self._activate_tm(tm, **new_kwargs)
+                self._activate_tm(requested_tm, **new_kwargs)
                 self._kwargs = new_kwargs
             else:
-                self._activate_tm(tm, **self._kwargs)
+                self._activate_tm(requested_tm, **self._kwargs)
             for tm in self.tms:
                 tm._clean_cashed_values()
 
@@ -296,6 +374,9 @@ class OpticElement:
 
     @staticmethod
     def _create_tms(element: Element, tm: Type[Transformation], **params) -> List[Transformation]:
+        # ``has_edge`` means the TM sequence is a three-map contract:
+        # ENTRANCE -> MAIN -> EXIT. Any TM used on such a family must therefore
+        # be able to bind both edge hooks and the main hook.
         tms = []
         if element.has_edge:
             tms.append(tm.from_element(element, TMTypes.ENTRANCE, **params))

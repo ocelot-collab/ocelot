@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import warnings
 from typing import Iterable
 import ocelot.common.globals as glb
 from scipy.special import factorial
@@ -19,22 +20,16 @@ class Twiss:
 
     def __init__(self, beam=None, **kwargs):
 
-        self._emit_xn = kwargs.get("emit_xn", 0.)
-        self._emit_yn = kwargs.get("emit_yn", 0.)
-        self._pending_emit_x = None
-        self._pending_emit_y = None
+        self._emit_x = kwargs.get("emit_x", 0.)
+        self._emit_y = kwargs.get("emit_y", 0.)
+        self._pending_emit_xn = None
+        self._pending_emit_yn = None
         self._E = kwargs.get("E", 0.0)  # ref the beam energy in [GeV]
 
-        # Apply emit_x and emit_y properly (only if present!)
-        if "emit_x" in kwargs:
-            self.emit_x = kwargs["emit_x"]
-        if "emit_y" in kwargs:
-            self.emit_y = kwargs["emit_y"]
-
         if "emit_xn" in kwargs:
-            self._emit_xn = kwargs["emit_xn"]
+            self.emit_xn = kwargs["emit_xn"]
         if "emit_yn" in kwargs:
-            self._emit_yn = kwargs["emit_yn"]
+            self.emit_yn = kwargs["emit_yn"]
 
         self.eigemit_1 = 0.
         self.eigemit_2 = 0.
@@ -80,8 +75,11 @@ class Twiss:
 
         if isinstance(beam, (Twiss, Beam)):
 
-            self._emit_xn = beam.emit_xn
-            self._emit_yn = beam.emit_yn
+            self._emit_x = beam.emit_x
+            self._emit_y = beam.emit_y
+            if isinstance(beam, Twiss):
+                self._pending_emit_xn = beam._pending_emit_xn
+                self._pending_emit_yn = beam._pending_emit_yn
 
             self._beta_x = beam.beta_x
             self._beta_y = beam.beta_y
@@ -96,6 +94,14 @@ class Twiss:
             self.xp = beam.xp
             self.yp = beam.yp
             self.E = beam.E
+
+    def _warn_pending_normalized_emittance(self, plane: str):
+        warnings.warn(
+            f"Twiss.emit_{plane}n was set while E is {self.E} GeV. "
+            f"Normalized emittance requires E to be converted, "
+            f"so emit_{plane} remains unresolved until E is set.",
+            stacklevel=2,
+        )
 
     @property
     def beta_x(self):
@@ -148,13 +154,14 @@ class Twiss:
     @E.setter
     def E(self, value):
         self._E = value
-        # If emit_x or emit_y were set before E, now recompute their xn versions
-        if self._pending_emit_x is not None:
-            self.emit_x = self._pending_emit_x  # triggers recompute
-            self._pending_emit_x = None
-        if self._pending_emit_y is not None:
-            self.emit_y = self._pending_emit_y
-            self._pending_emit_y = None
+        if self._E != 0 and self._pending_emit_xn is not None:
+            pending_emit_xn = self._pending_emit_xn
+            self._pending_emit_xn = None
+            self.emit_xn = pending_emit_xn
+        if self._E != 0 and self._pending_emit_yn is not None:
+            pending_emit_yn = self._pending_emit_yn
+            self._pending_emit_yn = None
+            self.emit_yn = pending_emit_yn
 
     @property
     def relgamma(self):
@@ -168,46 +175,64 @@ class Twiss:
     # --- X Plane ---
     @property
     def emit_xn(self):
-        return self._emit_xn
+        rb = self.relbeta * self.relgamma
+        if rb != 0:
+            return self._emit_x * rb
+        return self._pending_emit_xn if self._pending_emit_xn is not None else 0.
 
     @emit_xn.setter
     def emit_xn(self, value):
-        self._emit_xn = value
+        rb = self.relbeta * self.relgamma
+        if rb == 0:
+            if value != 0:
+                self._warn_pending_normalized_emittance("x")
+                self._pending_emit_xn = value
+            else:
+                self._pending_emit_xn = None
+            self._emit_x = 0.0
+        else:
+            self._emit_x = value / rb
+            self._pending_emit_xn = None
 
     @property
     def emit_x(self):
-        rb = self.relbeta * self.relgamma
-        return self._emit_xn / rb if rb != 0 else 0.
+        return self._emit_x
 
     @emit_x.setter
     def emit_x(self, value):
-        rb = self.relbeta * self.relgamma
-        if rb == 0:
-            self._pending_emit_x = value
-        else:
-            self._emit_xn = value * rb
+        self._emit_x = value
+        self._pending_emit_xn = None
 
     # --- Y Plane ---
     @property
     def emit_yn(self):
-        return self._emit_yn
+        rb = self.relbeta * self.relgamma
+        if rb != 0:
+            return self._emit_y * rb
+        return self._pending_emit_yn if self._pending_emit_yn is not None else 0.
 
     @emit_yn.setter
     def emit_yn(self, value):
-        self._emit_yn = value
+        rb = self.relbeta * self.relgamma
+        if rb == 0:
+            if value != 0:
+                self._warn_pending_normalized_emittance("y")
+                self._pending_emit_yn = value
+            else:
+                self._pending_emit_yn = None
+            self._emit_y = 0.0
+        else:
+            self._emit_y = value / rb
+            self._pending_emit_yn = None
 
     @property
     def emit_y(self):
-        rb = self.relbeta * self.relgamma
-        return self._emit_yn / rb if rb != 0 else 0.
+        return self._emit_y
 
     @emit_y.setter
     def emit_y(self, value):
-        rb = self.relbeta * self.relgamma
-        if rb == 0:
-            self._pending_emit_y = value
-        else:
-            self._emit_yn = value * rb
+        self._emit_y = value
+        self._pending_emit_yn = None
 
     @property
     def sigma_x(self):
@@ -321,8 +346,10 @@ class Twiss:
     @classmethod
     def from_series(cls, series: pd.Series):
         result = cls()
+        if "E" in series and hasattr(result, "E"):
+            result.E = np.squeeze(series["E"])
         for key, value in series.items():
-            if hasattr(result, key):
+            if key != "E" and hasattr(result, key):
                 setattr(result, key, np.squeeze(value))
         return result
 
@@ -720,4 +747,3 @@ class BeamArray(Beam):
 
         def to_array(self, *args, **kwargs):
             raise NotImplementedError('Method inherited from Beam() class, not applicable for BeamArray objects')
-

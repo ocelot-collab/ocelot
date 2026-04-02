@@ -111,7 +111,11 @@ def a_twiss_dictionary():
 @pytest.fixture
 def a_twiss_instance(a_twiss_dictionary):
     result = Twiss()
-    for key, value in a_twiss_dictionary.items():
+    keys = list(a_twiss_dictionary.keys())
+    if "E" in a_twiss_dictionary:
+        keys = ["E"] + [key for key in keys if key != "E"]
+    for key in keys:
+        value = a_twiss_dictionary[key]
         if not hasattr(result, key):
             raise AttributeError(f"Twiss instance has no {key} attribute.")
         setattr(result, key, value)

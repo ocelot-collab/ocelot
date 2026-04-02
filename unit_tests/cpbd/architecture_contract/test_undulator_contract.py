@@ -1,6 +1,7 @@
 from ocelot.cpbd.elements import Undulator
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.transformations.runge_kutta import RungeKuttaTM
+from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 from ocelot.cpbd.transformations.undulator_test import UndulatorTestTM
 
@@ -32,3 +33,20 @@ def test_magnetic_lattice_can_select_runge_kutta_for_undulator_family():
 
     assert all(isinstance(tm, RungeKuttaTM) for tm in und.tms)
     assert all(isinstance(tm, TransferMap) for tm in und.first_order_tms)
+
+
+def test_undulator_declares_second_order_tracking():
+    und = Undulator(lperiod=0.03, nperiods=10, Kx=1.2, eid="U4")
+
+    und.set_tm(SecondTM)
+
+    assert all(isinstance(tm, SecondTM) for tm in und.tms)
+    assert all(isinstance(tm, TransferMap) for tm in und.first_order_tms)
+
+
+def test_global_second_order_request_keeps_undulator_on_second_tm():
+    und = Undulator(lperiod=0.03, nperiods=10, Kx=1.2, eid="U5")
+
+    MagneticLattice((und,), method={"global": SecondTM})
+
+    assert all(isinstance(tm, SecondTM) for tm in und.tms)

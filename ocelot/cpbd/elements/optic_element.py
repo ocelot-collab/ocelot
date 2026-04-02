@@ -34,8 +34,9 @@ class OpticElement:
     internal first-order path that exists for optics. ``tm_policy`` makes the
     public selection rule explicit:
 
-    - ``generic`` wrappers allow declared TMs and keep the legacy hook-based
-      fallback path for undeclared requests
+    - ``generic`` wrappers allow declared TMs; explicit undeclared requests
+      raise, while global lattice requests may warn and fall back to
+      ``default_tm``
     - ``pinned`` wrappers always normalize active tracking back to their
       ``default_tm``
     """
@@ -75,7 +76,7 @@ class OpticElement:
         except (AttributeError, NotImplementedError) as exc:
             raise self._tm_contract_error(TransferMap, first_order_only=True) from exc
         self._kwargs = params  # Storing transforamtion sp
-        requested_tm = self._normalize_tm_request(tm, stacklevel=5)
+        requested_tm = self._normalize_tm_request(tm, request_source="explicit", stacklevel=5)
         self._activate_tm(requested_tm, **params)
         self.__is_init = True  # needed to disable __getattr__ and __setattr__ in __init__ phase. Do not add new attributes after.
 
@@ -195,12 +196,10 @@ class OpticElement:
         except (AttributeError, NotImplementedError) as exc:
             if self._is_declared_tm(tm) or tm == self.default_tm:
                 raise self._tm_contract_error(tm) from exc
-            warnings.warn(
-                f"Can't set {tm.__name__} for {self.__class__.__name__}; "
-                f"falling back to default {self.default_tm.__name__}.",
-                stacklevel=3,
-            )
-            self._activate_tm(self.default_tm, **params)
+            raise RuntimeError(
+                f"{self.__class__.__name__} does not declare support for {tm.__name__}. "
+                "The request should have been normalized before TM construction."
+            ) from exc
 
     def _validate_tm_declarations(self) -> None:
         """Check that the family default is part of the declared TM contract."""
@@ -224,15 +223,6 @@ class OpticElement:
         """Return True when the wrapper explicitly declares the TM as supported."""
         return self.supported_tms is not None and tm in self.supported_tms
 
-    def _warn_if_undeclared_tm(self, tm: Type[Transformation]) -> None:
-        """Warn when a generic wrapper is asked for an undeclared TM."""
-        if not self._is_declared_tm(tm):
-            warnings.warn(
-                f"{self.__class__.__name__} does not declare support for {tm.__name__}; "
-                "trying legacy hook-based fallback.",
-                stacklevel=3,
-            )
-
     def _warn_pinned_tm_request(self, tm: Type[Transformation], stacklevel: int) -> None:
         """Warn when a pinned wrapper is asked to use a non-default active TM."""
         warnings.warn(
@@ -241,12 +231,37 @@ class OpticElement:
             stacklevel=stacklevel,
         )
 
-    def _normalize_tm_request(self, tm: Type[Transformation], stacklevel: int) -> Type[Transformation]:
-        """Normalize TM requests according to the wrapper's explicit policy."""
+    def _warn_global_tm_fallback(self, tm: Type[Transformation], stacklevel: int) -> None:
+        """Warn when a global lattice TM request falls back to the family default."""
+        warnings.warn(
+            f"{self.__class__.__name__} does not declare support for {tm.__name__}; "
+            f"global lattice request falls back to default {self.default_tm.__name__}.",
+            stacklevel=stacklevel,
+        )
+
+    @staticmethod
+    def _validate_request_source(request_source: str) -> None:
+        """Validate the public request source contract."""
+        if request_source not in {"explicit", "global"}:
+            raise RuntimeError(
+                f"Unsupported request_source={request_source!r}. Expected 'explicit' or 'global'."
+            )
+
+    def _normalize_tm_request(self, tm: Type[Transformation], request_source: str, stacklevel: int) -> Type[Transformation]:
+        """Normalize TM requests according to the wrapper policy and request source."""
+        self._validate_request_source(request_source)
         if self.tm_policy == "pinned" and tm != self.default_tm:
             self._warn_pinned_tm_request(tm, stacklevel=stacklevel)
             return self.default_tm
-        return tm
+        if tm == self.default_tm or self._is_declared_tm(tm):
+            return tm
+        if request_source == "global":
+            self._warn_global_tm_fallback(tm, stacklevel=stacklevel)
+            return self.default_tm
+        raise RuntimeError(
+            f"{self.__class__.__name__} does not declare support for {tm.__name__}. "
+            f"Explicit requests must use supported_tms={self.supported_tms} or default_tm={self.default_tm.__name__}."
+        )
 
     @staticmethod
     def _tm_hook_family(tm: Type[Transformation]) -> str:
@@ -299,7 +314,6 @@ class OpticElement:
             self._tms = self.first_order_tms
             self._tm_class_type = TransferMap
             return
-        self._warn_if_undeclared_tm(tm)
         self.__init_tms(tm, **params)
 
     def apply(self, X: np.ndarray, energy: float):
@@ -307,15 +321,17 @@ class OpticElement:
         for tm in self.tms:
             tm.map_function(X, energy)
 
-    def set_tm(self, tm: Transformation, **params):
+    def set_tm(self, tm: Transformation, request_source: str = "explicit", **params):
         """
         Set the active tracking method for the wrapper.
 
         Declared support is expected to be buildable. ``tm_policy='generic'``
-        keeps the legacy undeclared-request fallback path. ``tm_policy='pinned'``
-        always normalizes active tracking back to ``default_tm``.
+        treats explicit undeclared requests as errors, while
+        ``request_source='global'`` allows a warning and fallback to
+        ``default_tm``. ``tm_policy='pinned'`` always normalizes active
+        tracking back to ``default_tm``.
         """
-        requested_tm = self._normalize_tm_request(tm, stacklevel=4)
+        requested_tm = self._normalize_tm_request(tm, request_source=request_source, stacklevel=4)
         new_kwargs = params if params and params != self._kwargs else None
         if requested_tm != self._tm_class_type or new_kwargs:
             if new_kwargs:

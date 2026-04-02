@@ -212,6 +212,8 @@ Recommended meaning:
 - `supported_tms` should list wrapper-selectable active tracking methods
 - it should not be used to encode the always-available `TransferMap` optics path
 - if a family keeps a `TransferMap` path only for `first_order_tms`, that should be documented separately
+- for audited `tm_policy = "generic"` wrappers, `supported_tms` should match the TM families that the atom can really build for active tracking
+- `tm_policy = "pinned"` wrappers are the deliberate exception: their atoms may build more than one TM family internally, but the wrapper still keeps active tracking pinned to `default_tm`
 
 One more important point:
 
@@ -237,7 +239,7 @@ The columns below deliberately separate:
 | `Marker` | No | `TransferMap` via generic `Element` first-order fallback | `TransferMap`, `SecondTM` | none | Zero-length reference point. |
 | `Monitor` | No | `TransferMap` via generic `Element` first-order fallback | `TransferMap`, `SecondTM` | none | Diagnostic state such as `x`, `y`, `x_ref`, `y_ref` lives on the atom. |
 | `Matrix` | No | `TransferMap` from stored `R` / `B` data | `TransferMap`, `SecondTM` | none | Sliced sections currently fall back to a drift-like first-order map rather than slicing the stored matrix. |
-| `UnknownElement` | No | `TransferMap` via inherited `Magnet` first-order hook | no audited `supported_tms` declaration yet | generic wrapper still lets `TransferMap`, `SecondTM`, and `KickTM` activate today | Legacy placeholder family rather than a clearly modeled element type. |
+| `UnknownElement` | No | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `SecondTM`, `KickTM` | none | Legacy placeholder family, but its generic `Magnet` hook surface is now declared explicitly. |
 | `Pulse` | n/a | n/a | n/a | n/a | Separate helper object for time-dependent kicks; not part of the `OpticElement` wrapper/atom/TM stack. |
 
 ### Magnet-like families
@@ -247,11 +249,11 @@ The columns below deliberately separate:
 | `Drift` | No | `TransferMap` via `DriftAtom` first-order hook | `TransferMap`, `SecondTM`, `KickTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | none | Useful no-edge reference family. |
 | `Quadrupole` | No | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `SecondTM`, `KickTM` | none | Wrapper also exposes convenience properties `k1l` and `k2l`. |
 | `Sextupole` | No | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `SecondTM`, `KickTM` | none | `KickTM` is the important nonlinear tracking path here. |
-| `Octupole` | No | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `KickTM` | inherited `SecondTM` can still be built on the generic wrapper path today, but it is not declared as audited octupole physics | `k3` only enters the dedicated kick path. |
+| `Octupole` | No | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `SecondTM`, `KickTM` | none | `k3` only enters the dedicated kick path; `SecondTM` still comes from inherited generic `Magnet` second-order hooks. |
 | `Solenoid` | No | `TransferMap` via solenoid-specific first-order hook | `TransferMap`, `SecondTM` | none | `SecondTM` currently comes from the generic `Element` second-order fallback, not from a solenoid-specific nonlinear model. |
 | `Hcor` / `Vcor` | No | `TransferMap` via `CorAtom` first-order hook | `TransferMap`, `SecondTM` | none | These are not `Magnet` subclasses, so they do not inherit generic kick hooks. |
 | `XYQuadrupole` | No | `TransferMap` via `XYQuadrupoleAtom` first-order hook | `TransferMap` only | the atom also has `SecondTM` and inherited `KickTM` hook surface, but the wrapper intentionally pins tracking to first order | Important wrapper-level exception. |
-| `Bend`, `SBend`, `RBend` | Yes | `TransferMap` via bend entrance/main/exit first-order hooks | `TransferMap`, `SecondTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | `KickTM` can still be built mechanically through inherited `Magnet` hooks, but `kick.py` explicitly says it does not work for dipoles, so it is intentionally not declared | Edge maps are part of the real family behavior, not metadata. |
+| `Bend`, `SBend`, `RBend` | Yes | `TransferMap` via bend entrance/main/exit first-order hooks | `TransferMap`, `SecondTM`, `KickTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | none | `KickTM` is declared here because the bend atoms do provide the full inherited `Magnet` kick hook family, including edges. |
 
 ### RF, field-integrated, and special families
 
@@ -260,7 +262,7 @@ The columns below deliberately separate:
 | `Cavity` | Yes | `TransferMap` via cavity-specific first-order entrance/main/exit hooks | `CavityTM` only | first-order `TransferMap` exists for optics but is not kept as the active tracking method | Most important complex reference family for edge handling and `delta_e`. |
 | `TWCavity` | Yes | `TransferMap` via traveling-wave cavity first-order hooks | `TWCavityTM` only | first-order `TransferMap` exists for optics but is not kept as the active tracking method | The atom currently warns that this family is unfinished. |
 | `TDCavity` | No | `TransferMap` via `TDCavityAtom` first-order hook | `TransferMap`, `SecondTM` | none | The atom's `additional_tms = [SecondTM]` is informational only; `OpticElement` does not consume it. |
-| `Undulator` | No | `TransferMap` via `UndulatorAtom` first-order hook | `TransferMap`, `RungeKuttaTM`, `RungeKuttaTrTM`, `UndulatorTestTM` | none | `MagneticLattice.update_transfer_maps()` also has special-case length handling when a field map is attached. |
+| `Undulator` | No | `TransferMap` via `UndulatorAtom` first-order hook | `TransferMap`, `SecondTM`, `RungeKuttaTM`, `RungeKuttaTrTM`, `UndulatorTestTM` | none | `MagneticLattice.update_transfer_maps()` also has special-case length handling when a field map is attached. |
 | `Multipole` | No | `TransferMap` via `MultipoleAtom` first-order hook | `MultipoleTM` only | first-order `TransferMap` exists for optics but the wrapper intentionally pins active tracking to `MultipoleTM` | This first-order path is a linearized multipole optics map, not a pure drift. |
 
 ## Layer 1: Public Wrapper
@@ -435,11 +437,24 @@ to keep it explicit and centralized in `OpticElement`.
 
 Current policy types:
 
-- `tm_policy = "generic"` means the wrapper allows declared TMs and keeps the legacy hook-based fallback path for undeclared requests
+- `tm_policy = "generic"` means the wrapper allows declared TMs, raises on explicit undeclared requests, and only lets global lattice requests warn and fall back to `default_tm`
 - `tm_policy = "pinned"` means the wrapper always normalizes active tracking back to its `default_tm`
 
 This removes the need for family-specific warning and fallback code in wrappers
 such as `Cavity`, `TWCavity`, `Multipole`, and `XYQuadrupole`.
+
+Example of the `generic` policy:
+
+- if `Quadrupole.supported_tms = {TransferMap, SecondTM, KickTM}` and the user requests `SecondTM`, the wrapper treats that as an explicitly supported active TM
+- if the user requests an undeclared TM such as `RungeKuttaTM` directly through `quad.set_tm(RungeKuttaTM)` or `Quadrupole(..., tm=RungeKuttaTM)`, the wrapper raises because that is an explicit unsupported request
+- if a lattice applies `method={"global": RungeKuttaTM}`, the same undeclared request is treated as permissive: the wrapper warns and falls back to `default_tm`
+
+This is intentionally different from the old broad hook-based fallback path.
+The remaining cleanup should continue by auditing families and either:
+
+- declaring support explicitly in `supported_tms`
+- pinning the family with `tm_policy = "pinned"`
+- or, for rare unaudited families, leaving only the family `default_tm` as the safe path
 
 ### 3. The wrapper/atom split is still externally relevant
 
@@ -541,11 +556,12 @@ Current policy in the main architecture:
 
 - `default_tm` is the family fallback for active tracking
 - `supported_tms`, when declared, should list wrapper-selectable active tracking TMs
-- `tm_policy = "generic"` means the wrapper allows declared TMs and keeps the legacy undeclared-request fallback path
+- `tm_policy = "generic"` means the wrapper allows declared TMs, raises on explicit undeclared requests, and only permits fallback for global lattice requests
 - `tm_policy = "pinned"` means the wrapper normalizes active tracking back to `default_tm`
 - the `TransferMap` optics path used by `first_order_tms` is a separate concept and may exist even when `TransferMap` is not an allowed active TM for the wrapper
 - declared TMs must actually build from the atom hooks; otherwise that is treated as a bug in the declaration
-- generic wrappers still warn before using the legacy undeclared-request path
+- generic wrappers use strict errors for explicit undeclared requests
+- generic wrappers warn and fall back only for `MagneticLattice(method={"global": ...})`
 - pinned wrappers warn and normalize active tracking back to `default_tm`
 
 Goal:
@@ -579,11 +595,17 @@ Goal:
 Current rule:
 
 - declared support that cannot be built raises clearly
-- undeclared requests on generic wrappers warn and use the existing hook-based fallback behavior
+- explicit undeclared requests on generic wrappers raise clearly
+- global lattice requests on generic wrappers warn and fall back to `default_tm`
 - pinned wrappers warn and normalize active tracking back to `default_tm`
 
 This keeps user-facing behavior conservative while still making bad
 declarations fail fast in tests and development.
+
+There is still real code that relies on broad lattice-level TM requests such as
+`MagneticLattice(method={"global": SecondTM})`. That is why the permissive
+fallback now lives only on the explicit global lattice path, not on direct
+family-specific or user-specific requests.
 
 Goal:
 

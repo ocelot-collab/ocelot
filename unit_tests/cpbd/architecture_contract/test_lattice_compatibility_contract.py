@@ -1,7 +1,10 @@
+import pytest
+
 from ocelot.cpbd.elements import Cavity, Drift, Quadrupole
 from ocelot.cpbd.elements.cavity import CavityTM
 from ocelot.cpbd.latticeIO import LatticeIO
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.transformations.runge_kutta import RungeKuttaTM
 from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 
@@ -28,3 +31,19 @@ def test_latticeio_element_definition_reads_state_from_wrapper_element():
     assert "l=0.4" in line
     assert "k1=-0.6" in line
     assert "eid='Q3'" in line
+
+
+def test_global_method_request_warns_and_falls_back_for_undeclared_tm():
+    quad = Quadrupole(l=0.4, k1=1.2, eid="Q4")
+
+    with pytest.warns(UserWarning, match="global lattice request falls back to default TransferMap"):
+        lat = MagneticLattice((quad,), method={"global": RungeKuttaTM})
+
+    assert all(isinstance(tm, TransferMap) for tm in lat.sequence[0].tms)
+
+
+def test_family_specific_method_request_is_strict_for_undeclared_tm():
+    quad = Quadrupole(l=0.4, k1=1.2, eid="Q5")
+
+    with pytest.raises(RuntimeError, match="Quadrupole does not declare support for RungeKuttaTM"):
+        MagneticLattice((quad,), method={Quadrupole: RungeKuttaTM})

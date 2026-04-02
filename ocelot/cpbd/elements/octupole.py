@@ -12,7 +12,7 @@ class Octupole(OpticElement):
     k3 - strength of octupole lens in [1/m^4].
     """
     default_tm = TransferMap
-    supported_tms = {TransferMap, KickTM}
+    supported_tms = {TransferMap, SecondTM, KickTM}
 
     def __init__(self, l=0., k3=0., tilt=0., eid=None, tm=TransferMap, **kwargs):
         super().__init__(OctupoleAtom(l=l, k3=k3, tilt=tilt, eid=eid, **kwargs), tm=tm, default_tm=TransferMap)

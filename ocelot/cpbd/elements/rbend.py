@@ -1,6 +1,7 @@
 from ocelot.cpbd.r_matrix import uni_matrix
 from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.elements.rbend_atom import RBendAtom
+from ocelot.cpbd.transformations.kick import KickTM
 from ocelot.cpbd.transformations.runge_kutta import RungeKuttaTM
 from ocelot.cpbd.transformations.runge_kutta_tr import RungeKuttaTrTM
 from ocelot.cpbd.transformations.second_order import SecondTM
@@ -25,7 +26,7 @@ class RBend(OpticElement):
     h_pole2 - the curvature (1/r) of the exit face
     """
     default_tm = TransferMap
-    supported_tms = {TransferMap, SecondTM, RungeKuttaTM, RungeKuttaTrTM}
+    supported_tms = {TransferMap, SecondTM, KickTM, RungeKuttaTM, RungeKuttaTrTM}
 
     def __init__(self, l=0., angle=0., k1=0., k2=0., e1=None, e2=None, tilt=0.,
                  gap=0, h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None, tm=TransferMap, **kwargs):

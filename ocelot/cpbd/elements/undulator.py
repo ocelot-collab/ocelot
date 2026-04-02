@@ -2,13 +2,14 @@ from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.elements.undulator_atom import UndulatorAtom
 from ocelot.cpbd.transformations.runge_kutta import RungeKuttaTM
 from ocelot.cpbd.transformations.runge_kutta_tr import RungeKuttaTrTM
+from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 from ocelot.cpbd.transformations.undulator_test import UndulatorTestTM
 
 
 class Undulator(OpticElement):
     default_tm = TransferMap
-    supported_tms = {TransferMap, RungeKuttaTM, RungeKuttaTrTM, UndulatorTestTM}
+    supported_tms = {TransferMap, SecondTM, RungeKuttaTM, RungeKuttaTrTM, UndulatorTestTM}
 
     def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., phase=0, end_poles='1', field_file=None, eid=None, tm=TransferMap, **params):
         super().__init__(UndulatorAtom(lperiod=lperiod, nperiods=nperiods, Kx=Kx, Ky=Ky, phase=phase, end_poles=end_poles, field_file=field_file, eid=eid),

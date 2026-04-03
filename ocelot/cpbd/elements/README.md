@@ -122,7 +122,7 @@ Important:
 
 - not every family allows every TM to stay active
 - families such as `Cavity`, `TWCavity`, `Multipole`, and `XYQuadrupole` expose only one active TM by declaring `supported_tms = {default_tm}`
-- those single-method families still keep their `TransferMap` optics path in `first_order_tms`, but explicit requests for another active TM raise
+- those single-method families still keep their `TransferMap` path in `first_order_tms` for optics / Twiss calculations, not for active beam tracking; explicit requests for another active TM raise. See the `TM Roles` section below.
 - only broad global lattice requests such as `method={"global": SecondTM}` are allowed to warn and fall back to `default_tm`
 
 This is the central call chain:
@@ -170,6 +170,10 @@ Before discussing element families, keep these four notions separate.
 For current `OpticElement` wrappers, `first_order_tms` is always built with
 `TransferMap`.
 
+In practice, `TransferMap` is the historical name for the linear first-order
+map, i.e. the `R`-matrix-based path used by Twiss and other linear optics
+code.
+
 That path is used for:
 
 - Twiss / linear optics code
@@ -178,6 +182,24 @@ That path is used for:
 
 So a family can have a real `TransferMap` optics path even when the wrapper
 does not allow `TransferMap` to stay active as the tracking method.
+
+This is the important distinction:
+
+- every `OpticElement` family is expected to support the `TransferMap`
+  first-order optics path through `first_order_tms`
+- but `TransferMap` belongs in `supported_tms` only when that family also
+  allows `TransferMap` as an active particle / beam tracking method for `tms`
+
+So there are two distinct questions:
+
+1. can the family build the linear `TransferMap` optics path for Twiss and `R()`
+2. is `TransferMap` also allowed to stay active for `ParticleArray` tracking
+
+For example, `Cavity` answers:
+
+- yes for the optics/Twiss path, because `first_order_tms` is still built with
+  `TransferMap`
+- no for active tracking, because `supported_tms = {CavityTM}`
 
 ### 2. Active tracking TM
 
@@ -211,11 +233,16 @@ This hook surface may be broader than the wrapper contract.
 
 Recommended meaning:
 
-- `supported_tms` should list wrapper-selectable active tracking methods
+- `supported_tms` should list wrapper-selectable active particle / beam tracking methods
 - it should not be used to encode the always-available `TransferMap` optics path
 - if a family keeps a `TransferMap` path only for `first_order_tms`, that should be documented separately
 - for audited multi-method wrappers, `supported_tms` should match the TM families that the atom can really build for active tracking
 - a family that intentionally exposes only one active TM should use `supported_tms = {default_tm}`, even if its atom can build more internal paths for optics or legacy helper code
+
+So, in short:
+
+- `first_order_tms` answers: what linear `TransferMap` path exists for optics / Twiss
+- `supported_tms` answers: what tracking methods may be selected for beam tracking
 
 One more important point:
 
@@ -240,7 +267,7 @@ The columns below deliberately separate:
 | `Aperture` | No | `TransferMap` via generic `Element` first-order fallback | `TransferMap`, `SecondTM` | none | No dedicated aperture-specific transformation; mainly a holder for aperture metadata and offsets. |
 | `Marker` | No | `TransferMap` via generic `Element` first-order fallback | `TransferMap`, `SecondTM` | none | Zero-length reference point. |
 | `Monitor` | No | `TransferMap` via generic `Element` first-order fallback | `TransferMap`, `SecondTM` | none | Diagnostic state such as `x`, `y`, `x_ref`, `y_ref` lives on the atom. |
-| `Matrix` | No | `TransferMap` from stored `R` / `B` data | `TransferMap`, `SecondTM` | none | Sliced sections currently fall back to a drift-like first-order map rather than slicing the stored matrix. |
+| `Matrix` | No | `TransferMap` from stored `R` / `B` data | `TransferMap`, `SecondTM` | none | Full-element maps use the stored `R` / `B` / `T` data. Partial slices are intentionally limited: `first_order_only=True` returns a drift-like first-order optics approximation with linearly scaled `delta_e`, while active partial tracking slices raise. |
 | `UnknownElement` | No | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `SecondTM`, `KickTM` | none | Legacy placeholder family, but its generic `Magnet` hook surface is now declared explicitly. |
 | `Pulse` | n/a | n/a | n/a | n/a | Separate helper object for time-dependent kicks; not part of the `OpticElement` wrapper/atom/TM stack. |
 
@@ -266,6 +293,36 @@ The columns below deliberately separate:
 | `TDCavity` | No | `TransferMap` via `TDCavityAtom` first-order hook | `TransferMap`, `SecondTM` | none | The atom's `additional_tms = [SecondTM]` is informational only; `OpticElement` does not consume it. |
 | `Undulator` | No | `TransferMap` via `UndulatorAtom` first-order hook | `TransferMap`, `SecondTM`, `RungeKuttaTM`, `RungeKuttaTrTM`, `UndulatorTestTM` | none | `MagneticLattice.update_transfer_maps()` also has special-case length handling when a field map is attached. |
 | `Multipole` | No | `TransferMap` via `MultipoleAtom` first-order hook | `MultipoleTM` only | first-order `TransferMap` exists for optics but the wrapper intentionally exposes only `MultipoleTM` as an active tracking method | This first-order path is a linearized multipole optics map, not a pure drift. |
+
+### Matrix Slice Policy
+
+`Matrix` is a special case because it stores a full black-box map (`R`, `B`,
+optional `T`, and `delta_e`) for the whole element, but it does not define a
+simple or trustworthy internal physics model for arbitrary partial lengths.
+
+Current policy:
+
+- the full element is exact and uses the stored `R` / `B` / `T` data
+- a partial slice requested with `first_order_only=True` is allowed only as an
+  optics / Twiss approximation
+- that approximation intentionally behaves like a drift-like first-order slice
+  with linearly scaled `delta_e`
+- a partial slice requested for active tracking (`first_order_only=False`) is
+  rejected explicitly
+
+Implementation note:
+
+- `elements/matrix.py` uses a small internal helper class,
+  `_MatrixFirstOrderSliceAtom`
+- this helper is not a new public element family; it is only a local way to
+  reuse the existing `DriftAtom -> TransferMap` first-order path for optics
+  interpolation
+- it carries the requested slice length plus the wrapper-visible geometry
+  fields (`dx`, `dy`, `tilt`) and scaled `delta_e`
+
+The explicit tracking guard lives in `Matrix.get_section_tms(...)`: if the
+request is for a partial slice and `first_order_only` is not set, the wrapper
+raises instead of silently inventing an active interior tracking map.
 
 ## Layer 1: Public Wrapper
 
@@ -361,15 +418,28 @@ Typical examples:
 - `tm_params/cavity_params.py`
 - `tm_params/kick_params.py`
 - `tm_params/runge_kutta_params.py`
+- `tm_params/multipole_params.py`
+- `tm_params/undulator_test_params.py`
 
 These objects are the explicit contract between the atom and the transformation.
 
-Examples:
+Overview:
 
-- `FirstOrderParams` carries `R`, `B`, `tilt`
-- `SecondOrderParams` adds `T`, `dx`, `dy`
-- `CavityParams` adds `v`, `freq`, `phi`
-- `KickParams` carries strengths and offsets for kick-style tracking
+| TMParams class | Main contents | Used by | What it means |
+| --- | --- | --- | --- |
+| `TMParams` | base marker class | all transformations | shared boundary type between atom hooks and transformations |
+| `FirstOrderParams` | `R`, `B`, `tilt` | `TransferMap` and as base for several other param classes | linear map plus additive offset and roll angle |
+| `SecondOrderParams` | `R`, `B`, `T`, `tilt`, `dx`, `dy` | `SecondTM` | linear part plus second-order tensor and source offsets used when the atom built the nonlinear map |
+| `CavityParams` | `R`, `B`, `tilt`, `v`, `freq`, `phi` | `CavityTM`, `TWCavityTM` | linear cavity map plus RF settings needed for energy gain and longitudinal RF terms |
+| `KickParams` | `dx`, `dy`, `tilt`, `angle`, `k1`, `k2`, `k3` | `KickTM` | strengths and offsets for algorithmic kick tracking rather than a prebuilt matrix |
+| `RungeKuttaParams` | `mag_field` callable | `RungeKuttaTM`, `RungeKuttaTrTM` | field callback used by the integrator |
+| `MultipoleParams` | `kn` | `MultipoleTM` | multipole coefficient list for the dedicated multipole kick polynomial |
+| `UndulatorTestParams` | `lperiod`, `Kx`, `ax` | `UndulatorTestTM` | minimal metadata for the simplified/test undulator map |
+
+Two practical notes:
+
+- some `TMParams` classes are pure data holders, while others add small helpers such as `get_rotated_R()` or `get_rotated_T()`
+- these classes are not just documentation; they are the explicit boundary that lets one atom family feed more than one transformation without mixing all algorithm-specific data into the atom itself
 
 This part of the design is worth keeping. It is one of the reasons the current system can support multiple tracking algorithms per element family.
 
@@ -439,11 +509,25 @@ to keep it explicit and centralized in `OpticElement`.
 
 Current rule:
 
-- if `Quadrupole.supported_tms = {TransferMap, SecondTM, KickTM}` and the user requests `SecondTM`, the wrapper treats that as an explicitly supported active TM
+- if `Quadrupole.supported_tms = {TransferMap, SecondTM, KickTM}`, that means a beam may be tracked through this wrapper with first-order `TransferMap`, second-order `SecondTM`, or kick-based `KickTM`
+- if the user requests `SecondTM` on that `Quadrupole`, the wrapper treats that as an explicitly supported active tracking method
+- if `Quadrupole.supported_tms` contains `TransferMap`, that also means `TransferMap` may be used as the active beam-tracking method for `ParticleArray` tracking
 - if the user requests an undeclared TM such as `RungeKuttaTM` directly through `quad.set_tm(RungeKuttaTM)` or `Quadrupole(..., tm=RungeKuttaTM)`, the wrapper raises because that is an explicit unsupported request
 - if a lattice applies `method={"global": RungeKuttaTM}`, the same undeclared request is treated as permissive: the wrapper warns and falls back to `default_tm`
 - if `Cavity.supported_tms = {CavityTM}` and the user requests `TransferMap` directly, the wrapper raises because `Cavity` exposes only one active tracking TM
 - if a lattice applies `method={"global": SecondTM}` to a sequence containing a `Cavity`, the wrapper warns and falls back to `CavityTM`
+
+This also explains the `TransferMap` / `SecondTM` case under global lattice
+assignment:
+
+- if a family does not list `TransferMap` or `SecondTM` in `supported_tms`,
+  then `MagneticLattice(method={"global": TransferMap})` or
+  `MagneticLattice(method={"global": SecondTM})` does not force that family to
+  use those methods
+- instead, the wrapper warns and falls back to its `default_tm`
+- `Cavity` is the clearest example: global `TransferMap` or global `SecondTM`
+  still leaves the active tracking method at `CavityTM`, while the
+  `TransferMap` optics path remains available in `first_order_tms`
 
 Internally, `OpticElement.set_tm(...)` distinguishes these cases with
 `request_source`:
@@ -539,7 +623,7 @@ Any future cleanup should preserve the following behavior.
 
 - first-order maps remain available even when active tracking uses another method
 - edge elements still behave as `ENTRANCE -> MAIN -> EXIT`
-- sliced tracking preserves current semantics
+- sliced tracking preserves current semantics for families that support active partial slices; `Matrix` is intentionally limited to optics-only partial slices
 - `create_delta_e(...)` scales correctly for sliced maps
 - caches are invalidated when tracking-relevant physics parameters change
 - the public wrapper API used by serialization and adaptor code remains stable
@@ -753,7 +837,7 @@ These tests protect cleanup around cavities and other active elements.
 
 1. Only the `MAIN` map contributes `delta_e`.
 
-2. `create_delta_e(total_length, delta_length)` scales correctly for slices.
+2. `create_delta_e(total_length, delta_length)` scales correctly for supported slices or documented optics-only approximations.
 
 3. Full-element `delta_e` equals the sum of slice `delta_e` values within tolerance.
 

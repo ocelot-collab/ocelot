@@ -94,6 +94,15 @@ def test_sbend_first_order_only_slice_uses_first_order_maps():
     assert all(isinstance(tm, TransferMap) for tm in section)
 
 
+def test_sbend_trailing_half_first_order_only_slice_uses_first_order_maps():
+    bend = SBend(l=1.2, angle=0.2, e1=0.05, e2=0.04, tm=SecondTM, eid="B4_TRAIL")
+
+    section = bend.get_section_tms(start_l=bend.l / 2.0, delta_l=bend.l / 2.0, first_order_only=True)
+
+    assert _tm_types(section) == [TMTypes.MAIN, TMTypes.EXIT]
+    assert all(isinstance(tm, TransferMap) for tm in section)
+
+
 def test_sbend_ignore_edges_returns_only_main_slice():
     bend = SBend(l=1.2, angle=0.2, e1=0.05, e2=0.04, eid="B5")
 
@@ -109,6 +118,15 @@ def test_cavity_full_section_keeps_edge_sequence_with_cavity_tm():
 
     assert _tm_types(section) == [TMTypes.ENTRANCE, TMTypes.MAIN, TMTypes.EXIT]
     assert all(isinstance(tm, CavityTM) for tm in section)
+
+
+def test_cavity_trailing_half_first_order_only_slice_uses_transfer_maps():
+    cavity = Cavity(l=0.7, freq=1.3e9, phi=20.0, v=0.005, eid="C_EDGE_TRAIL")
+
+    section = cavity.get_section_tms(start_l=cavity.l / 2.0, delta_l=cavity.l / 2.0, first_order_only=True)
+
+    assert _tm_types(section) == [TMTypes.MAIN, TMTypes.EXIT]
+    assert all(isinstance(tm, TransferMap) for tm in section)
 
 
 def test_has_edge_true_requires_first_order_edge_hooks_for_optics_path():

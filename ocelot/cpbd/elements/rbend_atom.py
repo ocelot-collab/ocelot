@@ -34,3 +34,14 @@ class RBendAtom(BendAtom):
         super().__init__(l=l, angle=angle, e1=e1, e2=e2, k1=k1, k2=k2, tilt=tilt,
                          gap=gap, h_pole1=h_pole1, h_pole2=h_pole2, fint=fint, fintx=fintx, eid=eid, **kwargs)
 
+    def __setattr__(self, name, value):
+        if name == "angle" and "angle" in self.__dict__:
+            # RBend stores edge angles with the rectangular half-angle shift
+            # already applied, so later angle updates must carry that shift
+            # forward by half of the delta bend angle.
+            half_delta = (value - self.__dict__["angle"]) / 2.
+            if "e1" in self.__dict__:
+                object.__setattr__(self, "e1", self.__dict__["e1"] + half_delta)
+            if "e2" in self.__dict__:
+                object.__setattr__(self, "e2", self.__dict__["e2"] + half_delta)
+        super().__setattr__(name, value)

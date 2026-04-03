@@ -15,5 +15,5 @@ class Aperture(OpticElement):
     """
     default_tm = TransferMap
     supported_tms = {TransferMap, SecondTM}
-    def __init__(self, xmax=np.inf, ymax=np.inf, dx=0, dy=0, type="rect", eid=None, tm=TransferMap, **kwargs):
-        super().__init__(ApertureAtom(xmax=xmax, ymax=ymax, dx=dx, dy=dy, type=type, eid=eid, **kwargs), tm=tm, default_tm=TransferMap)
+    def __init__(self, xmax=np.inf, ymax=np.inf, dx=0, dy=0, type="rect", eid=None, tm=None, **kwargs):
+        super().__init__(ApertureAtom(xmax=xmax, ymax=ymax, dx=dx, dy=dy, type=type, eid=eid, **kwargs), tm=tm)

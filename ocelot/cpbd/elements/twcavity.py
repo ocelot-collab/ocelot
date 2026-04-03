@@ -13,6 +13,5 @@ class TWCavity(OpticElement):
     default_tm = TWCavityTM
     supported_tms = {TWCavityTM}
 
-    def __init__(self, l=0., v=0., phi=0., freq=0., eid=None, tm=TWCavityTM, **kwargs):
-        super().__init__(TWCavityAtom(l=l, v=v, phi=phi, freq=freq, eid=eid, **kwargs), tm=tm,
-                         default_tm=TWCavityTM)
+    def __init__(self, l=0., v=0., phi=0., freq=0., eid=None, tm=None, **kwargs):
+        super().__init__(TWCavityAtom(l=l, v=v, phi=phi, freq=freq, eid=eid, **kwargs), tm=tm)

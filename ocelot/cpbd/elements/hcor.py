@@ -19,5 +19,5 @@ class Hcor(OpticElement):
     default_tm = TransferMap
     supported_tms = {TransferMap, SecondTM}
 
-    def __init__(self, l=0., angle=0., eid=None, tm=TransferMap, **kwargs):
-        super().__init__(HcorAtom(l=l, angle=angle, eid=eid, **kwargs), tm=tm, default_tm=TransferMap)
+    def __init__(self, l=0., angle=0., eid=None, tm=None, **kwargs):
+        super().__init__(HcorAtom(l=l, angle=angle, eid=eid, **kwargs), tm=tm)

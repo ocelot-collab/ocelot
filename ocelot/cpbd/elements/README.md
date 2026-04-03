@@ -290,7 +290,7 @@ The columns below deliberately separate:
 | --- | --- | --- | --- | --- | --- |
 | `Cavity` | Yes | `TransferMap` via cavity-specific first-order entrance/main/exit hooks | `CavityTM` only | first-order `TransferMap` exists for optics but is not exposed as an active tracking method | Most important complex reference family for edge handling and `delta_e`. |
 | `TWCavity` | Yes | `TransferMap` via traveling-wave cavity first-order hooks | `TWCavityTM` only | first-order `TransferMap` exists for optics but is not exposed as an active tracking method | The atom currently warns that this family is unfinished. |
-| `TDCavity` | No | `TransferMap` via `TDCavityAtom` first-order hook | `TransferMap`, `SecondTM` | none | The atom's `additional_tms = [SecondTM]` is informational only; `OpticElement` does not consume it. |
+| `TDCavity` | No | `TransferMap` via `TDCavityAtom` first-order hook | `TransferMap`, `SecondTM` | none | A straightforward no-edge RF family that follows the normal wrapper-declared TM contract. |
 | `Undulator` | No | `TransferMap` via `UndulatorAtom` first-order hook | `TransferMap`, `SecondTM`, `RungeKuttaTM`, `RungeKuttaTrTM`, `UndulatorTestTM` | none | `MagneticLattice.update_transfer_maps()` also has special-case length handling when a field map is attached. |
 | `Multipole` | No | `TransferMap` via `MultipoleAtom` first-order hook | `MultipoleTM` only | first-order `TransferMap` exists for optics but the wrapper intentionally exposes only `MultipoleTM` as an active tracking method | This first-order path is a linearized multipole optics map, not a pure drift. |
 
@@ -675,7 +675,7 @@ Current policy in the main architecture:
 Goal:
 
 - make supported behavior visible without relying on missing-method exceptions
-- later remove constructor duplication by letting `tm=None` resolve to the class `default_tm` instead of repeating the same TM in both the `__init__` signature and the class metadata
+- reduce wrapper constructor duplication by letting `tm=None` resolve to the class `default_tm` instead of repeating the same TM in both the `__init__` signature and the class metadata
 
 ### Phase 2: Make edge behavior more explicit
 

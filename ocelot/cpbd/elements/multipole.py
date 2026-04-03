@@ -12,5 +12,5 @@ class Multipole(OpticElement):
     default_tm = MultipoleTM
     supported_tms = {MultipoleTM}
 
-    def __init__(self, kn=0., eid=None, tm=MultipoleTM, **kwargs):
-        super().__init__(MultipoleAtom(kn=kn, eid=eid, **kwargs), tm=tm, default_tm=MultipoleTM)
+    def __init__(self, kn=0., eid=None, tm=None, **kwargs):
+        super().__init__(MultipoleAtom(kn=kn, eid=eid, **kwargs), tm=tm)

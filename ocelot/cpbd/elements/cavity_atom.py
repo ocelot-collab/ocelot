@@ -28,7 +28,7 @@ class CavityAtom(Element):
         kwargs.setdefault('width', 0.1)       # Bends are usually wider than 0.05
         kwargs.setdefault('height', 0.1)
         kwargs.setdefault('color', 'yellow') # Standard color for Dipoles
-        super().__init__(eid=eid, has_edge=True)
+        super().__init__(eid=eid, has_edge=True, **kwargs)
         self.l = l
         self.v = v  # in GV
         self.freq = freq  # Hz

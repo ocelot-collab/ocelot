@@ -37,8 +37,8 @@ class Matrix(OpticElement):
     default_tm = TransferMap
     supported_tms = {TransferMap, SecondTM}
 
-    def __init__(self, l=0., delta_e=0, eid=None, tm=TransferMap, **kwargs):
-        super().__init__(MatrixAtom(l=l, delta_e=delta_e, eid=eid, **kwargs), tm=tm, default_tm=TransferMap)
+    def __init__(self, l=0., delta_e=0, eid=None, tm=None, **kwargs):
+        super().__init__(MatrixAtom(l=l, delta_e=delta_e, eid=eid, **kwargs), tm=tm)
 
     def get_section_tms(self, delta_l: float, start_l: float = 0.0, ignore_edges=False, first_order_only=False) -> List[Transformation]:
         total_length = self.element.l

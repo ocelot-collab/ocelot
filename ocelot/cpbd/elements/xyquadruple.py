@@ -18,5 +18,5 @@ class XYQuadrupole(OpticElement):
     default_tm = TransferMap
     supported_tms = {TransferMap}
 
-    def __init__(self, l=0., x_offs=0.0, y_offs=0.0, k1=0.0, tilt=0.0, eid=None, tm=TransferMap, **kwargs):
-        super().__init__(XYQuadrupoleAtom(l=l, x_offs=x_offs, y_offs=y_offs, k1=k1, tilt=tilt, eid=eid, **kwargs), tm=tm, default_tm=TransferMap)
+    def __init__(self, l=0., x_offs=0.0, y_offs=0.0, k1=0.0, tilt=0.0, eid=None, tm=None, **kwargs):
+        super().__init__(XYQuadrupoleAtom(l=l, x_offs=x_offs, y_offs=y_offs, k1=k1, tilt=tilt, eid=eid, **kwargs), tm=tm)

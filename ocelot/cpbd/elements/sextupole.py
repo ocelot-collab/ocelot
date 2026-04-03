@@ -14,5 +14,5 @@ class Sextupole(OpticElement):
     default_tm = TransferMap
     supported_tms = {TransferMap, SecondTM, KickTM}
 
-    def __init__(self, l=0., k2=0., tilt=0., eid=None, tm=TransferMap, **kwargs):
-        super().__init__(SextupoleAtom(l=l, k2=k2, tilt=tilt, eid=eid, **kwargs), tm=tm, default_tm=TransferMap)
+    def __init__(self, l=0., k2=0., tilt=0., eid=None, tm=None, **kwargs):
+        super().__init__(SextupoleAtom(l=l, k2=k2, tilt=tilt, eid=eid, **kwargs), tm=tm)

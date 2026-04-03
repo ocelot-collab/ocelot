@@ -48,7 +48,8 @@ class OpticElement:
 
     __is_init = False  # needed to disable __getattr__ and __setattr__ until __init__ is executed
 
-    def __init__(self, element: Element, tm: Type[Transformation], default_tm: Type[Transformation], **params) -> None:
+    def __init__(self, element: Element, tm: Type[Transformation] | None = None,
+                 default_tm: Type[Transformation] | None = None, **params) -> None:
         """
         Create a wrapper around an element atom.
 
@@ -57,16 +58,18 @@ class OpticElement:
         element
             Physics implementation object.
         tm
-            Active transformation requested for tracking.
+            Active transformation requested for tracking. ``None`` means "use
+            the wrapper class default".
         default_tm
             Family default transformation used when a broad global lattice
-            request asks for an undeclared TM.
+            request asks for an undeclared TM. If omitted, the wrapper class
+            attribute ``default_tm`` is used.
         """
         # Physics state lives on `self.element`; framework/cache state stays on
         # the wrapper. This split lets us invalidate maps only when a physics
         # parameter changes.
         self.element = element
-        self.default_tm = default_tm
+        self.default_tm = default_tm if default_tm is not None else type(self).default_tm
         self._validate_tm_declarations()
         # First-order maps are always available because optics/Twiss code uses
         # them even when the active tracking method is something else. For
@@ -77,7 +80,9 @@ class OpticElement:
         except (AttributeError, NotImplementedError) as exc:
             raise self._tm_contract_error(TransferMap, first_order_only=True) from exc
         self._kwargs = params  # Storing transforamtion sp
-        requested_tm = self._normalize_tm_request(tm, request_source="explicit", stacklevel=5)
+        requested_tm = self.default_tm if tm is None else self._normalize_tm_request(
+            tm, request_source="explicit", stacklevel=5
+        )
         self._activate_tm(requested_tm, **params)
         self.__is_init = True  # needed to disable __getattr__ and __setattr__ in __init__ phase. Do not add new attributes after.
 

@@ -14,5 +14,5 @@ class Octupole(OpticElement):
     default_tm = TransferMap
     supported_tms = {TransferMap, SecondTM, KickTM}
 
-    def __init__(self, l=0., k3=0., tilt=0., eid=None, tm=TransferMap, **kwargs):
-        super().__init__(OctupoleAtom(l=l, k3=k3, tilt=tilt, eid=eid, **kwargs), tm=tm, default_tm=TransferMap)
+    def __init__(self, l=0., k3=0., tilt=0., eid=None, tm=None, **kwargs):
+        super().__init__(OctupoleAtom(l=l, k3=k3, tilt=tilt, eid=eid, **kwargs), tm=tm)

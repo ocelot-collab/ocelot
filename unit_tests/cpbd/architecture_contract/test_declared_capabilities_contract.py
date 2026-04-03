@@ -90,6 +90,16 @@ def test_representative_families_expose_current_default_tm_on_instances():
     assert undulator.default_tm is TransferMap
 
 
+def test_constructor_tm_none_uses_wrapper_default_tm():
+    drift = Drift(l=0.2, tm=None, eid="D_TM_NONE")
+    cavity = Cavity(l=0.3, v=0.002, freq=1.3e9, phi=0.0, tm=None, eid="C_TM_NONE")
+    multipole = Multipole(kn=[0.1, 0.2], tm=None, eid="MP_TM_NONE")
+
+    assert all(isinstance(tm, TransferMap) for tm in drift.tms)
+    assert all(isinstance(tm, CavityTM) for tm in cavity.tms)
+    assert all(isinstance(tm, MultipoleTM) for tm in multipole.tms)
+
+
 def test_single_method_families_expose_only_their_default_active_tm():
     cavity = Cavity(l=0.3, v=0.002, freq=1.3e9, phi=0.0, eid="C_POLICY")
     twcavity = TWCavity(l=0.3, v=0.002, freq=1.3e9, phi=0.0, eid="TWC_POLICY")

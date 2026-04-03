@@ -1,6 +1,6 @@
 import numpy as np
 
-from ocelot.cpbd.elements import Quadrupole
+from ocelot.cpbd.elements import Cavity, Quadrupole
 from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 
@@ -36,3 +36,11 @@ def test_quadrupole_parameter_change_rebuilds_first_order_and_active_maps():
     assert all(isinstance(tm, SecondTM) for tm in active_after)
     assert not np.allclose(r_before, quad.R(energy)[0])
     assert not np.allclose(t_before, quad.T(energy)[0])
+
+
+def test_cavity_wrapper_passes_plotting_kwargs_to_atom():
+    cavity = Cavity(width=0.2, height=0.3, color="red", eid="C_STYLE")
+
+    assert cavity.width == 0.2
+    assert cavity.height == 0.3
+    assert cavity.color == "red"

@@ -19,8 +19,8 @@ class Quadrupole(OpticElement):
     default_tm = TransferMap
     supported_tms = {TransferMap, SecondTM, KickTM}
 
-    def __init__(self, l: float = 0., k1: float = 0, k2: float = 0., tilt: float = 0., eid: str | None = None, tm=TransferMap, **kwargs):
-        super().__init__(QuadrupoleAtom(l=l, k1=k1, k2=k2, tilt=tilt, eid=eid, **kwargs), tm=tm, default_tm=TransferMap)
+    def __init__(self, l: float = 0., k1: float = 0, k2: float = 0., tilt: float = 0., eid: str | None = None, tm=None, **kwargs):
+        super().__init__(QuadrupoleAtom(l=l, k1=k1, k2=k2, tilt=tilt, eid=eid, **kwargs), tm=tm)
 
     @property
     def k1l(self) -> float:

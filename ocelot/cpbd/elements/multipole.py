@@ -11,7 +11,6 @@ class Multipole(OpticElement):
     """
     default_tm = MultipoleTM
     supported_tms = {MultipoleTM}
-    tm_policy = "pinned"
 
     def __init__(self, kn=0., eid=None, tm=MultipoleTM, **kwargs):
         super().__init__(MultipoleAtom(kn=kn, eid=eid, **kwargs), tm=tm, default_tm=MultipoleTM)

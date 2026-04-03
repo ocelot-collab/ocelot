@@ -14,7 +14,6 @@ class Cavity(OpticElement):
     """
     default_tm = CavityTM
     supported_tms = {CavityTM}
-    tm_policy = "pinned"
 
     def __init__(self, l=0., v=0., phi=0., freq=0., vx_up=0, vy_up=0, vxx_up=0, vxy_up=0,
                  vx_down=0, vy_down=0, vxx_down=0, vxy_down=0, eid=None, tm=CavityTM, **kwargs):

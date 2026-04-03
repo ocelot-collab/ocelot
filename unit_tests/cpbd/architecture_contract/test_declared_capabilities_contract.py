@@ -90,18 +90,16 @@ def test_representative_families_expose_current_default_tm_on_instances():
     assert undulator.default_tm is TransferMap
 
 
-def test_representative_families_expose_tm_policy_on_instances():
-    drift = Drift(l=0.2, eid="D_POLICY")
+def test_single_method_families_expose_only_their_default_active_tm():
     cavity = Cavity(l=0.3, v=0.002, freq=1.3e9, phi=0.0, eid="C_POLICY")
     twcavity = TWCavity(l=0.3, v=0.002, freq=1.3e9, phi=0.0, eid="TWC_POLICY")
     multipole = Multipole(kn=[0.1, 0.2], eid="MP_POLICY")
     xyquad = XYQuadrupole(l=0.3, x_offs=1e-3, y_offs=-1e-3, k1=0.2, eid="XY_POLICY")
 
-    assert drift.tm_policy == "generic"
-    assert cavity.tm_policy == "pinned"
-    assert twcavity.tm_policy == "pinned"
-    assert multipole.tm_policy == "pinned"
-    assert xyquad.tm_policy == "pinned"
+    assert cavity.supported_tms == {cavity.default_tm}
+    assert twcavity.supported_tms == {twcavity.default_tm}
+    assert multipole.supported_tms == {multipole.default_tm}
+    assert xyquad.supported_tms == {xyquad.default_tm}
 
 
 @pytest.mark.parametrize(
@@ -119,12 +117,12 @@ def test_declared_supported_tms_are_buildable(family_name, factory, declared_tms
         assert all(isinstance(tm, tm_class) for tm in element.tms), family_name
 
 
-def test_audited_generic_wrappers_declare_their_buildable_tm_surface():
+def test_multi_method_wrappers_declare_their_buildable_tm_surface():
     tm_candidates = (TransferMap, SecondTM, KickTM, RungeKuttaTM, RungeKuttaTrTM, UndulatorTestTM)
 
     for family_name, factory, _ in DECLARED_TM_FACTORIES:
         element = factory()
-        if element.tm_policy != "generic":
+        if element.supported_tms == {element.default_tm}:
             continue
 
         buildable_tms = set()
@@ -150,17 +148,15 @@ def test_constructor_request_for_undeclared_generic_tm_raises():
         Quadrupole(l=0.7, k1=0.4, tm=RungeKuttaTM, eid="Q_CTOR")
 
 
-def test_constructor_request_for_undeclared_tm_warns_and_uses_default():
-    with pytest.warns(UserWarning, match="Cavity pins active tracking to CavityTM"):
-        cavity = Cavity(l=0.7, freq=1.3e9, phi=20.0, v=0.005, tm=TransferMap, eid="C_WARN")
-
-    assert all(isinstance(tm, CavityTM) for tm in cavity.tms)
+def test_constructor_request_for_undeclared_single_method_family_raises():
+    with pytest.raises(RuntimeError, match="Cavity does not declare support for TransferMap"):
+        Cavity(l=0.7, freq=1.3e9, phi=20.0, v=0.005, tm=TransferMap, eid="C_WARN")
 
 
-def test_xyquadrupole_stays_first_order_only_with_explicit_fallback_warning():
-    quad = XYQuadrupole(l=0.3, x_offs=1e-3, y_offs=-2e-3, k1=0.4, tm=TransferMap, eid="XY1")
+def test_xyquadrupole_rejects_explicit_undeclared_tm_request():
+    quad = XYQuadrupole(l=0.3, x_offs=1e-3, y_offs=-2e-3, k1=0.4, eid="XY1")
 
-    with pytest.warns(UserWarning, match="XYQuadrupole pins active tracking to TransferMap"):
+    with pytest.raises(RuntimeError, match="XYQuadrupole does not declare support for SecondTM"):
         quad.set_tm(SecondTM)
 
     assert all(isinstance(tm, TransferMap) for tm in quad.tms)

@@ -14,15 +14,11 @@ def test_drift_can_switch_to_second_order_tracking():
     drift.set_tm(SecondTM)
 
     assert all(isinstance(tm, SecondTM) for tm in drift.tms)
-    assert drift.tm_policy == "generic"
 
 
-def test_cavity_normalizes_unsupported_tm_to_cavity_tm():
-    with pytest.warns(UserWarning, match="pins active tracking to CavityTM"):
-        cavity = Cavity(l=0.346, v=0.0025, freq=3.9e9, phi=180.0, tm=TransferMap, eid="C1")
-
-    assert all(isinstance(tm, CavityTM) for tm in cavity.tms)
-    assert cavity.tm_policy == "pinned"
+def test_cavity_rejects_unsupported_explicit_tm_request():
+    with pytest.raises(RuntimeError, match="Cavity does not declare support for TransferMap"):
+        Cavity(l=0.346, v=0.0025, freq=3.9e9, phi=180.0, tm=TransferMap, eid="C1")
 
 
 def test_cavity_keeps_first_order_maps_for_optics():
@@ -33,32 +29,29 @@ def test_cavity_keeps_first_order_maps_for_optics():
 
 
 def test_multipole_keeps_multipole_tm_as_active_method():
-    with pytest.warns(UserWarning, match="pins active tracking to MultipoleTM"):
-        multipole = Multipole(kn=[0.2, -0.5], tm=TransferMap, eid="M1")
+    multipole = Multipole(kn=[0.2, -0.5], eid="M1")
 
     assert all(isinstance(tm, MultipoleTM) for tm in multipole.tms)
     assert all(isinstance(tm, TransferMap) for tm in multipole.first_order_tms)
-    assert multipole.tm_policy == "pinned"
 
-    with pytest.warns(UserWarning, match="pins active tracking to MultipoleTM"):
+    with pytest.raises(RuntimeError, match="Multipole does not declare support for TransferMap"):
         multipole.set_tm(TransferMap)
 
     assert all(isinstance(tm, MultipoleTM) for tm in multipole.tms)
 
 
-def test_twcavity_uses_shared_pinned_tm_policy():
-    with pytest.warns(UserWarning, match="pins active tracking to TWCavityTM"):
-        cavity = TWCavity(l=0.346, v=0.0025, freq=3.9e9, phi=180.0, tm=TransferMap, eid="TW1")
+def test_twcavity_rejects_unsupported_explicit_tm_request():
+    with pytest.raises(RuntimeError, match="TWCavity does not declare support for TransferMap"):
+        TWCavity(l=0.346, v=0.0025, freq=3.9e9, phi=180.0, tm=TransferMap, eid="TW1")
 
-    assert cavity.tm_policy == "pinned"
+    cavity = TWCavity(l=0.346, v=0.0025, freq=3.9e9, phi=180.0, eid="TW2")
     assert all(isinstance(tm, TWCavityTM) for tm in cavity.tms)
 
 
-def test_xyquadrupole_uses_shared_pinned_tm_policy():
+def test_xyquadrupole_rejects_unsupported_explicit_tm_request():
     quad = XYQuadrupole(l=0.3, x_offs=1e-3, y_offs=-2e-3, k1=0.4, eid="XY1")
 
-    with pytest.warns(UserWarning, match="pins active tracking to TransferMap"):
+    with pytest.raises(RuntimeError, match="XYQuadrupole does not declare support for SecondTM"):
         quad.set_tm(SecondTM)
 
-    assert quad.tm_policy == "pinned"
     assert all(isinstance(tm, TransferMap) for tm in quad.tms)

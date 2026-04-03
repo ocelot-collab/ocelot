@@ -90,7 +90,7 @@ def test_oct_vs_multip(lattice, p_array, parameter=None, update_ref_values=False
     """
 
     oct = Octupole(l=0.5, k3=300, tm=KickTM)
-    mult3 = Multipole(kn=[0, 0, 0, 300 * 0.5], tm=KickTM)
+    mult3 = Multipole(kn=[0, 0, 0, 300 * 0.5])
 
     parray = ParticleArray(n=1)
     parray.x()[:] = 0.001
@@ -105,7 +105,7 @@ def test_oct_vs_multip(lattice, p_array, parameter=None, update_ref_values=False
     parray2.y()[:] = -0.001
     parray2.p()[:] = 0.001
 
-    lat = MagneticLattice((Drift(l=0.250), mult3, Drift(l=0.25)), method={Multipole: KickTM, "nkick": 1})
+    lat = MagneticLattice((Drift(l=0.250), mult3, Drift(l=0.25)))
     track(lat, parray2, Navigator(lat))
 
     p2 = obj2dict(parray2)

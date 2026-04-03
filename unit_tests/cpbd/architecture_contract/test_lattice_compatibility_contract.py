@@ -13,7 +13,8 @@ def test_magnetic_lattice_preserves_family_specific_tm_behavior():
     drift = Drift(l=0.3, eid="D2")
     cavity = Cavity(l=0.346, v=0.0025, phi=180.0, freq=3.9e9, eid="C6")
 
-    lat = MagneticLattice((drift, cavity), method={"global": SecondTM})
+    with pytest.warns(UserWarning, match="Cavity does not declare support for SecondTM; global lattice request falls back to default CavityTM"):
+        lat = MagneticLattice((drift, cavity), method={"global": SecondTM})
 
     assert all(isinstance(tm, SecondTM) for tm in drift.tms)
     assert all(isinstance(tm, CavityTM) for tm in cavity.tms)

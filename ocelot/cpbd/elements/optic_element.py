@@ -31,19 +31,20 @@ class OpticElement:
     ``default_tm`` remains the family fallback for active tracking. If a
     wrapper also declares ``supported_tms``, those entries should be read as
     wrapper-selectable active tracking methods, not as a list of every
-    internal first-order path that exists for optics. ``tm_policy`` makes the
-    public selection rule explicit:
+    internal first-order path that exists for optics.
 
-    - ``generic`` wrappers allow declared TMs; explicit undeclared requests
-      raise, while global lattice requests may warn and fall back to
-      ``default_tm``
-    - ``pinned`` wrappers always normalize active tracking back to their
-      ``default_tm``
+    Current selection rule:
+
+    - declared requests keep the requested active TM
+    - explicit undeclared requests raise
+    - global lattice requests may warn and fall back to ``default_tm``
+
+    A family that wants to expose only one active TM should simply declare
+    ``supported_tms = {default_tm}``.
     """
 
     default_tm = TransferMap
     supported_tms = None
-    tm_policy = "generic"
 
     __is_init = False  # needed to disable __getattr__ and __setattr__ until __init__ is executed
 
@@ -58,8 +59,8 @@ class OpticElement:
         tm
             Active transformation requested for tracking.
         default_tm
-            Family default transformation used when the requested one is not
-            supported or when a wrapper intentionally pins the family to one TM.
+            Family default transformation used when a broad global lattice
+            request asks for an undeclared TM.
         """
         # Physics state lives on `self.element`; framework/cache state stays on
         # the wrapper. This split lets us invalidate maps only when a physics
@@ -129,8 +130,8 @@ class OpticElement:
 
         These are always kept available even when the active tracking method is
         something else. This is why a family such as ``Multipole`` can keep a
-        ``TransferMap``-based optics path while still pinning active tracking
-        to ``MultipoleTM``.
+        ``TransferMap``-based optics path while still exposing only
+        ``MultipoleTM`` as an active tracking method.
         """
         if self._first_order_tms is None:
             self._first_order_tms = self._create_tms(self.element, TransferMap)
@@ -203,33 +204,15 @@ class OpticElement:
 
     def _validate_tm_declarations(self) -> None:
         """Check that the family default is part of the declared TM contract."""
-        if self.tm_policy not in {"generic", "pinned"}:
-            raise RuntimeError(
-                f"{self.__class__.__name__} declares unsupported tm_policy={self.tm_policy!r}. "
-                "Expected 'generic' or 'pinned'."
-            )
         if self.supported_tms is not None and self.default_tm not in self.supported_tms:
             raise RuntimeError(
                 f"{self.__class__.__name__} declares default_tm={self.default_tm.__name__}, "
                 "but default_tm is missing from supported_tms."
             )
-        if self.tm_policy == "pinned" and self.supported_tms != {self.default_tm}:
-            raise RuntimeError(
-                f"{self.__class__.__name__} uses tm_policy='pinned', so supported_tms must be "
-                f"exactly {{{self.default_tm.__name__}}}."
-            )
 
     def _is_declared_tm(self, tm: Type[Transformation]) -> bool:
         """Return True when the wrapper explicitly declares the TM as supported."""
         return self.supported_tms is not None and tm in self.supported_tms
-
-    def _warn_pinned_tm_request(self, tm: Type[Transformation], stacklevel: int) -> None:
-        """Warn when a pinned wrapper is asked to use a non-default active TM."""
-        warnings.warn(
-            f"{self.__class__.__name__} pins active tracking to {self.default_tm.__name__}; "
-            f"requested {tm.__name__} falls back to default {self.default_tm.__name__}.",
-            stacklevel=stacklevel,
-        )
 
     def _warn_global_tm_fallback(self, tm: Type[Transformation], stacklevel: int) -> None:
         """Warn when a global lattice TM request falls back to the family default."""
@@ -250,9 +233,6 @@ class OpticElement:
     def _normalize_tm_request(self, tm: Type[Transformation], request_source: str, stacklevel: int) -> Type[Transformation]:
         """Normalize TM requests according to the wrapper policy and request source."""
         self._validate_request_source(request_source)
-        if self.tm_policy == "pinned" and tm != self.default_tm:
-            self._warn_pinned_tm_request(tm, stacklevel=stacklevel)
-            return self.default_tm
         if tm == self.default_tm or self._is_declared_tm(tm):
             return tm
         if request_source == "global":
@@ -325,11 +305,9 @@ class OpticElement:
         """
         Set the active tracking method for the wrapper.
 
-        Declared support is expected to be buildable. ``tm_policy='generic'``
-        treats explicit undeclared requests as errors, while
-        ``request_source='global'`` allows a warning and fallback to
-        ``default_tm``. ``tm_policy='pinned'`` always normalizes active
-        tracking back to ``default_tm``.
+        Declared support is expected to be buildable. Explicit undeclared
+        requests are treated as errors, while ``request_source='global'``
+        allows a warning and fallback to ``default_tm``.
         """
         requested_tm = self._normalize_tm_request(tm, request_source=request_source, stacklevel=4)
         new_kwargs = params if params and params != self._kwargs else None

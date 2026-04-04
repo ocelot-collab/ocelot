@@ -83,7 +83,7 @@ class AstraLatticeConverter:
                 # parsing element parameters
                 if result[0][0] in self.astra_matrix[element_type]['params']:
                     param = self.astra_matrix[element_type]['params'][result[0][0]]
-                    elements_list[element_index][0].__dict__[param] = float(result[0][2])
+                    setattr(elements_list[element_index][0], param, float(result[0][2]))
 
         elements_list = sorted(elements_list, key=lambda x: x[1])
         cell = lattice_format_converter(elements_list)
@@ -117,7 +117,7 @@ class AstraLatticeConverter:
                 tmp_data = {}
 
                 for j in self.astra_matrix[elem_class]['params']:
-                    tmp_data[j] = elem.__dict__[self.astra_matrix[elem_class]['params'][j]]
+                    tmp_data[j] = getattr(elem, self.astra_matrix[elem_class]['params'][j])
 
                 for j in self.astra_matrix[elem_class]['default_vals']:
                     tmp_data[j] = self.astra_matrix[elem_class]['default_vals'][j]

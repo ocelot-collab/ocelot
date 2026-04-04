@@ -73,10 +73,11 @@ def test_optics_from_tfs(optics_df):
 
     # Check the info stored in the header (emittances and beam energy) are also correct.
     relgamma = twiss0.E / m_e_GeV
+    relbeta = (1 - relgamma ** -2) ** 0.5 if relgamma != 0 else 1.0
     emit_x = optics_df.headers["EX"]
     emit_y = optics_df.headers["EY"]
-    emit_xn = emit_x * relgamma
-    emit_yn = emit_y * relgamma
+    emit_xn = emit_x * relgamma * relbeta
+    emit_yn = emit_y * relgamma * relbeta
 
     assert emit_x == twiss0.emit_x
     assert emit_x == twiss0.emit_y

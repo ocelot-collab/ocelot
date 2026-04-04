@@ -10,7 +10,7 @@ from ocelot.cpbd.transformations.transformation import Transformation
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 
-class _MatrixFirstOrderSliceAtom(DriftAtom):
+class _MatrixApproxSliceAtom(DriftAtom):
     """
     Approximate optics-only slice used for partial Matrix sections.
 
@@ -60,5 +60,5 @@ class Matrix(OpticElement):
         slice_delta_e = self.delta_e * delta_l / total_length if total_length != 0 else self.delta_e
         # For optics/Twiss sampling, approximate the interior of Matrix as a
         # drift-like first-order slice with scaled reference-energy gain.
-        slice_atom = _MatrixFirstOrderSliceAtom(source=self.element, l=delta_l, delta_e=slice_delta_e)
+        slice_atom = _MatrixApproxSliceAtom(source=self.element, l=delta_l, delta_e=slice_delta_e)
         return [TransferMap.from_element(slice_atom)]

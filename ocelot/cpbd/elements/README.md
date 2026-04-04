@@ -300,6 +300,9 @@ The columns below deliberately separate:
 optional `T`, and `delta_e`) for the whole element, but it does not define a
 simple or trustworthy internal physics model for arbitrary partial lengths.
 
+This is currently treated as a deliberate one-off family exception, not as a
+general template for other elements.
+
 Current policy:
 
 - the full element is exact and uses the stored `R` / `B` / `T` data
@@ -313,7 +316,7 @@ Current policy:
 Implementation note:
 
 - `elements/matrix.py` uses a small internal helper class,
-  `_MatrixFirstOrderSliceAtom`
+  `_MatrixApproxSliceAtom`
 - this helper is not a new public element family; it is only a local way to
   reuse the existing `DriftAtom -> TransferMap` first-order path for optics
   interpolation
@@ -775,6 +778,130 @@ Until the architecture is improved further, the safest extension path is still t
 7. add tests before trying to optimize the structure
 
 For new work today, that is lower risk than creating new public direct-style elements.
+
+### Adding A New Transformation To An Existing Element
+
+This is the lower-risk extension path when the element family already exists
+and only the tracking algorithm changes.
+
+Recommended order:
+
+1. decide whether the new algorithm is only another active tracking method for
+   an existing family, or whether the family physics itself also changes
+2. check whether an existing `TMParams` container already matches the data the
+   new transformation needs
+3. add the atom hook family that builds those params
+4. implement the new transformation class
+5. declare the new transformation on the wrapper only after the atom hooks and
+   transformation can actually build
+6. add contract tests for selection, buildability, and any edge behavior
+
+About `TMParams`:
+
+- you do not always need a new `TMParams` class
+- if the new transformation can consume an existing contract such as
+  `FirstOrderParams`, `SecondOrderParams`, `KickParams`, or
+  `RungeKuttaParams`, reuse it
+- add a new `TMParams` class only when the transformation needs a new data
+  boundary that is not already represented cleanly
+
+Typical cases:
+
+- new algorithm, same first-order data:
+  reuse `FirstOrderParams`
+- algorithmic kick tracking:
+  reuse `KickParams`
+- field-integrator style tracking:
+  reuse `RungeKuttaParams`
+- transformation needs genuinely new metadata:
+  add a new `TMParams` class and a matching atom hook family
+
+Mechanically, the pieces are:
+
+1. Atom:
+   add `create_<hook_family>_main_params(...)`
+   if `has_edge=True`, also add the entrance and exit variants
+
+2. Transformation:
+   add `transformations/<name>.py`
+   implement `from_element(...)`
+   bind to the new atom hook family
+   implement `map_function(...)`
+
+3. Wrapper:
+   if the family should expose the new algorithm as an active method, add it
+   to `supported_tms`
+   if it should become the family default active method, also update
+   `default_tm`
+
+4. Tests:
+   add or extend architecture tests so the wrapper contract is explicit
+
+Example decision rule:
+
+- if you add a `RungeKutta`-style tracking option to a family whose atom can
+  already provide `mag_field`, you probably only need a new hook family or
+  reuse the existing one plus wrapper declaration
+- if you add a brand-new algorithm with brand-new per-element metadata, you
+  need all three pieces: new hook family, new `TMParams`, and new
+  transformation
+
+### Adding A New Element From Scratch
+
+For a new family, keep the current wrapper-plus-atom split unless there is a
+very strong reason not to.
+
+Recommended checklist:
+
+1. start from the closest existing family and copy the structure, not just the
+   formulas
+2. create the public wrapper in `elements/<name>.py`
+3. create the physics atom in `elements/<name>_atom.py`
+4. choose the family `default_tm`
+5. declare `supported_tms`
+6. implement the required atom hooks for the declared methods
+7. make sure the always-available first-order optics path exists
+8. add edge hooks only if `has_edge=True`
+9. add architecture tests before adding broader physics regression coverage
+
+Minimum structure for a normal new family:
+
+1. Wrapper:
+   subclass `OpticElement`
+   set `default_tm`
+   set `supported_tms`
+   construct the atom and pass `tm` through
+
+2. Atom:
+   subclass `Element`, `Magnet`, or the closest existing atom family
+   store the physics state
+   implement at least `create_first_order_main_params(...)`
+   implement `create_delta_e(...)` only if the family changes reference energy
+
+3. If the family has edges:
+   set `has_edge=True`
+   implement first-order entrance and exit hooks
+   implement entrance and exit hooks for every declared active TM
+
+4. If the family needs custom active tracking:
+   either reuse an existing transformation and its `TMParams`
+   or add a new transformation plus a new `TMParams` boundary
+
+Safe default rule:
+
+- if you are unsure, first make the family work with the linear
+  `TransferMap` optics path
+- then add one extra active tracking method at a time
+- only after that widen `supported_tms`
+
+What to avoid:
+
+- declaring a TM in `supported_tms` before the atom hooks really exist
+- treating the always-available `TransferMap` optics path as if it were always
+  an allowed active tracking method
+- adding `has_edge=True` without implementing the required entrance and exit
+  hooks
+- bypassing the wrapper and exposing only the atom as the public element API
 
 ## Unit Tests That Protect Future Cleanup
 

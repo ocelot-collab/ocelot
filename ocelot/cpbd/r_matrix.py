@@ -19,6 +19,25 @@ def rot_mtx(angle):
                      [0., 0., 0., 0., 0., 1.]])
 
 
+def bend_edge_matrix(h, edge, gap=0., fint=0.):
+    """
+    First-order transfer matrix for a dipole edge.
+
+    :param h: curvature (1/r) of the bend in [1/m]
+    :param edge: edge angle [rad]
+    :param gap: magnet gap [m]
+    :param fint: fringe field integral
+    :return: edge R-matrix [6, 6]
+    """
+    sec_edge = 1. / np.cos(edge)
+    phi = fint * h * gap * sec_edge * (1. + np.sin(edge) ** 2)
+
+    r_matrix = np.eye(6)
+    r_matrix[1, 0] = h * np.tan(edge)
+    r_matrix[3, 2] = -h * np.tan(edge - phi)
+    return r_matrix
+
+
 def uni_matrix(z, k1, hx, sum_tilts=0., energy=0.):
     """
     universal matrix. The function creates R-matrix from given parameters.

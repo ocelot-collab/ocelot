@@ -6,6 +6,7 @@ from scipy import optimize
 from ocelot.common.globals import m_e_GeV, m_e_eV, speed_of_light
 from numpy.linalg import norm
 from ocelot.common.ocelog import *
+from ocelot.cpbd.r_matrix import bend_edge_matrix
 
 _logger = logging.getLogger(__name__)
 
@@ -627,8 +628,8 @@ def t_nnn(L, h, k1, k2, energy=0):
 def fringe_ent(h, k1, e, h_pole=0., gap=0., fint=0.):
     """
     Calculate first and second order matrices for edge focusing element.
-    Note: the first order (R) is shown here in the sake of completeness but it is duplicated
-            in r_matrix.py module and used from there in optics.py
+    The first-order matrix is built via the shared bend edge helper in
+    ``r_matrix.py`` and returned here together with the second-order tensor.
 
     :param h: curvature (1/r) of the bend in [1/m]
     :param k1: strength of quadrupole component of the dipole in [1/m^2],
@@ -644,9 +645,7 @@ def fringe_ent(h, k1, e, h_pole=0., gap=0., fint=0.):
     tan_e = np.tan(e)
     tan_e2 = tan_e*tan_e
     phi = fint*h*gap*sec_e*(1. + np.sin(e)**2)
-    R = np.eye(6)
-    R[1, 0] = h*tan_e
-    R[3, 2] = -h*np.tan(e - phi)
+    R = bend_edge_matrix(h=h, edge=e, gap=gap, fint=fint)
 
     T = np.zeros((6,6,6))
     T[0, 0, 0] = -h/2.*tan_e2
@@ -672,8 +671,8 @@ def fringe_ent(h, k1, e, h_pole=0., gap=0., fint=0.):
 def fringe_ext(h, k1, e, h_pole=0., gap=0., fint=0.):
     """
     Calculate first and second order matrices for edge focusing element.
-    Note: the first order (R) is shown here in the sake of completeness but it is duplicated
-            in r_matrix.py module and used from there in optics.py
+    The first-order matrix is built via the shared bend edge helper in
+    ``r_matrix.py`` and returned here together with the second-order tensor.
 
     :param h: curvature (1/r) of the bend in [1/m]
     :param k1: strength of quadrupole component of the dipole in [1/m^2],
@@ -691,10 +690,7 @@ def fringe_ext(h, k1, e, h_pole=0., gap=0., fint=0.):
     tan_e3 = tan_e2 * tan_e
     phi = fint*h*gap*sec_e*(1. + np.sin(e)**2)
     h2 = h*h
-    R = np.eye(6)
-
-    R[1, 0] = h*tan_e
-    R[3, 2] = -h*np.tan(e - phi)
+    R = bend_edge_matrix(h=h, edge=e, gap=gap, fint=fint)
 
     T = np.zeros((6,6,6))
     T[0, 0, 0] = h/2.*tan_e2

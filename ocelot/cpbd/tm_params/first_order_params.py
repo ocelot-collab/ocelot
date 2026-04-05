@@ -22,10 +22,16 @@ class FirstOrderParams(TMParams):
         self.R = R
         self.B = B
         self.tilt = tilt
+        self._rotated_R = None
 
     def get_rotated_R(self):
         """Return ``R`` in the tilted element frame expected by the map."""
-        return np.dot(np.dot(rot_mtx(-self.tilt), self.R), rot_mtx(self.tilt))
+        if self._rotated_R is None:
+            if self.tilt == 0:
+                self._rotated_R = self.R
+            else:
+                self._rotated_R = np.dot(np.dot(rot_mtx(-self.tilt), self.R), rot_mtx(self.tilt))
+        return self._rotated_R.copy()
 
     def multiply(self, tm_params: 'FirstOrderParams'):
         """Compose two linear parameter sets into one equivalent map."""

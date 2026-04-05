@@ -5,7 +5,7 @@ from ocelot.cpbd.tm_params.kick_params import KickParams
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
 from ocelot.cpbd.tm_params.second_order_params import SecondOrderParams
 from ocelot.cpbd.high_order import t_nnn
-from ocelot.cpbd.r_matrix import uni_matrix
+from ocelot.cpbd.r_matrix import linear_magnet_matrix
 from ocelot.cpbd.tm_utils import map_transform_with_offsets
 
 
@@ -16,16 +16,15 @@ class Magnet(Element):
         self.k1 = 0.  # Magnets quadropole
         self.k2 = 0.  # Magnets Sextupole
 
+    def _curvature(self) -> float:
+        return 0.0 if self.l == 0 else self.angle / self.l
+
+    def linear_r_main(self, energy: float, delta_length: float = None, xp=np):
+        length = self.l if delta_length is None else delta_length
+        return linear_magnet_matrix(length, self.k1, hx=self._curvature(), sum_tilts=0.0, energy=energy, xp=xp)
+
     def create_first_order_main_params(self, energy: float, delta_length: float = None) -> FirstOrderParams:
-        k1 = self.k1
-        if self.l == 0:
-            hx = 0.
-        else:
-            hx = self.angle / self.l
-        if delta_length is not None:
-            R = uni_matrix(delta_length, k1, hx=hx, sum_tilts=0, energy=energy)
-        else:
-            R = uni_matrix(self.l, k1, hx=hx, sum_tilts=0, energy=energy)
+        R = self.linear_r_main(energy, delta_length, xp=np)
         B = self._default_B(R)
         return FirstOrderParams(R, B, self.tilt)
 

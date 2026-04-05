@@ -52,17 +52,45 @@ class Element:
     def _default_B(self, R):
         return np.dot((np.eye(6) - R), np.array([[self.dx], [0.], [self.dy], [0.], [0.], [0.]]))
 
+    def linear_r_main(self, energy: float = 0.0, delta_length: float = None, xp=np):
+        """Return the unrotated first-order body matrix for the current physics state."""
+        length = self.l if delta_length is None else delta_length
+        hx = 0.0 if self.l == 0.0 else self.angle / self.l
+        return uni_matrix(length, 0.0, hx=hx, sum_tilts=0.0, energy=energy, xp=xp)
+
+    def linear_r_entrance(self, energy: float = 0.0, xp=np):
+        raise NotImplementedError(f"{type(self).__name__} does not define an entrance linear R block.")
+
+    def linear_r_exit(self, energy: float = 0.0, xp=np):
+        raise NotImplementedError(f"{type(self).__name__} does not define an exit linear R block.")
+
+    def linear_r_blocks(self, energy: float = 0.0, xp=np):
+        """Return the unrotated first-order block sequence for the full element."""
+        if self.has_edge:
+            return [
+                self.linear_r_entrance(energy=energy, xp=xp),
+                self.linear_r_main(energy=energy, xp=xp),
+                self.linear_r_exit(energy=energy, xp=xp),
+            ]
+        return [self.linear_r_main(energy=energy, xp=xp)]
+
+    def linear_delta_e_blocks(self):
+        """Return the reference-energy changes associated with the linear block sequence."""
+        main_delta_e = self.create_delta_e(total_length=self.l, delta_length=self.l)
+        if self.has_edge:
+            return [0.0, main_delta_e, 0.0]
+        return [main_delta_e]
+
+    def linear_length_blocks(self):
+        """Return the path-length increments associated with the linear block sequence."""
+        if self.has_edge:
+            return [0.0, self.l, 0.0]
+        return [self.l]
+
     def create_first_order_main_params(self, energy: float, delta_length: float = None) -> FirstOrderParams:
         # Generic straight-element first-order fallback used when a concrete
         # family does not override the main map construction.
-        if self.l == 0:
-            hx = 0.
-        else:
-            hx = self.angle / self.l
-        if delta_length is not None:
-            R = uni_matrix(delta_length, 0., hx=hx, sum_tilts=0, energy=energy)
-        else:
-            R = uni_matrix(self.l, 0., hx=hx, sum_tilts=0, energy=energy)
+        R = self.linear_r_main(energy, delta_length, xp=np)
         B = self._default_B(R)
 
         return FirstOrderParams(R, B, self.tilt)

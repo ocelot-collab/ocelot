@@ -5,6 +5,7 @@ import warnings
 import numpy as np
 
 from ocelot.cpbd.elements.element import Element
+from ocelot.cpbd.r_matrix import rot_mtx
 from ocelot.cpbd.transformations.transformation import Transformation, TMTypes
 from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.transformations.transfer_map import TransferMap
@@ -187,6 +188,92 @@ class OpticElement:
             res.append(tm.get_params(E).get_rotated_T())
             E += tm.get_delta_e()
         return res
+
+    def _copy_element_with_linear_overrides(self, overrides):
+        if not overrides:
+            return self.element
+
+        unknown = sorted(name for name in overrides if name not in self.element.__dict__)
+        if unknown:
+            raise TypeError(
+                f"{self.__class__.__name__}.linear_r received unsupported parameter override(s): {unknown}"
+            )
+
+        element = copy(self.element)
+        for name, value in overrides.items():
+            setattr(element, name, value)
+        return element
+
+    @staticmethod
+    def _rotate_linear_r(R, tilt, xp=np):
+        if xp is np and tilt == 0.0:
+            return R
+        rot = rot_mtx(tilt, xp=xp)
+        return xp.matmul(rot_mtx(-tilt, xp=xp), xp.matmul(R, rot))
+
+    @staticmethod
+    def _compose_linear_r_blocks(blocks, xp=np):
+        full = blocks[0]
+        for block in blocks[1:]:
+            full = xp.matmul(block, full)
+        return full
+
+    def linear_r(self, energy: float = 0.0, xp=np, **overrides):
+        """
+        Return the rotated first-order body matrix for the current element.
+
+        Explicit keyword overrides are applied to a temporary copy of the atom,
+        so callers can evaluate ``R(parameter)`` without mutating the live
+        lattice object.
+        """
+        element = self._copy_element_with_linear_overrides(overrides)
+        return self._rotate_linear_r(
+            element.linear_r_main(energy=energy, xp=xp),
+            getattr(element, "tilt", 0.0),
+            xp=xp,
+        )
+
+    def linear_delta_e_blocks(self, **overrides):
+        """Return block-wise reference-energy changes for the linear optics path."""
+        element = self._copy_element_with_linear_overrides(overrides)
+        return element.linear_delta_e_blocks()
+
+    def linear_length_blocks(self, **overrides):
+        """Return block-wise path-length increments for the linear optics path."""
+        element = self._copy_element_with_linear_overrides(overrides)
+        return element.linear_length_blocks()
+
+    def linear_r_blocks(self, energy: float = 0.0, xp=np, **overrides):
+        """
+        Return the rotated first-order block sequence for the full element.
+
+        For edge families this returns ``[entrance, main, exit]``. For
+        non-edge families it returns ``[main]``.
+        """
+        element = self._copy_element_with_linear_overrides(overrides)
+        tilt = getattr(element, "tilt", 0.0)
+        delta_e_blocks = element.linear_delta_e_blocks()
+        blocks = []
+        block_energy = xp.asarray(energy)
+
+        if element.has_edge:
+            block_builders = [
+                element.linear_r_entrance,
+                element.linear_r_main,
+                element.linear_r_exit,
+            ]
+        else:
+            block_builders = [element.linear_r_main]
+
+        for build_block, delta_e in zip(block_builders, delta_e_blocks):
+            blocks.append(self._rotate_linear_r(build_block(energy=block_energy, xp=xp), tilt, xp=xp))
+            block_energy = block_energy + xp.asarray(delta_e)
+        return blocks
+
+    def linear_r_full(self, energy: float = 0.0, xp=np, **overrides):
+        """Return one rotated 6x6 matrix for the full element."""
+        blocks = self.linear_r_blocks(energy=energy, xp=xp, **overrides)
+        return self._compose_linear_r_blocks(blocks, xp=xp)
 
     def __init_tms(self, tm: Transformation, **params):
         """

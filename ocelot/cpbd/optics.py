@@ -1,6 +1,5 @@
 __author__ = 'Sergey'
 
-
 from numpy.linalg import inv
 import pandas as pd
 from typing import Iterable
@@ -8,6 +7,7 @@ from typing import Iterable
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 from ocelot.cpbd.r_matrix import *
+from ocelot.cpbd.twiss_linear import periodic_twiss_from_r
 from ocelot.cpbd.tm_utils import SecondOrderMult
 from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.beam import Twiss, twiss_iterable_to_df
@@ -98,50 +98,19 @@ def periodic_twiss(tws, R):
     initial conditions for a periodic Twiss solution
     """
     tws = Twiss(tws)
+    state = periodic_twiss_from_r(R, energy=tws.E, xp=np)
 
-    if R[5, 5] != 1:
-        if tws.E == 0:
-            raise TypeError("Lattice is contained Cavity. Argument 'tws' must be Twiss class with non zero energy 'tws.E'")
-
-        g0 = tws.E / m_e_GeV
-        g1 = np.sqrt(g0 ** 2 - 1 + R[5, 5] ** 2) / R[5, 5]
-        k = np.sqrt(g1 / g0)
-        R[0, 0] = R[0, 0] * k
-        R[0, 1] = R[0, 1] * k
-        R[1, 0] = R[1, 0] * k
-        R[1, 1] = R[1, 1] * k
-        R[2, 2] = R[2, 2] * k
-        R[2, 3] = R[2, 3] * k
-        R[3, 2] = R[3, 2] * k
-        R[3, 3] = R[3, 3] * k
-
-    cosmx = (R[0, 0] + R[1, 1]) / 2.
-    cosmy = (R[2, 2] + R[3, 3]) / 2.
-
-    if abs(cosmx) >= 1 or abs(cosmy) >= 1:
+    if not state["stable_x"] or not state["stable_y"]:
         _logger.warning(" ************ periodic solution does not exist. return None ***********")
         return None
-    sinmx = np.sign(R[0, 1]) * np.sqrt(1. - cosmx * cosmx)
-    sinmy = np.sign(R[2, 3]) * np.sqrt(1. - cosmy * cosmy)
-
-    tws.beta_x = abs(R[0, 1] / sinmx)
-    tws.beta_y = abs(R[2, 3] / sinmy)
-
-    tws.alpha_x = (R[0, 0] - R[1, 1]) / (2. * sinmx)  # X[0,0]
-
-
-    tws.alpha_y = (R[2, 2] - R[3, 3]) / (2 * sinmy)  # Y[0,0]
-
-    Hx = np.array([[R[0, 0] - 1, R[0, 1]], [R[1, 0], R[1, 1] - 1]])
-    Hhx = np.array([[R[0, 5]], [R[1, 5]]])
-    hh = np.dot(inv(-Hx), Hhx)
-    tws.Dx = hh[0, 0]
-    tws.Dxp = hh[1, 0]
-    Hy = np.array([[R[2, 2] - 1, R[2, 3]], [R[3, 2], R[3, 3] - 1]])
-    Hhy = np.array([[R[2, 5]], [R[3, 5]]])
-    hhy = np.dot(inv(-Hy), Hhy)
-    tws.Dy = hhy[0, 0]
-    tws.Dyp = hhy[1, 0]
+    tws.beta_x = state["beta_x"]
+    tws.beta_y = state["beta_y"]
+    tws.alpha_x = state["alpha_x"]
+    tws.alpha_y = state["alpha_y"]
+    tws.Dx = state["Dx"]
+    tws.Dxp = state["Dxp"]
+    tws.Dy = state["Dy"]
+    tws.Dyp = state["Dyp"]
     return tws
 
 

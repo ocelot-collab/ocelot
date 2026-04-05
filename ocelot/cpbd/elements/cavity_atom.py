@@ -1,16 +1,9 @@
-import logging
-
 import numpy as np
 
-from ocelot.cpbd.transformations.cavity import CavityTM
-from ocelot.cpbd.high_order import m_e_GeV
-from ocelot.common.globals import speed_of_light
-from ocelot.cpbd.r_matrix import uni_matrix
+from ocelot.cpbd.r_matrix import cavity_coupler_edge_matrix, standing_wave_cavity_matrix
 from ocelot.cpbd.elements.element import Element
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
 from ocelot.cpbd.tm_params.cavity_params import CavityParams
-
-logger = logging.getLogger(__name__)
 
 
 class CavityAtom(Element):
@@ -61,122 +54,22 @@ class CavityAtom(Element):
         return s
 
     def _R_edge_matrix(self, energy: float, vxx: float, vxy: float):
-
-        def ck_matrix(v, phi, vxx, vxy, energy):
-            """
-            matrix for coupler kick
-
-            :param v: voltage of the cavity in GV
-            :param phi: phase [deg] of the cavity
-            :param vxx: first order coefficients of the coupler kicks
-            :param vxy: first order coefficients of the coupler kicks
-            :param energy: beam energy in GeV
-            :return:
-            """
-            phi = phi * np.pi / 180.
-            m21 = (vxx * v * np.exp(1j * phi)).real / energy
-            m43 = - m21
-            m23 = (vxy * v * np.exp(1j * phi)).real / energy
-
-            coupl_kick = np.array([[1, 0., 0., 0., 0., 0.],
-                                   [m21, 1, m23, 0., 0., 0.],
-                                   [0., 0., 1, 0., 0., 0.],
-                                   [m23, 0., m43, 1, 0., 0.],
-                                   [0., 0., 0., 0., 1., 0.],
-                                   [0., 0., 0., 0., 0., 1]])
-            return coupl_kick
-
-        r_z_e = ck_matrix(v=self.v, phi=self.phi,
-                          vxx=vxx, vxy=vxy, energy=energy)
-        return r_z_e
+        return cavity_coupler_edge_matrix(v=self.v, phi=self.phi, vxx=vxx, vxy=vxy, energy=energy, xp=np)
 
     def _R_main_matrix(self, energy: float, length: float):
+        voltage = self.v * length / self.l if self.l != 0 else self.v
+        return standing_wave_cavity_matrix(length, voltage=voltage, energy=energy, freq=self.freq, phi=self.phi, xp=np)
 
-        def cavity_R_z(z, V, E, freq, phi=0.):
-            """
-            :param z: length
-            :param de: delta E
-            :param freq: frequency
-            :param E: initial energy
-            :return: matrix
-            """
+    def linear_r_main(self, energy: float = 0.0, delta_length: float = None, xp=np):
+        length = self.l if delta_length is None else delta_length
+        voltage = self.v * length / self.l if self.l != 0 else self.v
+        return standing_wave_cavity_matrix(length, voltage=voltage, energy=energy, freq=self.freq, phi=self.phi, xp=xp)
 
-            phi = phi * np.pi / 180.
-            de = V * np.cos(phi)
-            # pure pi-standing-wave case
-            eta = 1
-            # gamma = (E + 0.5 * de) / m_e_GeV
-            Ei = E / m_e_GeV
-            Ef = (E + de) / m_e_GeV
-            Ep = (Ef - Ei) / z  # energy derivative
-            if Ei == 0:
-                logger.error("CAVITY: Initial energy is 0, check ParticleArray.E or Twiss.E OR cavity.v must be 0")
+    def linear_r_entrance(self, energy: float = 0.0, xp=np):
+        return cavity_coupler_edge_matrix(v=self.v, phi=self.phi, vxx=self.vxx_up, vxy=self.vxy_up, energy=energy, xp=xp)
 
-            cos_phi = np.cos(phi)
-            alpha = np.sqrt(eta / 8.) / cos_phi * np.log(Ef / Ei)
-            sin_alpha = np.sin(alpha)
-
-            cos_alpha = np.cos(alpha)
-            r11 = (cos_alpha - np.sqrt(2. / eta) * cos_phi * sin_alpha)
-
-            if abs(Ep) > 1e-10:
-                r12 = np.sqrt(8. / eta) * Ei / Ep * cos_phi * sin_alpha
-            else:
-                r12 = z
-            r21 = -Ep / Ef * (cos_phi / np.sqrt(2. * eta) + np.sqrt(eta / 8.) / cos_phi) * sin_alpha
-
-            r22 = Ei / Ef * (cos_alpha + np.sqrt(2. / eta) * cos_phi * sin_alpha)
-            # print(f"z = {z}, V = {V}, E = {E}, phi = {phi}, alpha = {alpha}, r11 = {r11}")
-
-            r56 = 0.
-            beta0 = 1
-            beta1 = 1
-
-            k = 2. * np.pi * freq / speed_of_light
-            r55_cor = 0.
-            if V != 0 and E != 0:
-                gamma2 = Ei * Ei
-                beta0 = np.sqrt(1. - 1 / gamma2)
-                gamma2 = Ef * Ef
-                beta1 = np.sqrt(1. - 1 / gamma2)
-
-                # r56 = (beta0 / beta1 - 1) * Ei / (Ef - Ei) * z
-                r56 = - z / (Ef * Ef * Ei * beta1) * (Ef + Ei) / (beta1 + beta0)
-                g0 = Ei
-                g1 = Ef
-                delta_gamma = g1 - g0
-                zero_energy_gain = abs(delta_gamma) < 1e-8 * abs(g0)
-                is_zero_crossing = zero_energy_gain and abs(cos_phi) < 1e-3
-
-                if is_zero_crossing:
-                    # analytic limit for R55 correction at φ = π/2, Δγ → 0
-                    # r55_cor = -k * z * V / (2 m_e_GeV * g0 * (g0**2 - 1))  # equivalent form
-                    r55_cor = -k * z * V / (2.0 * m_e_GeV * g0 ** 3 * beta0 ** 2)
-                else:
-                    # general RF expression (valid as long as g1 != g0)
-                    r55_cor = (
-                            k * z * beta0 * V / m_e_GeV * np.sin(phi)
-                            * (g0 * g1 * (beta0 * beta1 - 1.0) + 1.0)
-                            / (beta1 * g1 * (g0 - g1) ** 2)
-                    )
-
-            r66 = Ei / Ef * beta0 / beta1
-            r65 = k * np.sin(phi) * V / (Ef * beta1 * m_e_GeV)
-            cav_matrix = np.array([[r11, r12, 0., 0., 0., 0.],
-                                   [r21, r22, 0., 0., 0., 0.],
-                                   [0., 0., r11, r12, 0., 0.],
-                                   [0., 0., r21, r22, 0., 0.],
-                                   [0., 0., 0., 0., 1. + r55_cor, r56],
-                                   [0., 0., 0., 0., r65, r66]]).real
-
-            return cav_matrix
-
-        if self.v == 0.:
-            R = uni_matrix(length, 0., hx=0., sum_tilts=self.tilt, energy=energy)
-        else:
-            R = cavity_R_z(length, V=self.v * length / self.l, E=energy, freq=self.freq,
-                           phi=self.phi)
-        return R
+    def linear_r_exit(self, energy: float = 0.0, xp=np):
+        return cavity_coupler_edge_matrix(v=self.v, phi=self.phi, vxx=self.vxx_down, vxy=self.vxy_down, energy=energy, xp=xp)
 
     def kick_b(self, v, vx, vy, phi, energy):
         phi = phi * np.pi / 180.
@@ -186,17 +79,17 @@ class CavityAtom(Element):
         return b
 
     def create_first_order_main_params(self, energy: float, delta_length: float) -> FirstOrderParams:
-        R = self._R_main_matrix(energy=energy, length=delta_length if delta_length is not None else self.l)
+        R = self.linear_r_main(energy=energy, delta_length=delta_length, xp=np)
         B = self._default_B(R)
         return FirstOrderParams(R, B, self.tilt)
 
     def create_first_order_entrance_params(self, energy: float, delta_length: float) -> FirstOrderParams:
-        R = self._R_edge_matrix(energy=energy, vxx=self.vxx_up, vxy=self.vxy_up)
+        R = self.linear_r_entrance(energy=energy, xp=np)
         B = self.kick_b(self.v, self.vx_up, self.vy_up, self.phi, energy)
         return FirstOrderParams(R, B, self.tilt)
 
     def create_first_order_exit_params(self, energy: float, delta_length: float) -> FirstOrderParams:
-        R = self._R_edge_matrix(energy=energy, vxx=self.vxx_down, vxy=self.vxy_down)
+        R = self.linear_r_exit(energy=energy, xp=np)
         B = self.kick_b(self.v, self.vx_down, self.vy_down, self.phi, energy)
         return FirstOrderParams(R, B, self.tilt)
 

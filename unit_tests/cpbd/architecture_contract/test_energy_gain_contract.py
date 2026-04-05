@@ -74,3 +74,40 @@ def test_cavity_remove_coupler_kick_rebuilds_edge_maps():
     np.testing.assert_allclose(exit_after.B, np.zeros((6, 1)))
     np.testing.assert_allclose(entrance_after.R, np.eye(6))
     np.testing.assert_allclose(exit_after.R, np.eye(6))
+
+
+def test_cavity_linear_api_matches_first_order_sequence_and_energy_contract():
+    cavity = Cavity(
+        l=0.346,
+        v=0.0025,
+        phi=20.0,
+        freq=3.9e9,
+        vx_up=0.0,
+        vy_up=0.0,
+        vxx_up=0.03,
+        vxy_up=0.04,
+        vx_down=0.0,
+        vy_down=0.0,
+        vxx_down=0.07,
+        vxy_down=0.08,
+        eid="C6",
+    )
+    energy = 0.13
+
+    expected_blocks = cavity.R(energy)
+    actual_blocks = cavity.linear_r_blocks(energy=energy)
+
+    assert len(actual_blocks) == 3
+    for actual, expected in zip(actual_blocks, expected_blocks):
+        np.testing.assert_allclose(actual, expected)
+
+    full_expected = expected_blocks[0]
+    for block in expected_blocks[1:]:
+        full_expected = block @ full_expected
+
+    np.testing.assert_allclose(cavity.linear_r(energy=energy), expected_blocks[1])
+    np.testing.assert_allclose(cavity.linear_r_full(energy=energy), full_expected)
+
+    expected_delta_e = cavity.v * np.cos(np.deg2rad(cavity.phi))
+    assert cavity.linear_delta_e_blocks() == pytest.approx([0.0, expected_delta_e, 0.0])
+    assert cavity.linear_length_blocks() == pytest.approx([0.0, cavity.l, 0.0])

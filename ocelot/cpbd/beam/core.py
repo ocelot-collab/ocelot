@@ -10,6 +10,8 @@ from ocelot.common.ocelog import *
 from ocelot.cpbd.reswake import pipe_wake
 import copy
 
+from ocelot.cpbd.twiss_linear import make_twiss_state, twiss_step_from_r
+
 _logger = logging.getLogger(__name__)
 
 
@@ -254,54 +256,73 @@ class Twiss:
 
     @staticmethod
     def track(R, tws0):
-        R00, R01, R10, R11 = R[0, 0], R[0, 1], R[1, 0], R[1, 1]
-        R22, R23, R32, R33 = R[2, 2], R[2, 3], R[3, 2], R[3, 3]
-        R05, R15, R25, R35 = R[0, 5], R[1, 5], R[2, 5], R[3, 5]
+        state0 = make_twiss_state(
+            beta_x=tws0.beta_x,
+            alpha_x=tws0.alpha_x,
+            beta_y=tws0.beta_y,
+            alpha_y=tws0.alpha_y,
+            Dx=tws0.Dx,
+            Dxp=tws0.Dxp,
+            Dy=tws0.Dy,
+            Dyp=tws0.Dyp,
+            mux=tws0.mux,
+            muy=tws0.muy,
+            E=tws0.E,
+            s=tws0.s,
+            p=tws0.p,
+        )
+        state = twiss_step_from_r(R, state0, xp=np)
 
         tws = Twiss(tws0)
-        tws.p = tws0.p
-
-        tws.beta_x = R00 ** 2 * tws0.beta_x - 2 * R00 * R01 * tws0.alpha_x + R01 ** 2 * tws0.gamma_x
-        tws.beta_y = R22 ** 2 * tws0.beta_y - 2 * R22 * R23 * tws0.alpha_y + R23 ** 2 * tws0.gamma_y
-
-        tws.alpha_x = -R00 * R10 * tws0.beta_x + (R01 * R10 + R11 * R00) * tws0.alpha_x - R01 * R11 * tws0.gamma_x
-        tws.alpha_y = -R22 * R32 * tws0.beta_y + (R23 * R32 + R33 * R22) * tws0.alpha_y - R23 * R33 * tws0.gamma_y
-
-        tws.Dx = R00 * tws0.Dx + R01 * tws0.Dxp + R05
-        tws.Dxp = R10 * tws0.Dx + R11 * tws0.Dxp + R15
-        tws.Dy = R22 * tws0.Dy + R23 * tws0.Dyp + R25
-        tws.Dyp = R32 * tws0.Dy + R33 * tws0.Dyp + R35
-
-        d_mux = np.arctan2(R01, R00 * tws0.beta_x - R01 * tws0.alpha_x)
-        if d_mux < 0: d_mux += np.pi
-        tws.mux = tws0.mux + d_mux
-
-        d_muy = np.arctan2(R23, R22 * tws0.beta_y - R23 * tws0.alpha_y)
-        if d_muy < 0: d_muy += np.pi
-        tws.muy = tws0.muy + d_muy
-
+        tws.p = state["p"]
+        tws.beta_x = state["beta_x"]
+        tws.beta_y = state["beta_y"]
+        tws.alpha_x = state["alpha_x"]
+        tws.alpha_y = state["alpha_y"]
+        tws.Dx = state["Dx"]
+        tws.Dxp = state["Dxp"]
+        tws.Dy = state["Dy"]
+        tws.Dyp = state["Dyp"]
+        tws.mux = state["mux"]
+        tws.muy = state["muy"]
         return tws
 
     def map_x_twiss(self, tm):
-        E = self.E
-        M = tm.get_params(energy=E).get_rotated_R()
-        zero_tol = 1.e-10
-        if abs(tm.get_delta_e()) > zero_tol:
-            Ei = self.E
-            Ef = self.E + tm.get_delta_e()
-            k = np.sqrt(Ef / Ei)
-            M[0, 0] = M[0, 0] * k
-            M[0, 1] = M[0, 1] * k
-            M[1, 0] = M[1, 0] * k
-            M[1, 1] = M[1, 1] * k
-            M[2, 2] = M[2, 2] * k
-            M[2, 3] = M[2, 3] * k
-            M[3, 2] = M[3, 2] * k
-            M[3, 3] = M[3, 3] * k
-            E = Ef
+        state0 = make_twiss_state(
+            beta_x=self.beta_x,
+            alpha_x=self.alpha_x,
+            beta_y=self.beta_y,
+            alpha_y=self.alpha_y,
+            Dx=self.Dx,
+            Dxp=self.Dxp,
+            Dy=self.Dy,
+            Dyp=self.Dyp,
+            mux=self.mux,
+            muy=self.muy,
+            E=self.E,
+            s=self.s,
+            p=self.p,
+        )
+        state = twiss_step_from_r(
+            tm.get_params(energy=self.E).get_rotated_R(),
+            state0,
+            delta_e=tm.get_delta_e(),
+            xp=np,
+        )
 
-        tws = self.track(M, self)
-        tws.E = E
+        tws = Twiss(self)
+        tws.p = state["p"]
+        tws.beta_x = state["beta_x"]
+        tws.beta_y = state["beta_y"]
+        tws.alpha_x = state["alpha_x"]
+        tws.alpha_y = state["alpha_y"]
+        tws.Dx = state["Dx"]
+        tws.Dxp = state["Dxp"]
+        tws.Dy = state["Dy"]
+        tws.Dyp = state["Dyp"]
+        tws.mux = state["mux"]
+        tws.muy = state["muy"]
+        tws.E = state["E"]
         return tws
 
     def __str__(self):

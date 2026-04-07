@@ -11,20 +11,52 @@ from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 class Bend(OpticElement):
     """
-    bending magnet
-    l - length of magnet in [m],
-    angle - angle of bend in [rad], we use convention from MAD8 where "a positive bend angle represents a bend to the right,
-        i.e. towards negative x vales"
-    k1 - strength of quadrupole lens in [1/m^2],
-    k2 - strength of sextupole lens in [1/m^3],
-    tilt - tilt of lens in [rad],
-    e1 - the angle of inclination of the entrance face [rad],
-    e2 - the angle of inclination of the exit face [rad].
-    fint - fringe field integral
-    fintx - allows (fintx > 0) to set fint at the element exit different from its entry value.
-    gap - the magnet gap [m], NOTE in MAD and ELEGANT: HGAP = gap/2
-    h_pole1 - the curvature (1/r) of the entrance face
-    h_pole2 - the curvature (1/r) of the exit face
+    General bending magnet with optional quadrupole and edge effects.
+
+    Parameters
+    ----------
+    l : float, default=0
+        Length of magnet in [m]
+    angle : float, default=0
+        Bending angle in [rad] (MAD8 convention: positive = bend right)
+    k1 : float, default=0
+        Quadrupole (focusing) strength in [1/m²]
+    k2 : float, default=0
+        Sextupole (coupling) strength in [1/m³]
+    e1, e2 : float, default=0
+        Entrance and exit face angles in [rad]
+    tilt : float, default=0
+        Roll angle around beam axis in [rad]
+    gap : float, default=0
+        Magnet gap in [m] (NOTE: HGAP=gap/2 in MAD/ELEGANT)
+    fint, fintx : float, default=0
+        Fringe field integrals (entrance and exit)
+    h_pole1, h_pole2 : float, default=0
+        Curvature (1/r) of entrance and exit face poles
+
+    Physics
+    -------
+    Bending magnet with dispersion and optional focusing.
+    Edge-aware: builds ENTRANCE → MAIN → EXIT map sequence.
+
+    Tracking Methods
+    ----------------
+    - TransferMap (default): linear maps
+    - SecondTM: second-order nonlinear
+    - KickTM, RungeKuttaTM, RungeKuttaTrTM: advanced methods
+
+    Architecture
+    ~~~~~~~~~~~~~
+    - Wrapper: Bend (this class)
+    - Atom: BendAtom (inherits from Magnet)
+    - Edge-aware: Yes (ENTRANCE → MAIN → EXIT)
+
+    See Also
+    --------
+    https://ocelot-collab.github.io/docs/docu/elements/bend/
+    SBend : Sector bending magnet variant
+    RBend : Rectangular bending magnet variant
+    BendAtom : Physics implementation with edge modeling
     """
     default_tm = TransferMap
     supported_tms = {TransferMap, SecondTM, KickTM, RungeKuttaTM, RungeKuttaTrTM}

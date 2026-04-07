@@ -12,35 +12,49 @@ from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 class OpticElement:
     """
-    Public facade around an element atom.
+    Public wrapper for beamline elements with cached transformations and TM selection.
 
-    Current CPBD contract:
-    - the wrapper owns framework state such as cached transformations, the
-      selected tracking method, and section slicing helpers
-    - the wrapped ``element`` object owns the physics state and the
-      ``create_*_params(...)`` hook methods used by transformations
-    - most public element attributes are forwarded to ``self.element`` to
-      preserve the historical user-facing API
+    Four-Layer Architecture
+    =======================
+    OpticElement is the public wrapper in a four-layer design:
 
-    Two TM roles must be kept separate:
+    1. **Wrapper** (OpticElement subclass): Public API, caching, framework behavior
+    2. **Atom** (Element or Magnet): Physics state and hook methods
+    3. **TMParams**: Typed data passed from atom to transformation
+    4. **Transformation**: Tracking algorithm (TransferMap, SecondTM, etc.)
 
-    - ``first_order_tms`` is the always-available ``TransferMap`` cache used by
-      linear optics / Twiss code.
-    - ``tms`` is the active tracking method selected on the wrapper.
+    This class owns framework state and forwards physics attributes to the atom.
 
-    ``default_tm`` remains the family fallback for active tracking. If a
-    wrapper also declares ``supported_tms``, those entries should be read as
-    wrapper-selectable active tracking methods, not as a list of every
-    internal first-order path that exists for optics.
+    Two Transformation Paths
+    ========================
+    **first_order_tms** (always available)
+        Linear R-matrix path built with TransferMap.
+        Used by Twiss, optics, and linear analysis.
+        Always present even if active method is different.
 
-    Current selection rule:
+    **tms** (active tracking path)
+        May use TransferMap, SecondTM, CavityTM, or family-specific transformation.
+        Selected via default_tm and supported_tms.
 
-    - declared requests keep the requested active TM
-    - explicit undeclared requests raise
-    - global lattice requests may warn and fall back to ``default_tm``
+    Tracking Method Selection
+    =========================
+    - ``default_tm``: Family fallback when tm=None
+    - ``supported_tms``: Wrapper-selectable active methods (if declared)
+    - Explicit requests must be in supported_tms (raises otherwise)
+    - Global lattice requests may warn and fall back to default_tm
 
-    A family that wants to expose only one active TM should simply declare
-    ``supported_tms = {default_tm}``.
+    See Also
+    --------
+    https://ocelot-collab.github.io/docs/docu/elements/architecture/
+    https://ocelot-collab.github.io/docs/docu/elements/optical-element/
+
+    Examples
+    --------
+    >>> from ocelot.cpbd.elements import Quadrupole
+    >>> from ocelot.cpbd.transformations.second_order import SecondTM
+    >>> q = Quadrupole(l=0.4, k1=1.2)
+    >>> q.set_tm(SecondTM)  # Switch to second-order tracking
+    >>> q.R(energy=1.0)  # Get R-matrix
     """
 
     default_tm = TransferMap
@@ -116,6 +130,22 @@ class OpticElement:
 
         These may differ from ``first_order_tms`` when a family uses a custom
         tracking method such as ``CavityTM`` or ``RungeKuttaTM``.
+
+        Important:
+        This property returns transformation objects, not already materialized
+        matrices. The real energy-dependent params are created later via
+        ``tm.get_params(energy)``.
+
+        For example, to get the rotated R matrix for each active TM in a
+        sequence, code must do the same energy propagation that ``R(energy)``
+        does:
+
+        ``params = tm.get_params(E)``
+        ``R = params.get_rotated_R()``
+        ``E += tm.get_delta_e()``
+
+        In most cases callers should prefer the wrapper helpers ``R(energy)``,
+        ``B(energy)``, and ``T(energy)`` instead of reimplementing that loop.
         """
         if self._tms is None:
             if self._tm_class_type == TransferMap:
@@ -137,6 +167,17 @@ class OpticElement:
         something else. This is why a family such as ``Multipole`` can keep a
         ``TransferMap``-based optics path while still exposing only
         ``MultipoleTM`` as an active tracking method.
+
+        Important:
+        This property returns first-order ``Transformation`` objects, not ready
+        R matrices. The actual first-order params are created on demand via
+        ``tm.get_params(energy)``.
+
+        For one TM object the materialized linear matrix is typically read as
+        ``tm.get_params(E).get_rotated_R()``. For a whole element sequence the
+        incoming reference energy must be advanced after each map using
+        ``tm.get_delta_e()``. The wrapper helpers ``R(energy)`` and
+        ``B(energy)`` already perform that bookkeeping for the optics path.
         """
         if self._first_order_tms is None:
             self._first_order_tms = self._create_tms(self.element, TransferMap)

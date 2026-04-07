@@ -10,20 +10,44 @@ from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 class RBend(OpticElement):
     """
-    rectangular bending magnet,
-    l - length of magnet in [m],
-    angle - angle of bend in [rad], we use convention from MAD8 where "a positive bend angle represents a bend to the right,
-        i.e. towards negative x vales"
-    k1 - strength of quadrupole lens in [1/m^2],
-    k2 - strength of sextupole lens in [1/m^3],
-    tilt - tilt of lens in [rad],
-    e1 - the angle of inclination of the entrance face [rad],
-    e2 - the angle of inclination of the exit face [rad].
-    fint - fringe field integral
-    fintx - allows (fintx > 0) to set fint at the element exit different from its entry value.
-    gap - the magnet gap [m], NOTE in MAD and ELEGANT: HGAP = gap/2
-    h_pole1 - the curvature (1/r) of the entrance face
-    h_pole2 - the curvature (1/r) of the exit face
+    Rectangular bending magnet: bend with edges perpendicular to entrance/exit.
+
+    Parameters
+    ----------
+    l : float, default=0
+        Length of magnet in [m]
+    angle : float, default=0
+        Bending angle in [rad] (MAD8 convention)
+    k1, k2 : float, default=0
+        Quadrupole and sextupole strengths
+    e1, e2, tilt : float, default=0
+        Entrance/exit face angles and roll in [rad]
+    gap, fint, fintx : float, default=0
+        Fringe field model parameters
+    h_pole1, h_pole2 : float, default=0
+        Pole face curvatures (1/r)
+
+    Physics
+    -------
+    Rectangular (cylindrical) bend.
+    Edges perpendicular to reference trajectory at entrance/exit.
+    Dispersion element. Edge-aware.
+
+    Tracking Methods
+    ----------------
+    Same as Bend: TransferMap, SecondTM, KickTM, etc.
+
+    Architecture
+    ~~~~~~~~~~~~~
+    - Wrapper: RBend (this class)
+    - Atom: RBendAtom (inherits from Magnet)
+    - Edge-aware: Yes (ENTRANCE → MAIN → EXIT)
+
+    See Also
+    --------
+    Bend : General bending magnet
+    SBend : Sector bend variant
+    RBendAtom : Physics implementation
     """
     default_tm = TransferMap
     supported_tms = {TransferMap, SecondTM, KickTM, RungeKuttaTM, RungeKuttaTrTM}

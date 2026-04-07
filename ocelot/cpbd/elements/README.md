@@ -1,13 +1,17 @@
-# CPBD Element Architecture: Current Contract and Improvement Plan
+# CPBD Element Architecture: Developer Note
 
 This note is for developers working inside `ocelot.cpbd`.
 
 It has two goals:
 
-1. explain how the current element machinery really works
-2. describe an improvement path that makes the current architecture clearer without breaking user-visible behavior
+1. explain how the current element machinery works
+2. describe a safe evolution path that makes the current architecture clearer without changing user-visible behavior
 
-The public Ocelot docs already explain how to use elements such as `Bend`, `SBend`, `RBend`, `Cavity`, and `Quadrupole`. What is harder to understand from the outside is the internal contract between wrappers, atoms, parameter containers, and transformations. That contract is the important part to preserve before any architecture change.
+The public Ocelot documentation already explains how to use elements such as
+`Bend`, `SBend`, `RBend`, `Cavity`, and `Quadrupole`. What is harder to see
+from the outside is the internal contract between wrappers, atoms, parameter
+containers, and transformations. That contract is the part that matters when
+reading or modifying the current implementation.
 
 In this note:
 
@@ -18,42 +22,40 @@ In this note:
 
 ## Bottom Line
 
-The current architecture already has several strong sides that are worth
-keeping:
+The current implementation already has a clear high-level split:
 
 - element physics lives on atoms, while tracking algorithms live in transformations
 - one element family can support more than one active tracking method
-- first-order optics can stay available even when active tracking uses another TM
+- first-order optics can remain available even when active tracking uses another TM
 - the public wrapper preserves a stable user-facing API across lattice and tracking code
 
-The main weakness is not the overall split. The main weakness is that too much
-of the contract is implicit.
+The main source of complexity is that much of the contract is still implicit.
 
-In the current code, a developer still has to discover important rules by
-reading implementation details:
+In the current code, a developer often has to infer important rules from
+implementation details:
 
-- `OpticElement` is part of the real framework behavior, not just a thin facade
-- wrapper forwarding hides where physics state actually lives
+- `OpticElement` participates directly in framework behavior; it is not just a thin facade
+- wrapper forwarding hides where physics state is actually stored
 - TM support and edge behavior have historically been inferred from hook presence, wrapper restrictions, and fallback rules
-- some family behavior is clear only after reading both the wrapper and the atom
+- some family behavior is only obvious after reading both the wrapper and the atom
 
-So the current goal is not to redesign the architecture first. The current goal
-is to make the existing architecture clearer, safer, and easier to work with.
+The current work therefore focuses on making the existing contract explicit
+rather than replacing the architecture first.
 
-That improvement work already started in three ways:
+That work has already started in three ways:
 
 1. the current contract is being documented explicitly in this note
 2. architecture-level unit tests now freeze the important behavior
 3. wrapper TM declarations and edge behavior are being made more explicit
 
-The next steps should continue in the same direction:
+The next steps continue in the same direction:
 
 1. finish making per-family capabilities visible
 2. keep tightening contract tests around edge and TM behavior
 3. simplify local parts of the current design only where that improves clarity without changing physics
 
-Users should not notice these changes except through clearer developer-facing
-behavior, safer maintenance, and preserved physics results within tolerance.
+Users should only see the results as clearer developer-facing behavior, safer
+maintenance, and preserved physics results within tolerance.
 
 ## The Current Runtime Model
 
@@ -137,17 +139,253 @@ MagneticLattice.update_transfer_maps()
     -> Transformation.map_function(...)
 ```
 
+## Worked Examples
+
+The abstract split is easier to understand when traced through representative
+families.
+
+For most developers with a physics background, the most useful mental model is:
+
+- wrapper = the public beamline element and its usage policy
+- atom = the physics model and formulas
+- transformation = the tracking method / propagator
+- `TMParams` = the coefficients or structured data passed from the physics model to the propagator
+
+### Example 1: Quadrupole
+
+```python
+from ocelot.cpbd.elements import Quadrupole
+from ocelot.cpbd.transformations.second_order import SecondTM
+
+q = Quadrupole(l=0.4, k1=1.2)
+```
+
+What exists conceptually after construction:
+
+- the public lattice element is the `Quadrupole` wrapper
+- inside it, `q.element` is a `QuadrupoleAtom`
+- the default active tracking method is `TransferMap`
+- because `Quadrupole` has no edges, CPBD builds only one `MAIN` map
+
+So the runtime picture is:
+
+```text
+Quadrupole wrapper
+    -> QuadrupoleAtom physics
+    -> create_first_order_main_params(...)
+    -> FirstOrderParams
+    -> TransferMap(MAIN)
+```
+
+If you later switch the active method:
+
+```python
+q.set_tm(SecondTM)
+```
+
+the physical quadrupole does not change. What changes is the active
+transformation:
+
+```text
+same QuadrupoleAtom
+    -> create_second_order_main_params(...)
+    -> SecondOrderParams
+    -> SecondTM(MAIN)
+```
+
+Important:
+
+- `q.tms` now uses `SecondTM` for active tracking
+- `q.first_order_tms` still exists and still uses `TransferMap`
+- therefore one quadrupole keeps a linear optics view and a possibly different active tracking view
+
+#### Following `q.first_order_tms` to the real matrix
+
+One common source of confusion is that:
+
+```python
+q.first_order_tms
+```
+
+does not return an `R` matrix directly. It returns a list of transformation
+objects.
+
+For a quadrupole without edges, the practical result is conceptually:
+
+```text
+[TransferMap(MAIN)]
+```
+
+Important:
+
+- `q.first_order_tms` is a property, not a method; write `q.first_order_tms`, not `q.first_order_tms()`
+- for a no-edge family such as `Quadrupole`, the list usually has one `MAIN` transformation
+- for an edge-aware family such as `Bend` or `Cavity`, the list may contain `ENTRANCE`, `MAIN`, and `EXIT`
+
+The actual first-order params appear only when energy is known:
+
+```python
+q = Quadrupole(l=0.4, k1=1.2)
+tm = q.first_order_tms[0]
+params = tm.get_params(energy=1.0)
+
+R = params.get_rotated_R()
+B = params.B
+```
+
+So the real runtime chain is:
+
+```text
+q.first_order_tms
+    -> TransferMap object
+    -> tm.get_params(energy)
+    -> FirstOrderParams
+    -> params.get_rotated_R()
+```
+
+Why the extra step exists:
+
+- the transformation object is lazy
+- many maps depend on the incoming reference energy
+- some families such as cavities also change that energy along the beamline
+- therefore CPBD usually cannot materialize every map correctly at element construction time
+
+For a whole transformation sequence, energy must be advanced after each map:
+
+```python
+E = 1.0
+Rs = []
+for tm in q.first_order_tms:
+    Rs.append(tm.get_params(E).get_rotated_R())
+    E += tm.get_delta_e()
+```
+
+That bookkeeping is exactly why helper methods such as `q.R(energy)` and
+`q.B(energy)` exist: they already perform the `get_params(...)` call and the
+energy propagation through the sequence.
+
+### Example 2: Cavity
+
+```python
+from ocelot.cpbd.elements import Cavity
+
+c = Cavity(l=0.3, v=0.002, freq=1.3e9, phi=20.0)
+```
+
+`Cavity` is the clearest example of why wrappers and atoms are separate.
+
+Physics side:
+
+- `CavityAtom` stores RF voltage, phase, coupler-kick data, and energy gain
+- it can build both first-order optics parameters and cavity-specific tracking parameters
+
+Wrapper side:
+
+- the wrapper declares `supported_tms = {CavityTM}`
+- therefore active tracking uses `CavityTM`, not `TransferMap`
+- but `first_order_tms` is still built with `TransferMap` for optics / Twiss
+
+So for cavity the two TM roles are different:
+
+```text
+active tracking: CavityTM
+optics / Twiss:  TransferMap
+```
+
+Because `Cavity` has `has_edge=True`, it does not build one map but three:
+
+```text
+ENTRANCE -> MAIN -> EXIT
+```
+
+Conceptually this means:
+
+- entrance coupler / edge effect
+- cavity body
+- exit coupler / edge effect
+
+This is why `Cavity` is a useful reference family when reading the
+architecture: it shows that the linear optics path and the active tracking path
+are separate concepts.
+
+### Example 3: Bend
+
+```python
+from ocelot.cpbd.elements import Bend
+
+b = Bend(l=1.0, angle=0.1, e1=0.02, e2=0.03)
+```
+
+`Bend` is the most natural edge-aware example because accelerator physicists
+already think about it as entrance face, body, and exit face.
+
+For first-order tracking the structure is:
+
+```text
+TransferMap(ENTRANCE), TransferMap(MAIN), TransferMap(EXIT)
+```
+
+If the active method is changed to `SecondTM`, the structure becomes:
+
+```text
+SecondTM(ENTRANCE), SecondTM(MAIN), SecondTM(EXIT)
+```
+
+So the wrapper contract for an edge-aware family is not "one element gives one
+map". The current contract is:
+
+- no-edge family: one `MAIN` map
+- edge-aware family: `ENTRANCE -> MAIN -> EXIT`
+
+### Example 4: What `MagneticLattice` actually does
+
+```python
+from ocelot.cpbd.elements import Quadrupole, Cavity
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.transformations.second_order import SecondTM
+
+cell = (
+    Quadrupole(l=0.4, k1=1.2, eid="Q1"),
+    Cavity(l=0.3, v=0.002, freq=1.3e9, phi=0.0, eid="C1"),
+)
+
+lat = MagneticLattice(cell, method={"global": SecondTM})
+```
+
+`MagneticLattice` does not do the element physics itself. It asks each wrapper
+to choose its active TM according to wrapper policy.
+
+Conceptually:
+
+```text
+MagneticLattice
+    -> wrapper decides whether requested TM is allowed
+    -> atom builds params for the selected TM
+    -> transformation tracks particles
+```
+
+In this example:
+
+- `Quadrupole` accepts `SecondTM`, so its active tracking becomes second-order
+- `Cavity` does not expose `SecondTM` as an active TM, so the global request falls back to `CavityTM`
+- `Cavity` still keeps its first-order `TransferMap` optics path in `first_order_tms`
+
+This is the most important practical reading rule for the current
+architecture:
+
+- one physical element family may support more than one active tracking method
+- optics / Twiss still uses the always-available first-order path
+- wrapper declarations decide what users are allowed to select explicitly
+
 ## Edge Contract
 
 `has_edge` is not cosmetic metadata. It changes how CPBD builds both the
 always-available optics path and the active tracking path.
 
 - `has_edge = False` means the element builds only one `MAIN` map
-- `has_edge = True` means the element builds a three-map sequence:
-  `ENTRANCE -> MAIN -> EXIT`
+- `has_edge = True` means the element builds a three-map sequence: `ENTRANCE -> MAIN -> EXIT`
 - this rule applies to `first_order_tms` as well as to the active `tms`
-- therefore an edge-aware family must always provide first-order entrance and
-  exit hooks, even if its active tracking TM is a custom family-specific one
+- therefore an edge-aware family must always provide first-order entrance and exit hooks, even if its active tracking TM is a custom family-specific one
 
 For slices built with `get_section_tms(...)`, the current contract is:
 
@@ -158,8 +396,8 @@ For slices built with `get_section_tms(...)`, the current contract is:
 - `ignore_edges=True` suppresses entrance and exit maps explicitly
 
 If a family declares support for a TM and also has `has_edge=True`, then that
-TM must be able to build entrance, main, and exit maps from the atom hooks.
-If it cannot, that is a bug in the wrapper contract, not a user mistake.
+TM must be able to build entrance, main, and exit maps from the atom hooks. If
+it cannot, that is a bug in the wrapper contract, not a user mistake.
 
 ## TM Roles
 
@@ -185,10 +423,8 @@ does not allow `TransferMap` to stay active as the tracking method.
 
 This is the important distinction:
 
-- every `OpticElement` family is expected to support the `TransferMap`
-  first-order optics path through `first_order_tms`
-- but `TransferMap` belongs in `supported_tms` only when that family also
-  allows `TransferMap` as an active particle / beam tracking method for `tms`
+- every `OpticElement` family is expected to support the `TransferMap` first-order optics path through `first_order_tms`
+- but `TransferMap` belongs in `supported_tms` only when that family also allows `TransferMap` as an active particle / beam tracking method for `tms`
 
 So there are two distinct questions:
 
@@ -197,8 +433,7 @@ So there are two distinct questions:
 
 For example, `Cavity` answers:
 
-- yes for the optics/Twiss path, because `first_order_tms` is still built with
-  `TransferMap`
+- yes for the optics / Twiss path, because `first_order_tms` is still built with `TransferMap`
 - no for active tracking, because `supported_tms = {CavityTM}`
 
 ### 2. Active tracking TM
@@ -248,11 +483,12 @@ One more important point:
 
 - `SecondTM` is not applied as "`TransferMap` plus a correction map"
 - it is its own transformation class with `R`, `B`, and `T`
-- many atoms build the `R`/`B` part by calling their own first-order helper internally, but runtime still applies only the `SecondTM`
+- many atoms build the `R` / `B` part by calling their own first-order helper internally, but runtime still applies only the `SecondTM`
 
 ## Public Element Capability Inventory
 
-This inventory is based on current code behavior, not on an idealized future design.
+This inventory is based on current code behavior, not on an idealized future
+design.
 
 The columns below deliberately separate:
 
@@ -306,22 +542,15 @@ general template for other elements.
 Current policy:
 
 - the full element is exact and uses the stored `R` / `B` / `T` data
-- a partial slice requested with `first_order_only=True` is allowed only as an
-  optics / Twiss approximation
-- that approximation intentionally behaves like a drift-like first-order slice
-  with linearly scaled `delta_e`
-- a partial slice requested for active tracking (`first_order_only=False`) is
-  rejected explicitly
+- a partial slice requested with `first_order_only=True` is allowed only as an optics / Twiss approximation
+- that approximation intentionally behaves like a drift-like first-order slice with linearly scaled `delta_e`
+- a partial slice requested for active tracking (`first_order_only=False`) is rejected explicitly
 
 Implementation note:
 
-- `elements/matrix.py` uses a small internal helper class,
-  `_MatrixApproxSliceAtom`
-- this helper is not a new public element family; it is only a local way to
-  reuse the existing `DriftAtom -> TransferMap` first-order path for optics
-  interpolation
-- it carries the requested slice length plus the wrapper-visible geometry
-  fields (`dx`, `dy`, `tilt`) and scaled `delta_e`
+- `elements/matrix.py` uses a small internal helper class, `_MatrixApproxSliceAtom`
+- this helper is not a new public element family; it is only a local way to reuse the existing `DriftAtom -> TransferMap` first-order path for optics interpolation
+- it carries the requested slice length plus the wrapper-visible geometry fields (`dx`, `dy`, `tilt`) and scaled `delta_e`
 
 The explicit tracking guard lives in `Matrix.get_section_tms(...)`: if the
 request is for a partial slice and `first_order_only` is not set, the wrapper
@@ -337,7 +566,8 @@ Typical examples:
 
 Most public classes subclass `OpticElement`.
 
-That wrapper does more than just forward constructor arguments. It is responsible for:
+That wrapper does more than forward constructor arguments. It is responsible
+for:
 
 - exposing the legacy public API
 - forwarding many attributes to `self.element`
@@ -347,7 +577,7 @@ That wrapper does more than just forward constructor arguments. It is responsibl
 - building `ENTRANCE`, `MAIN`, and `EXIT` transformation lists
 - building partial element slices for `get_section_tms(...)`
 
-This point is easy to underestimate. The wrapper is currently part of the framework contract, not just syntactic sugar.
+The wrapper is therefore part of the framework contract, not just syntax.
 
 ### Public attribute access rule
 
@@ -410,7 +640,8 @@ Elements without edges usually implement only the `main` variant.
 - `create_runge_kutta_*_params(...)`
 - `create_delta_e(...)`
 
-The atom does not usually track particles directly. It computes the data a transformation needs.
+The atom does not usually track particles directly. It computes the data a
+transformation needs.
 
 ## Layer 3: `TMParams`
 
@@ -424,7 +655,8 @@ Typical examples:
 - `tm_params/multipole_params.py`
 - `tm_params/undulator_test_params.py`
 
-These objects are the explicit contract between the atom and the transformation.
+These objects are the explicit contract between the atom and the
+transformation.
 
 Overview:
 
@@ -444,7 +676,8 @@ Two practical notes:
 - some `TMParams` classes are pure data holders, while others add small helpers such as `get_rotated_R()` or `get_rotated_T()`
 - these classes are not just documentation; they are the explicit boundary that lets one atom family feed more than one transformation without mixing all algorithm-specific data into the atom itself
 
-This part of the design is worth keeping. It is one of the reasons the current system can support multiple tracking algorithms per element family.
+This boundary is one reason the current system can support multiple tracking
+algorithms per element family.
 
 ## Layer 4: Transformation
 
@@ -462,6 +695,15 @@ The transformation:
 - requests params for a given energy via `get_params(energy)`
 - applies the actual map in `map_function(...)`
 
+Why these objects are lazy:
+
+- `first_order_tms` and `tms` return transformation objects, not fully materialized matrices or `TMParams`
+- the real params are created only when code calls `get_params(energy)`
+- this is necessary because many maps depend on the incoming reference energy, and some families such as cavities also change that energy along the lattice
+- therefore CPBD usually cannot safely precompute every map at element construction time; the correct params are known only when tracking or Twiss propagation provides the actual beam energy
+- the lazy transformation object is the carrier that remembers which atom hook to call, which TM type it is (`ENTRANCE`, `MAIN`, `EXIT`), and what slice length should be used
+- this also lets CPBD reuse one abstraction for full elements, slices, tracking, and optics, while still caching params for a specific energy once they are requested
+
 Examples:
 
 - `TransferMap` applies `R` and `B`
@@ -469,29 +711,36 @@ Examples:
 - `CavityTM` uses cavity-specific metadata in addition to the linear map
 - `KickTM` computes the kick algorithmically instead of consuming a ready-made matrix
 
-## What Is Good About The Current Design
+## Current Architectural Properties
 
-Before discussing further cleanup, it is important to preserve the advantages that already exist.
+Before discussing cleanup, it is useful to state the stable properties that the
+current implementation already relies on.
 
 ### 1. Physics and algorithm are separated
 
-`CavityAtom` computes cavity-specific matrices and RF parameters. `CavityTM` decides how to apply those parameters to particles. That separation is useful and should remain.
+`CavityAtom` computes cavity-specific matrices and RF parameters. `CavityTM`
+decides how to apply those parameters to particles. The current contract
+depends on that separation.
 
 ### 2. One element family can support multiple tracking methods
 
-A magnet family can expose first-order, second-order, kick-based, or Runge-Kutta tracking without forcing every algorithm into one monolithic class.
+A magnet family can expose first-order, second-order, kick-based, or
+Runge-Kutta tracking without forcing every algorithm into one monolithic class.
 
 ### 3. First-order optics stay available
 
-`OpticElement` always keeps first-order maps available even when the active method is different. This is essential for Twiss, partial tracing, and other linear optics routines.
+`OpticElement` always keeps first-order maps available even when the active
+method is different. Twiss, partial tracing, and other linear optics routines
+depend on that behavior.
 
 ### 4. Edge handling is uniform
 
-The `ENTRANCE -> MAIN -> EXIT` convention is shared across bends, cavities, and other edge-aware elements. That is a valuable invariant.
+The `ENTRANCE -> MAIN -> EXIT` convention is shared across bends, cavities, and
+other edge-aware elements. That is an important current invariant.
 
 ## Where The Current Design Is Too Implicit
 
-This is where most developer confusion comes from.
+Most developer confusion comes from this area.
 
 ### 1. The wrapper is more than a facade
 
@@ -503,7 +752,8 @@ The wrapper owns important framework behavior:
 - slice construction in `get_section_tms(...)`
 - public attribute forwarding
 
-So cleanup cannot simply "remove the wrapper" unless that behavior is moved somewhere explicit and every caller still gets the same semantics.
+Any cleanup that changes the wrapper has to preserve those semantics
+explicitly.
 
 ### 2. TM selection policy must stay explicit
 
@@ -523,14 +773,9 @@ Current rule:
 This also explains the `TransferMap` / `SecondTM` case under global lattice
 assignment:
 
-- if a family does not list `TransferMap` or `SecondTM` in `supported_tms`,
-  then `MagneticLattice(method={"global": TransferMap})` or
-  `MagneticLattice(method={"global": SecondTM})` does not force that family to
-  use those methods
+- if a family does not list `TransferMap` or `SecondTM` in `supported_tms`, then `MagneticLattice(method={"global": TransferMap})` or `MagneticLattice(method={"global": SecondTM})` does not force that family to use those methods
 - instead, the wrapper warns and falls back to its `default_tm`
-- `Cavity` is the clearest example: global `TransferMap` or global `SecondTM`
-  still leaves the active tracking method at `CavityTM`, while the
-  `TransferMap` optics path remains available in `first_order_tms`
+- `Cavity` is the clearest example: global `TransferMap` or global `SecondTM` still leaves the active tracking method at `CavityTM`, while the `TransferMap` optics path remains available in `first_order_tms`
 
 Internally, `OpticElement.set_tm(...)` distinguishes these cases with
 `request_source`:
@@ -570,15 +815,20 @@ The remaining cleanup should continue by auditing families and either:
 
 ### 3. The wrapper/atom split is still externally relevant
 
-This is still a critical compatibility point.
+This remains a compatibility point.
 
-Historically, parts of CPBD and related adaptors inspected `element.element` directly. The known serializer/adaptor cases have been migrated to the public wrapper API, so this is no longer the main blocker. The split is still not an implementation detail because:
+Historically, parts of CPBD and related adaptors inspected `element.element`
+directly. The known serializer/adaptor cases have been migrated to the public
+wrapper API, so this is no longer the main blocker. The split is still not an
+implementation detail because:
 
 - `OpticElement` itself stores physics on `self.element`
 - wrapper forwarding and cache invalidation depend on that split
 - some code paths still assume an `OpticElement` instance rather than a raw physics object
 
-That means a direct one-class element design is not only a local change inside `elements/`. It still affects compatibility surfaces even after those serializer/adaptor cleanups.
+That means a direct one-class element design is not only a local change inside
+`elements/`. It still affects compatibility surfaces even after those
+serializer/adaptor cleanups.
 
 ### 4. Hook-based capability discovery is hard to read
 
@@ -592,11 +842,14 @@ This works, but it is hidden and fragile.
 
 ### 5. The magic forwarding hides where data lives
 
-`OpticElement.__getattr__` and `__setattr__` are useful for backward compatibility, but they also hide the true storage location of physics state and the exact moment cache invalidation happens.
+`OpticElement.__getattr__` and `__setattr__` are useful for backward
+compatibility, but they also hide the true storage location of physics state
+and the exact moment cache invalidation happens.
 
 ## Cavity As A Reference Example
 
-`Cavity` is a good example because it exercises several important parts of the architecture.
+`Cavity` is a useful reference family because it exercises several important
+parts of the architecture at once.
 
 ### Current split
 
@@ -605,7 +858,7 @@ This works, but it is hidden and fragile.
 - `CavityParams` is the contract object
 - `CavityTM` owns the longitudinal tracking algorithm
 
-This split is reasonable:
+In current code:
 
 - the wrapper preserves the old public API
 - the atom computes `R`, `B`, and cavity-specific metadata
@@ -633,7 +886,7 @@ Any future cleanup should preserve the following behavior.
 
 ## Recommended Improvement Plan
 
-The safest improvement path is staged.
+The current contract is easiest to evolve in stages.
 
 ### Phase 0: Freeze the current contract
 
@@ -649,7 +902,7 @@ Goal:
 
 ### Phase 1: Finish making capabilities explicit
 
-This is now part of the main architecture, not just a future idea.
+This is already part of the main architecture, not just a future idea.
 
 Current state:
 
@@ -657,7 +910,7 @@ Current state:
 - representative public wrappers already declare `supported_tms`
 - architecture contract tests already freeze that behavior
 
-What still needs to be completed:
+What still needs to be completed for each family:
 
 - what its `TransferMap` / `first_order_tms` optics path means
 - `has_edge`
@@ -724,8 +977,8 @@ Goal:
 
 ### Phase 4: Review `TMParams` containers carefully
 
-`TMParams` already does something useful: it gives an explicit boundary between
-atom physics code and transformation code.
+`TMParams` already provides an explicit boundary between atom physics code and
+transformation code.
 
 Potential benefits of dataclasses:
 
@@ -751,7 +1004,8 @@ Goal:
 
 ### Phase 5: Extract the framework contract only if needed
 
-Instead, identify the exact framework services currently provided by `OpticElement`:
+Before any deeper refactor, identify the exact framework services currently
+provided by `OpticElement`:
 
 - forwarding
 - cache invalidation
@@ -767,7 +1021,8 @@ Goal:
 
 ## What To Do If You Add A New Element Today
 
-Until the architecture is improved further, the safest extension path is still the current one:
+Until the architecture is clarified further, the lower-risk extension path is
+still the current one:
 
 1. start from the closest existing family
 2. keep the wrapper-plus-atom split
@@ -777,7 +1032,8 @@ Until the architecture is improved further, the safest extension path is still t
 6. add edge hooks only when `has_edge=True`
 7. add tests before trying to optimize the structure
 
-For new work today, that is lower risk than creating new public direct-style elements.
+For new work today, that is lower risk than creating new public direct-style
+elements.
 
 ### Adding A New Transformation To An Existing Element
 
@@ -786,24 +1042,18 @@ and only the tracking algorithm changes.
 
 Recommended order:
 
-1. decide whether the new algorithm is only another active tracking method for
-   an existing family, or whether the family physics itself also changes
-2. check whether an existing `TMParams` container already matches the data the
-   new transformation needs
+1. decide whether the new algorithm is only another active tracking method for an existing family, or whether the family physics itself also changes
+2. check whether an existing `TMParams` container already matches the data the new transformation needs
 3. add the atom hook family that builds those params
 4. implement the new transformation class
-5. declare the new transformation on the wrapper only after the atom hooks and
-   transformation can actually build
+5. declare the new transformation on the wrapper only after the atom hooks and transformation can actually build
 6. add contract tests for selection, buildability, and any edge behavior
 
 About `TMParams`:
 
 - you do not always need a new `TMParams` class
-- if the new transformation can consume an existing contract such as
-  `FirstOrderParams`, `SecondOrderParams`, `KickParams`, or
-  `RungeKuttaParams`, reuse it
-- add a new `TMParams` class only when the transformation needs a new data
-  boundary that is not already represented cleanly
+- if the new transformation can consume an existing contract such as `FirstOrderParams`, `SecondOrderParams`, `KickParams`, or `RungeKuttaParams`, reuse it
+- add a new `TMParams` class only when the transformation needs a new data boundary that is not already represented cleanly
 
 Typical cases:
 
@@ -829,22 +1079,16 @@ Mechanically, the pieces are:
    implement `map_function(...)`
 
 3. Wrapper:
-   if the family should expose the new algorithm as an active method, add it
-   to `supported_tms`
-   if it should become the family default active method, also update
-   `default_tm`
+   if the family should expose the new algorithm as an active method, add it to `supported_tms`
+   if it should become the family default active method, also update `default_tm`
 
 4. Tests:
    add or extend architecture tests so the wrapper contract is explicit
 
 Example decision rule:
 
-- if you add a `RungeKutta`-style tracking option to a family whose atom can
-  already provide `mag_field`, you probably only need a new hook family or
-  reuse the existing one plus wrapper declaration
-- if you add a brand-new algorithm with brand-new per-element metadata, you
-  need all three pieces: new hook family, new `TMParams`, and new
-  transformation
+- if you add a `RungeKutta`-style tracking option to a family whose atom can already provide `mag_field`, you probably only need a new hook family or reuse the existing one plus wrapper declaration
+- if you add a brand-new algorithm with brand-new per-element metadata, you need all three pieces: new hook family, new `TMParams`, and new transformation
 
 ### Adding A New Element From Scratch
 
@@ -853,8 +1097,7 @@ very strong reason not to.
 
 Recommended checklist:
 
-1. start from the closest existing family and copy the structure, not just the
-   formulas
+1. start from the closest existing family and copy the structure, not just the formulas
 2. create the public wrapper in `elements/<name>.py`
 3. create the physics atom in `elements/<name>_atom.py`
 4. choose the family `default_tm`
@@ -889,25 +1132,24 @@ Minimum structure for a normal new family:
 
 Safe default rule:
 
-- if you are unsure, first make the family work with the linear
-  `TransferMap` optics path
+- if you are unsure, first make the family work with the linear `TransferMap` optics path
 - then add one extra active tracking method at a time
 - only after that widen `supported_tms`
 
 What to avoid:
 
 - declaring a TM in `supported_tms` before the atom hooks really exist
-- treating the always-available `TransferMap` optics path as if it were always
-  an allowed active tracking method
-- adding `has_edge=True` without implementing the required entrance and exit
-  hooks
+- treating the always-available `TransferMap` optics path as if it were always an allowed active tracking method
+- adding `has_edge=True` without implementing the required entrance and exit hooks
 - bypassing the wrapper and exposing only the atom as the public element API
 
 ## Unit Tests That Protect Future Cleanup
 
-The most useful tests are not only physics regression tests. We also need framework-contract tests.
+The most useful tests are not only physics regression tests. The architecture
+also needs contract tests.
 
-The best approach is to add one new architecture-focused test module and keep a few element-family tests around it.
+The best approach is to add one architecture-focused test area and keep a few
+representative element-family tests around it.
 
 Current contract test area:
 
@@ -970,7 +1212,8 @@ These tests protect cleanup around cavities and other active elements.
 
 ### D. Representative family tests
 
-We do not need one architecture test per element immediately. We do need one representative test per important family.
+We do not need one architecture test per element immediately. We do need one
+representative test per important family.
 
 Recommended coverage:
 
@@ -983,7 +1226,8 @@ Recommended coverage:
 
 ### E. Cavity-specific contract tests
 
-For future architecture work, `Cavity` deserves dedicated tests beyond `remove_coupler_kick()`.
+For future architecture work, `Cavity` deserves dedicated tests beyond
+`remove_coupler_kick()`.
 
 Recommended additions:
 
@@ -1001,7 +1245,8 @@ Recommended additions:
 
 ### F. Compatibility tests outside `elements/`
 
-Before migrating away from the wrapper-plus-atom model, add at least a few tests that protect the current external expectations.
+Before migrating away from the wrapper-plus-atom model, add at least a few
+tests that protect the current external expectations.
 
 Recommended coverage:
 
@@ -1017,15 +1262,19 @@ The earlier README was directionally useful, but it had several weaknesses.
 
 ### 1. It repeated itself
 
-There were multiple sections saying similar things about architecture changes, explicit capabilities, and templates. That made the document longer without making the contract clearer.
+There were multiple sections saying similar things about architecture changes,
+explicit capabilities, and templates. That made the document longer without
+making the contract clearer.
 
 ### 2. It described the split more cleanly than the code actually behaves
 
-The old note described wrappers mainly as facades, while current code shows that `OpticElement` still owns important framework behavior.
+The old note described wrappers mainly as facades, while current code shows
+that `OpticElement` still owns important framework behavior.
 
 ### 3. It moved toward architecture replacement too quickly
 
-The earlier version talked too much about replacing the structure before finishing the basic clarity work on the current implementation.
+The earlier version talked too much about replacing the structure before
+finishing the basic clarity work on the current implementation.
 
 ### 4. It did not emphasize external compatibility enough
 
@@ -1036,13 +1285,14 @@ The previous note did not clearly separate two facts:
 
 ### 5. It mixed extension guidance with architecture replacement
 
-Those are related topics, but they should not be confused. The current extension path and the future cleanup path are not the same thing.
+Those are related topics, but they should not be confused. The current
+extension path and the future cleanup path are not the same thing.
 
 ## Recommendation
 
-The right direction is evolutionary, not revolutionary.
+The current direction is evolutionary rather than architectural replacement.
 
-The project should move toward:
+The project should continue toward:
 
 - explicit capabilities
 - consistent TM selection behavior
@@ -1050,4 +1300,5 @@ The project should move toward:
 - less hidden wrapper magic
 - maybe later, if clearly justified, a simpler internal model
 
-But the immediate next step should be test-first hardening and clearer documentation of the current contract, not replacing the architecture by intuition.
+The immediate next step is test-first hardening and clearer documentation of
+the current contract, not replacing the architecture by intuition.

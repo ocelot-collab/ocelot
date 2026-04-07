@@ -10,6 +10,32 @@ from ocelot.cpbd.tm_utils import map_transform_with_offsets
 
 
 class Magnet(Element):
+    """
+    Atom base class for magnetic elements (quadrupoles, bends, solenoids, etc.).
+
+    Physics Parameters
+    ===================
+    - angle: Bending angle or deflection [rad] (zero for quadrupoles, non-zero for bends)
+    - k1: Quadrupole strength [1/m²] (focusing/defocusing)
+    - k2: Sextupole strength [1/m³] (chromatic, nonlinear effects)
+
+    Available Hook Methods
+    =======================
+    Inherited from Element with magnetic-specific implementations:
+
+    - create_first_order_main_params(energy) → FirstOrderParams
+    - create_second_order_main_params(energy) → SecondOrderParams
+    - create_kick_entrance/main/exit_params() → KickParams
+
+    Subclasses like BendAtom add edge hooks:
+    - create_first_order_entrance/exit_params(energy)
+    - create_second_order_entrance/exit_params(energy)
+
+    See Also
+    --------
+    https://ocelot-collab.github.io/docs/docu/elements/magnet/
+    Element : Base atom class
+    """
     def __init__(self, eid=None, has_edge=False, **kwargs):
         super().__init__(eid=eid, has_edge=has_edge, **kwargs)
         self.angle = 0.  # Magnets Drift, Bend, Correctors (just angle)

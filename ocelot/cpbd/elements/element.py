@@ -11,16 +11,40 @@ from ocelot.cpbd.tm_utils import map_transform_with_offsets
 
 class Element:
     """
-    Minimal physics implementation object used by CPBD transformations.
+    Atom layer: physics state and hook methods for transformations.
 
-    In the current wrapper/atom architecture this class is not usually the
-    public object users hold in a lattice. Public wrappers such as
-    ``Quadrupole`` or ``Cavity`` own framework state, while ``Element`` and its
-    subclasses own the physics state and the ``create_*_params(...)`` hooks.
+    Role in Architecture
+    ====================
+    Element (and subclasses Magnet, etc.) is the "atom" in the wrapper/atom design:
+    - Stores physics parameters (l, k1, k2, offsets, etc.)
+    - Implements create_*_params(...) hooks that build TMParams objects
+    - Transformations use these TMParams to track particles
 
-    The default implementations below are generic fallbacks. They make simple
-    element families immediately usable, but they should not be mistaken for a
-    full family-specific model.
+    Public wrappers (Quadrupole, Drift, etc.) subclass OpticElement and wrap
+    an Element instance, forwarding user-facing API to this physics object.
+
+    Hook Methods
+    =============
+    Subclasses override hooks to provide physics-specific parameters:
+
+    - create_first_order_main_params(energy) → FirstOrderParams
+    - create_second_order_main_params(energy) → SecondOrderParams
+    - create_kick_*_params(...) → KickParams (for kick-based tracking)
+    - create_delta_e(...) → float (reference energy change)
+
+    Edge-aware families also implement entrance and exit variants.
+
+    Default Behavior
+    =================
+    Default implementations are generic fallbacks for simple elements.
+    Individual families override these with physics-specific code.
+
+    See Also
+    --------
+    https://ocelot-collab.github.io/docs/docu/elements/element/
+    https://ocelot-collab.github.io/docs/docu/how-to/new_element/
+    Magnet : Base class for magnetic families (quadrupoles, bends, etc.)
+    OpticElement : Public wrapper that uses this atom
     """
 
     def __init__(self, eid=None, has_edge=False, **kwargs):

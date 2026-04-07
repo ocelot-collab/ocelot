@@ -5,12 +5,53 @@ from ocelot.cpbd.transformations.cavity import CavityTM
 
 class Cavity(OpticElement):
     """
-    Standing wave RF cavity
-    v - voltage [GV]
-    freq - frequency [Hz]
-    phi - phase in [deg]
-    vx_{up/down}, vy_{up/down} - zero order kick of a {up/down}stream coupler
-    vxx_{up/down}, vxy_{up/down} - first order kick  a {up/down}stream coupler
+    Standing-wave RF cavity with coupler kicks and energy gain.
+
+    Parameters
+    ----------
+    l : float, default=0
+        Cavity body length in [m]
+    v : float, default=0
+        RF voltage in [GV]
+    phi : float, default=0
+        RF phase in [deg]
+    freq : float, default=0
+        RF frequency in [Hz]
+    vx_up, vy_up : complex, default=0
+        Zero-order coupler kicks (upstream) in both planes
+    vxx_up, vxy_up : complex, default=0
+        First-order coupler kicks (upstream)
+    vx_down, vy_down, vxx_down, vxy_down : complex, default=0
+        Downstream coupler kicks
+
+    Physics
+    -------
+    RF acceleration with transverse dispersion from coupler kicks.
+    Energy gain via voltage and RF phase.
+    Edge-aware (ENTRANCE coupler → MAIN cavity → EXIT coupler).
+
+    Tracking Method
+    ----------------
+    Restricted to CavityTM only (cannot be changed by user).
+    Linear optics path still available via first_order_tms for Twiss.
+
+    Architecture
+    ~~~~~~~~~~~~~
+    - Wrapper: Cavity (this class, restricted active TM)
+    - Atom: CavityAtom
+    - Default TM: CavityTM
+    - Supported TMs: {CavityTM} only (single active method)
+    - Edge-aware: Yes (ENTRANCE → MAIN → EXIT)
+
+    Methods
+    -------
+    remove_coupler_kick() : Remove all coupler kicks (set to zero)
+
+    See Also
+    --------
+    https://ocelot-collab.github.io/docs/docu/elements/cavity/
+    CavityAtom : Physics implementation
+    CavityTM : Active tracking method (RF acceleration algorithm)
     """
     default_tm = CavityTM
     supported_tms = {CavityTM}

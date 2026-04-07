@@ -10,11 +10,47 @@ from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 class Quadrupole(OpticElement):
     """
-    quadrupole
-    l - length of lens in [m],
-    k1 - strength of quadrupole lens in [1/m^2],
-    k2 - strength of sextupole lens in [1/m^3],
-    tilt - tilt of lens in [rad].
+    Quadrupole lens: linear focusing/defocusing element.
+
+    Parameters
+    ----------
+    l : float, default=0
+        Length of lens in [m]
+    k1 : float, default=0
+        Quadrupole focusing strength in [1/m²]
+        (positive focuses in x, defocuses in y)
+    k2 : float, default=0
+        Sextupole coupling strength in [1/m³]
+    tilt : float, default=0
+        Roll angle around beam axis in [rad]
+
+    Physics
+    -------
+    Standard magnetic focusing element.
+    First-order dynamics are linear (hence R-matrix).
+    Second-order effects via sextupole coupling.
+
+    Tracking Methods
+    ----------------
+    - TransferMap (default): linear R-matrix
+    - SecondTM: second-order nonlinear with k2 effects
+    - KickTM: kick-based algorithmic tracking
+
+    Architecture
+    ~~~~~~~~~~~~~
+    - Wrapper: Quadrupole (this class)
+    - Atom: QuadrupoleAtom (inherits from Magnet)
+    - Edge-aware: No (single MAIN map)
+
+    Convenience Properties
+    ~~~~~~~~~~~~~~~~~~~~~~
+    - k1l: integrated quadrupole strength (k1 * l)
+    - k2l: integrated sextupole strength (k2 * l)
+
+    See Also
+    --------
+    https://ocelot-collab.github.io/docs/docu/elements/quadrupole/
+    QuadrupoleAtom : Physics implementation
     """
     default_tm = TransferMap
     supported_tms = {TransferMap, SecondTM, KickTM}

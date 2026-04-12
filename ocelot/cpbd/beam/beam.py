@@ -10,10 +10,10 @@ from typing import Iterable
 import ocelot.common.globals as glb
 from ocelot.common.math_op import find_nearest_idx, invert_cdf
 from ocelot.common.ocelog import *
-from . import beam_utils
 from . import analysis
 from . import particle
 from . import core
+from .beam_utils import beam_matching, m_from_twiss
 
 
 #TypeParticleArray = TypeVar("TypeParticleArray", bound="ParticleArray")
@@ -107,67 +107,6 @@ def twiss_parray_slice(parray, slice="Imax", nparts_in_slice=5000, smooth_param=
         ind0 = np.argsort(np.abs(slice_params.s))[0]
     tws = slice_params.extract_slice(ind0)
     return tws
-
-
-def beam_matching(parray, bounds, x_opt, y_opt, remove_offsets=True, slice=None):
-    """
-    Beam matching function, the beam is centered in the phase space
-
-    :param parray: ParticleArray
-    :param bounds: [start, stop] in rms of sigmas in longitudinal direction
-    :param x_opt: [alpha, beta, mu (phase advance)]
-    :param y_opt: [alpha, beta, mu (phase advance)]
-    :param remove_offsets: True, remove offsets in transverse planes
-    :param slice: None, if "Imax" or "Emax" beam matched to that slice and bound param is ignored
-    :return: transform ParticleArray (the same object)
-    """
-    particles = parray.rparticles
-    pd = np.zeros((int(particles.size / 6), 6))
-    dx = 0.
-    dxp = 0.
-    dy = 0.
-    dyp = 0.
-    if remove_offsets:
-        dx = np.mean(particles[0])
-        dxp = np.mean(particles[1])
-        dy = np.mean(particles[2])
-        dyp = np.mean(particles[3])
-
-    pd[:, 0] = particles[0] - dx
-    pd[:, 1] = particles[1] - dxp
-    pd[:, 2] = particles[2] - dy
-    pd[:, 3] = particles[3] - dyp
-    pd[:, 4] = particles[4]
-    pd[:, 5] = particles[5]
-
-    z0 = np.mean(pd[:, 4])
-    sig0 = np.std(pd[:, 4])
-    inds = np.argwhere((z0 + sig0 * bounds[0] <= pd[:, 4]) * (pd[:, 4] <= z0 + sig0 * bounds[1]))
-
-    mx, mxs, mxx, mxxs, mxsxs, emitx0 = beam_utils.moments(pd[inds, 0], pd[inds, 1])
-    beta_x = mxx / emitx0
-    alpha_x = -mxxs / emitx0
-
-    [my, mys, myy, myys, mysys, emity0] = beam_utils.moments(pd[inds, 2], pd[inds, 3])
-    beta_y = myy / emity0
-    alpha_y = -myys / emity0
-
-    if slice is not None:
-        tw = twiss_parray_slice(parray, slice=slice, nparts_in_slice=5000, smooth_param=0.05, filter_base=2,
-                                filter_iter=2)
-        beta_x = tw.beta_x
-        alpha_x = tw.alpha_x
-        beta_y = tw.beta_y
-        alpha_y = tw.alpha_y
-    Mx = m_from_twiss([alpha_x, beta_x, 0], x_opt)
-
-    particles[0] = Mx[0, 0] * pd[:, 0] + Mx[0, 1] * pd[:, 1]
-    particles[1] = Mx[1, 0] * pd[:, 0] + Mx[1, 1] * pd[:, 1]
-
-    My = m_from_twiss([alpha_y, beta_y, 0], y_opt)
-    particles[2] = My[0, 0] * pd[:, 2] + My[0, 1] * pd[:, 3]
-    particles[3] = My[1, 0] * pd[:, 2] + My[1, 1] * pd[:, 3]
-    return particles
 
 
 '''
@@ -449,22 +388,3 @@ def ellipse_from_twiss(emit, beta, alpha):
     xp = -a / np.sqrt(beta) * (np.sin(phi) + alpha * np.cos(phi))
     return (x, xp)
 
-
-def m_from_twiss(Tw1, Tw2):
-    # Transport matrix M for two sets of Twiss parameters (alpha,beta,psi)
-    b1 = Tw1[1]
-    a1 = Tw1[0]
-    psi1 = Tw1[2]
-    b2 = Tw2[1]
-    a2 = Tw2[0]
-    psi2 = Tw2[2]
-
-    psi = psi2 - psi1
-    cosp = np.cos(psi)
-    sinp = np.sin(psi)
-    M = np.zeros((2, 2))
-    M[0, 0] = np.sqrt(b2 / b1) * (cosp + a1 * sinp)
-    M[0, 1] = np.sqrt(b2 * b1) * sinp
-    M[1, 0] = ((a1 - a2) * cosp - (1 + a1 * a2) * sinp) / np.sqrt(b2 * b1)
-    M[1, 1] = np.sqrt(b1 / b2) * (cosp - a2 * sinp)
-    return M

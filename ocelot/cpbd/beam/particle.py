@@ -5,6 +5,7 @@ from typing import TypeVar
 import ocelot.common.globals as glb
 from ocelot.common.ocelog import *
 from . import analysis
+from . import beam_utils
 from . import noise
 from . import core
 
@@ -492,6 +493,46 @@ class ParticleArray:
                     jitter_fraction=quiet_jitter_fraction, rng=rng
                 )
 
+    def match_to_twiss(
+        self,
+        tws: 'core.Twiss',
+        bounds=(-5, 5),
+        slice=None,
+        remove_offsets=True,
+    ) -> TypeParticleArray:
+        """
+        Match the transverse particle distribution to the target Twiss optics.
+
+        The transformation is applied in place to the ``x/px`` and ``y/py``
+        phase-space planes while keeping the longitudinal coordinates and
+        macroparticle charges unchanged.
+
+        Parameters
+        ----------
+        tws : Twiss
+            Target horizontal and vertical Twiss parameters.
+        bounds : tuple[float, float], optional
+            ``tau`` window in rms units used to estimate the source optics when
+            ``slice`` is ``None``.
+        slice : str or None, optional
+            If set, match using the selected slice optics, for example
+            ``"Imax"`` or ``"Emax"``. In that case ``bounds`` is ignored.
+        remove_offsets : bool, optional
+            If ``True``, subtract the mean transverse offsets before applying
+            the matching transform.
+
+        Returns
+        -------
+        ParticleArray
+            This particle array instance after matching.
+        """
+        x_opt = [tws.alpha_x, tws.beta_x, tws.mux]
+        y_opt = [tws.alpha_y, tws.beta_y, tws.muy]
+        beam_utils.beam_matching(self, bounds, x_opt, y_opt, remove_offsets, slice)
+        return self
+
+
+
 class Particle:
     """
     particle
@@ -524,5 +565,4 @@ class Particle:
     def multiply_with_tm(self, tm: 'TransferMap', length):
         tm.apply(self)
         return deepcopy(self)
-
 

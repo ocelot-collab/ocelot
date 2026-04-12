@@ -171,10 +171,7 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
         dp += chirp * p_array.tau() / sigma_tau
     p_array.rparticles[5][:] = dp[:]
     if isinstance(tws, core.Twiss):
-        x_opt = [tws.alpha_x, tws.beta_x, tws.mux]
-        y_opt = [tws.alpha_y, tws.beta_y, tws.muy]
-        bounds = [-5, 5]
-        beam.beam_matching(p_array, bounds, x_opt, y_opt, remove_offsets=True)
+        p_array.match_to_twiss(tws, bounds=(-5, 5), remove_offsets=True)
 
     return p_array
 

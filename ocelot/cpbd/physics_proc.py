@@ -1,6 +1,6 @@
 from ocelot.cpbd.io import save_particle_array
 from ocelot.common.globals import h_eV_s, m_e_eV, m_e_GeV, ro_e, speed_of_light, q_e
-from ocelot.cpbd.beam import Twiss, beam_matching, global_slice_analysis, s_to_cur, get_envelope
+from ocelot.cpbd.beam import Twiss, global_slice_analysis, s_to_cur, get_envelope
 from ocelot.utils.acc_utils import slice_bunching
 from ocelot.common.ocelog import *
 from ocelot.cpbd.beam import ParticleArray
@@ -420,7 +420,7 @@ class BeamTransform(PhysProc):
         _logger.debug("BeamTransform: apply")
         self.x_opt = [self.twiss.alpha_x, self.twiss.beta_x, self.twiss.mux]
         self.y_opt = [self.twiss.alpha_y, self.twiss.beta_y, self.twiss.muy]
-        beam_matching(p_array, self.bounds, self.x_opt, self.y_opt, self.remove_offsets, self.slice)
+        p_array.match_to_twiss(self.twiss, bounds=self.bounds, slice=self.slice, remove_offsets=self.remove_offsets)
 
 
 class SlottedFoil(PhysProc):
@@ -774,4 +774,3 @@ class IBS(PhysProc):
         # Energy spread and update particle momenta
         sigma_e = sigma_gamma * m_e_GeV / pc
         p_array.p()[:] += np.random.randn(p_array.n) * sigma_e
-

@@ -200,7 +200,7 @@ class MagneticLattice:
           [Small Useful Features](https://nbviewer.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/small_useful_features.ipynb).
     """
 
-    def __init__(self, sequence, start: E = None, stop: E = None, method=None):
+    def __init__(self, sequence, start: E | None = None, stop: E | None = None, method=None):
         if method is None:
             method = {'global': TransferMap}
         if isinstance(method, dict):
@@ -344,8 +344,8 @@ class MagneticLattice:
         LatticeIO.save_lattice(self, tws0=tws0, file_name=file_name, remove_rep_drifts=remove_rep_drifts,
                                power_supply=power_supply)
 
-    def transfer_maps(self, energy, output_at_each_step: bool = False, start: E = None,
-                      stop: E = None):
+    def transfer_maps(self, energy, output_at_each_step: bool = False, start: E | None = None,
+                      stop: E | None = None):
         """
         Calculates the zero, first- and second-order transfer maps for the lattice.
 
@@ -543,7 +543,7 @@ class MagneticLattice:
         return to_longlist_convention(mid_phys), to_longlist_convention(end_phys)
 
 
-    def print_sequence(self, start: E = None, stop: E = None):
+    def print_sequence(self, start: E | None = None, stop: E | None = None):
         sequence = self.get_sequence_part(start, stop)
         lines = ["{:<17} {:<15} {:<10} {:<10}".format('id', 'length', 'start', 'end') ]
         s = 0.

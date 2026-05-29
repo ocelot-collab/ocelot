@@ -36,7 +36,7 @@ __all__ = [
     "compensate_chromaticity", "EbeamParams", "CSR", "SpaceCharge", "LSC",
 
     # === Wake Effects & Physics Processes ===
-    "Wake", "WakeTable", "WakeKick", "WakeTableDechirperOffAxis",
+    "Wake", "WakeTable", "WakeKick", "WakeTableDechirperOffAxis", "LongWake", "LinLongWake",
     "BeamTransform", "SmoothBeam", "EmptyProc", "PhysProc", "LaserHeater",
     "LaserModulator", "SpontanRadEffects", "PhaseSpaceAperture",
     "RectAperture", "EllipticalAperture", "CopyBeam", "SaveBeam", "LatticeEnergyProfile",
@@ -136,4 +136,3 @@ try:
     import numexpr
 except:
     print("import: module NUMEXPR is not installed. Install it to speed up calculation")
-

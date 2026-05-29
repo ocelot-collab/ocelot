@@ -1538,6 +1538,229 @@ class WakeKick(Wake):
         p_array.rparticles[1] = p_array.rparticles[1] + self.factor * Px / (p_array.E * 1e9)
 
 
+class LongWake(PhysProc):
+    """
+    Apply pre-calculated long range longitudinal and/or transverse wake files to a witness beam.
+
+    The wake files are expected to contain two numeric columns: longitudinal
+    coordinate and wake voltage in V/pC. Comment/header lines starting with
+    "#" or "%" are ignored. With wake_file_unit="auto", common headers such as
+    "s[cm]" and "s / mm" are used to determine the coordinate unit.
+
+    Parameters
+    ----------
+    long_wake_file : str or path-like, optional
+        Longitudinal wake file. The sampled voltage changes p_array.p().
+    transverse_wake_file : str or path-like, optional
+        Transverse wake file. The sampled voltage changes px or py.
+    driver_charge : float, optional
+        Driver bunch charge in pC used to scale V/pC file data to V.
+    beam_position : float, optional
+        Wake-file coordinate of the witness bunch center in meters.
+    wake_file_unit : {"auto", "m", "cm", "mm", "um"}, optional
+        Coordinate unit for both files. Use long_wake_unit and
+        transverse_wake_unit to override each file separately.
+    center_witness : bool, optional
+        If True, the witness bunch centroid samples beam_position and particle
+        offsets are taken relative to the current bunch mean tau.
+    tau_sign : float, optional
+        Sign multiplier for p_array.tau() offsets before adding beam_position.
+    """
+
+    _unit_scales = {
+        "m": 1.0,
+        "meter": 1.0,
+        "meters": 1.0,
+        "cm": 1e-2,
+        "mm": 1e-3,
+        "um": 1e-6,
+        "micron": 1e-6,
+        "microns": 1e-6,
+    }
+
+    def __init__(self, step=1, **kwargs):
+        if "step" in kwargs:
+            step = kwargs.pop("step")
+        super().__init__(step)
+
+        self.long_wake_file = kwargs.pop("long_wake_file", None)
+        if self.long_wake_file is None:
+            self.long_wake_file = kwargs.pop("longitudinal_wake_file", None)
+        self.transverse_wake_file = kwargs.pop("transverse_wake_file", None)
+
+        self.driver_charge = kwargs.pop("driver_charge", 250.0)  # pC
+        self.factor = kwargs.pop("factor", 1.0)
+        self.beam_position = kwargs.pop("beam_position", 0.0)  # m
+        self.wake_file_unit = kwargs.pop("wake_file_unit", "auto")
+        self.long_wake_unit = kwargs.pop("long_wake_unit", self.wake_file_unit)
+        self.transverse_wake_unit = kwargs.pop("transverse_wake_unit", self.wake_file_unit)
+        self.center_witness = kwargs.pop("center_witness", True)
+        self.tau_sign = kwargs.pop("tau_sign", 1.0)
+        self.transverse_plane = kwargs.pop("transverse_plane", "y")  # "x" -> px kick, "y" -> py kick
+        self.transverse_sign = kwargs.pop("transverse_sign", 1.0)
+        self.verbose = kwargs.pop("verbose", False)
+
+        self.long_wake = None
+        self.transverse_wake = None
+
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    @property
+    def structure_length(self):
+        if self.s_start is not None and self.s_stop is not None:
+            return self.s_stop - self.s_start
+
+        raise AttributeError("structure_length is available after the process is added to a Navigator")
+
+    @classmethod
+    def _detect_coordinate_unit(cls, line):
+        text = line.lower().replace('"', "").replace("'", "")
+        text = text.replace(" ", "")
+        for unit in ("mm", "cm", "um", "m"):
+            if f"s[{unit}]" in text or f"s/{unit}" in text or f"s({unit})" in text:
+                return unit
+        return None
+
+    @classmethod
+    def _resolve_coordinate_unit(cls, unit, detected_unit):
+        if unit is None or str(unit).lower() == "auto":
+            unit = detected_unit or "m"
+        unit = str(unit).lower()
+        if unit not in cls._unit_scales:
+            valid = ", ".join(["auto"] + sorted(cls._unit_scales))
+            raise ValueError(f"Unsupported wake_file_unit={unit!r}. Supported units: {valid}")
+        return unit
+
+    @classmethod
+    def read_wake_file(cls, wake_file):
+        with open(wake_file) as f:
+            lines = f.readlines()
+
+        detected_unit = None
+        data_start = 0
+        for index, line in enumerate(lines):
+            unit = cls._detect_coordinate_unit(line)
+            if unit is not None:
+                if detected_unit is None:
+                    detected_unit = unit
+                data_start = index + 1
+                break
+
+        rows = []
+        for line in lines[data_start:]:
+            stripped = line.strip()
+            if not stripped or stripped[0] in ("#", "%"):
+                continue
+            columns = stripped.replace(",", " ").split()
+            if len(columns) < 2:
+                continue
+            try:
+                rows.append((float(columns[0]), float(columns[1])))
+            except ValueError:
+                continue
+
+        if len(rows) == 0:
+            raise ValueError(f"No two-column wake data found in {wake_file}")
+
+        return np.array(rows, dtype=float), detected_unit
+
+    def load_wakefield(self, wake_file, coordinate_unit="auto"):
+        wake, detected_unit = self.read_wake_file(wake_file)
+        unit = self._resolve_coordinate_unit(coordinate_unit, detected_unit)
+        wake[:, 0] *= self._unit_scales[unit]
+        wake[:, 1] *= self.driver_charge
+
+        order = np.argsort(wake[:, 0])
+        return wake[order]
+
+    def sample_wake(self, wake, z):
+        return np.interp(z, wake[:, 0], wake[:, 1], left=0.0, right=0.0)
+
+    def witness_positions(self, p_array):
+        tau = p_array.tau()
+        tau0 = np.mean(tau) if self.center_witness and tau.size else 0.0
+        return self.beam_position + self.tau_sign * (tau - tau0)
+
+    def prepare(self, lat):
+        self.check_step()
+        if self.long_wake_file is None and self.transverse_wake_file is None:
+            raise ValueError("LongWake requires long_wake_file and/or transverse_wake_file")
+        if self.transverse_plane not in ("x", "y"):
+            raise ValueError("transverse_plane must be 'x' or 'y'")
+
+        self.long_wake = None
+        self.transverse_wake = None
+        if self.long_wake_file is not None:
+            self.long_wake = self.load_wakefield(self.long_wake_file, self.long_wake_unit)
+        if self.transverse_wake_file is not None:
+            self.transverse_wake = self.load_wakefield(self.transverse_wake_file, self.transverse_wake_unit)
+
+    def apply(self, p_array, dz):
+        if self.verbose:
+            _logger.info("LongWake applied, dz = %s", dz)
+
+        z = self.witness_positions(p_array)
+        pc_ref = np.sqrt(p_array.E ** 2 - glb.m_e_GeV ** 2)  # GeV
+
+        L = self.structure_length
+        dz_fraction = 1.0 if L == 0 else dz / L
+        scale = dz_fraction * self.factor * 1e-9 / pc_ref
+
+        if self.long_wake is not None:
+            p_array.rparticles[5] += self.sample_wake(self.long_wake, z) * scale
+
+        if self.transverse_wake is not None:
+            transverse_kick = self.transverse_sign * self.sample_wake(self.transverse_wake, z) * scale
+            if self.transverse_plane == "x":
+                p_array.rparticles[1] += transverse_kick
+            else:
+                p_array.rparticles[3] += transverse_kick
+
+    def __repr__(self) -> str:
+        cname = type(self).__name__
+        return (f"<{cname}: long_wake_file={self.long_wake_file!r}, "
+                f"transverse_wake_file={self.transverse_wake_file!r}, "
+                f"driver_charge={self.driver_charge}, beam_position={self.beam_position}, "
+                f"factor={self.factor}, step={self.step}>")
+
+
+class LinLongWake(PhysProc):
+    """
+    Simple linear longitudinal wake for testing.
+
+    The voltage applied to each particle is
+    voltage + derivative * (tau - position), where tau and position are in
+    meters. The resulting voltage is converted to Ocelot's p=dE/(p0*c).
+    """
+
+    def __init__(self, voltage=0.0, derivative=0.0, position=0.0, step=1):
+        super().__init__(step)
+        self.voltage = voltage  # V
+        self.derivative = derivative  # V/m
+        self.position = position  # m
+
+    def prepare(self, lat):
+        self.check_step()
+
+    def _dz_fraction(self, dz):
+        if self.s_start is None or self.s_stop is None:
+            return 1.0
+
+        L = self.s_stop - self.s_start
+        return 1.0 if L == 0 else dz / L
+
+    def apply(self, p_array, dz):
+        voltage = self.voltage + self.derivative * (p_array.tau() - self.position)
+        pc_ref = np.sqrt(p_array.E ** 2 - glb.m_e_GeV ** 2)  # GeV
+        p_array.rparticles[5] += voltage * self._dz_fraction(dz) * 1e-9 / pc_ref
+
+    def __repr__(self) -> str:
+        cname = type(self).__name__
+        return (f"<{cname}: voltage={self.voltage}, derivative={self.derivative}, "
+                f"position={self.position}, step={self.step}>")
+
+
 def undulator_wake_euxfel(x, I, q):
     """
     Function to calculate wakes for the EuXFEL standard undulator section.

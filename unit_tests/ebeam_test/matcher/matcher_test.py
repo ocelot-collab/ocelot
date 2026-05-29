@@ -224,6 +224,83 @@ def test_twiss_delta_wrap_phase_equivalence():
     assert reports_raw[0].residual_norm > np.pi
 
 
+def test_periodic_twiss_target_between_elements():
+    lat, start, _dvar, end = _simple_drift_lattice(1.0)
+    tw0 = _twiss_seed()
+
+    problem = MatchProblem(lat, tw0)
+    problem.vary_twiss("alpha_x", limits=(-1.0, 1.0), name="alpha_x0")
+    problem.target_periodic_twiss("beta_x", start, end, weight=1.0e6, tol=1.0e-10)
+
+    result = problem.solve(solver="ls_trf", max_iter=120, tol=1.0e-12)
+    assert result.success
+
+    _merit, reports, _objectives, state = problem.evaluate()
+    assert reports[0].details["type"] == "twiss_periodic"
+    assert np.isclose(
+        state.twiss_at(end).beta_x,
+        state.twiss_at(start).beta_x,
+        atol=1.0e-8,
+    )
+
+
+def test_target_periodic_twiss_defaults_to_lattice_boundaries():
+    lat, _start, _dvar, _end = _simple_drift_lattice(1.0)
+    tw0 = _twiss_seed()
+
+    problem = MatchProblem(lat, tw0)
+    problem.vary_twiss("alpha_y", limits=(-1.0, 1.0), name="alpha_y0")
+    problem.target_periodic_twiss("beta_y", weight=1.0e6, tol=1.0e-10)
+
+    result = problem.solve(solver="ls_trf", max_iter=120, tol=1.0e-12)
+    assert result.success
+
+    _merit, reports, _objectives, state = problem.evaluate()
+    assert reports[0].details["start"] == "twiss_start"
+    assert reports[0].details["end"] == "twiss_end"
+    assert np.isclose(state.twiss_end.beta_y, state.twiss_start.beta_y, atol=1.0e-8)
+
+
+def test_partial_periodic_twiss_can_mix_with_strict_targets():
+    start = Marker(eid="START")
+    d0 = Drift(l=0.5, eid="D0")
+    q1 = Quadrupole(l=0.2, k1=0.5, eid="Q1")
+    d1 = Drift(l=0.5, eid="D1")
+    q2 = Quadrupole(l=0.2, k1=-0.5, eid="Q2")
+    d2 = Drift(l=0.5, eid="D2")
+    end = Marker(eid="END")
+    lat = SimpleMagneticLattice((start, d0, q1, d1, q2, d2, end))
+
+    tw0 = Twiss()
+    tw0.beta_x = 9.0
+    tw0.beta_y = 10.0
+    tw0.E = 1.0
+
+    problem = MatchProblem(lat, tw0, periodic=False)
+    problem.vary_element(q1, quantity="k1", limits=(-5.0, 5.0), name="Q1.k1")
+    problem.vary_element(q2, quantity="k1", limits=(-5.0, 5.0), name="Q2.k1")
+    problem.vary_twiss("alpha_x", limits=(-5.0, 5.0), name="twiss0.alpha_x")
+    problem.vary_twiss("alpha_y", limits=(-5.0, 5.0), name="twiss0.alpha_y")
+
+    problem.target_twiss(end, "alpha_x", 0.0, weight=1.0e6, tol=1.0e-10)
+    problem.target_twiss(end, "beta_y", 9.0, weight=1.0e6, tol=1.0e-10)
+    problem.target_periodic_twiss("beta_x", start, end, weight=1.0e6, tol=1.0e-10)
+    problem.target_periodic_twiss("alpha_y", start, end, weight=1.0e6, tol=1.0e-10)
+
+    result = problem.solve(solver="ls_trf", max_iter=300, tol=1.0e-12)
+    assert result.success
+    assert result.merit < 1.0e-12
+    assert not np.isclose(problem.twiss0.alpha_x, tw0.alpha_x)
+    assert not np.isclose(problem.twiss0.alpha_y, tw0.alpha_y)
+
+    _merit, reports, _objectives, state = problem.evaluate()
+    assert all(report.met for report in reports)
+    assert np.isclose(state.twiss_at(end).alpha_x, 0.0, atol=1.0e-8)
+    assert np.isclose(state.twiss_at(end).beta_y, 9.0, atol=1.0e-8)
+    assert np.isclose(state.twiss_at(end).beta_x, state.twiss_at(start).beta_x, atol=1.0e-8)
+    assert np.isclose(state.twiss_at(end).alpha_y, state.twiss_at(start).alpha_y, atol=1.0e-8)
+
+
 def test_rmatrix_entry_target():
     lat, start, dvar, end = _simple_drift_lattice(1.1)
     problem = MatchProblem(lat, _twiss_seed())

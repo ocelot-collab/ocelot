@@ -518,6 +518,81 @@ class TwissDifferenceTarget(Target):
         )
 
 
+class TwissPeriodicityTarget(Target):
+    """Target equality of one Twiss quantity between start and end.
+
+    If ``start`` or ``end`` are not provided, the problem's effective initial
+    Twiss or final Twiss are used respectively. This allows partial periodic
+    constraints without enabling ``MatchProblem(periodic=True)``.
+    """
+
+    def __init__(
+        self,
+        quantity: str,
+        start: Optional[OpticElement] = None,
+        end: Optional[OpticElement] = None,
+        relation: str = "==",
+        wrap_phase: bool = False,
+        **kwargs: Any,
+    ):
+        super().__init__(**kwargs)
+        self.quantity = quantity
+        self.start = start
+        self.end = end
+        self.relation = relation
+        self.wrap_phase = bool(wrap_phase)
+
+    def _start_twiss(self, state: MatchState) -> Twiss:
+        if self.start is None:
+            return state.twiss_start
+        return state.twiss_at(self.start)
+
+    def _end_twiss(self, state: MatchState) -> Twiss:
+        if self.end is None:
+            return state.twiss_end
+        return state.twiss_at(self.end)
+
+    def _actual(self, state: MatchState) -> float:
+        v0 = float(getattr(self._start_twiss(state), self.quantity))
+        v1 = float(getattr(self._end_twiss(state), self.quantity))
+        return v1 - v0
+
+    def residuals(self, state: MatchState) -> np.ndarray:
+        actual = self._actual(state)
+        if self.wrap_phase and self.relation.strip().lower() in {"==", "eq"}:
+            r = _wrap_to_pi(actual)
+            if abs(r) <= self.tol:
+                r = 0.0
+        else:
+            r = _residual_scalar(actual, 0.0, self.relation, self.tol)
+        return np.array([r], dtype=float)
+
+    def report(self, state: MatchState) -> TargetReport:
+        start_tw = self._start_twiss(state)
+        end_tw = self._end_twiss(state)
+        actual_start = float(getattr(start_tw, self.quantity))
+        actual_end = float(getattr(end_tw, self.quantity))
+        r = float(self.residuals(state)[0])
+        return TargetReport(
+            name=self.name,
+            residual_norm=abs(r),
+            met=abs(r) < 1.0e-12,
+            weight=self.weight,
+            details={
+                "type": "twiss_periodic",
+                "start": getattr(self.start, "id", "twiss_start"),
+                "end": getattr(self.end, "id", "twiss_end"),
+                "quantity": self.quantity,
+                "start_value": actual_start,
+                "end_value": actual_end,
+                "actual": actual_end - actual_start,
+                "target": 0.0,
+                "relation": self.relation,
+                "wrap_phase": self.wrap_phase,
+            },
+        )
+
+
 class GlobalTwissTarget(Target):
     """Enforce inequality/equality over all lattice elements."""
 
@@ -1038,6 +1113,48 @@ class MatchProblem:
             )
         )
 
+    def target_periodic_twiss(
+        self,
+        quantity: str,
+        start: Optional[OpticElement] = None,
+        end: Optional[OpticElement] = None,
+        relation: str = "==",
+        wrap_phase: bool = False,
+        name: Optional[str] = None,
+        weight: float = 1.0,
+        tol: float = 0.0,
+        active: bool = True,
+        tag: str = "",
+    ) -> TwissPeriodicityTarget:
+        """Constrain one Twiss quantity to be equal at start and end.
+
+        This is useful for partial periodicity, for example matching
+        ``beta_x`` at the beginning and end while independently targeting
+        ``beta_y`` or ``alpha_y``. It does not compute a full periodic Twiss
+        solution like ``MatchProblem(periodic=True)``; it adds an ordinary
+        residual target ``end - start == 0``.
+
+        If ``start`` is omitted, ``state.twiss_start`` is used. If ``end`` is
+        omitted, ``state.twiss_end`` is used.
+        """
+
+        start_name = getattr(start, "id", "twiss_start")
+        end_name = getattr(end, "id", "twiss_end")
+        return self.add_target(
+            TwissPeriodicityTarget(
+                quantity=quantity,
+                start=start,
+                end=end,
+                relation=relation,
+                wrap_phase=wrap_phase,
+                name=name or f"periodic.{quantity}@{start_name}->{end_name}",
+                weight=weight,
+                tol=tol,
+                active=active,
+                tag=tag,
+            )
+        )
+
     def target_global(
         self,
         quantity: str,
@@ -1485,6 +1602,7 @@ __all__ = [
     "Objective",
     "TwissTarget",
     "TwissDifferenceTarget",
+    "TwissPeriodicityTarget",
     "GlobalTwissTarget",
     "RMatrixElementTarget",
     "RMatrixBlockTarget",

@@ -43,7 +43,7 @@ Versioning is date based: `YY.MM.patch`.
 - Made `numexpr`, `pyfftw`, and `numba` required package dependencies in
   `setup.py`; the public installation docs previously listed them as optional
   speed-up dependencies.
-- Restored package metadata compatibility with Python 3.9+.
+- Declared Python 3.10+ package support.
 
 ### Fixed
 

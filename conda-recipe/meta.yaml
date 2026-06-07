@@ -1,10 +1,10 @@
 package:
   name: ocelot
-  version: "25.07.0"
+  version: "26.06.0"
 
 source:
   git_url: https://github.com/ocelot-collab/ocelot.git
-  git_tag: v25.07.0
+  git_tag: v26.06.0
 
 build:
   noarch: python
@@ -12,16 +12,19 @@ build:
 
 requirements:
   host:
-    - python >=3.9
+    - python >=3.10
     - pip
     - setuptools
   run:
-    - python >=3.9
+    - python >=3.10
     - numpy
     - scipy
     - matplotlib
     - pandas
     - h5py
+    - numexpr >=2.6.1
+    - pyfftw >=0.10
+    - numba
 
 about:
   home: https://github.com/ocelot-collab/ocelot

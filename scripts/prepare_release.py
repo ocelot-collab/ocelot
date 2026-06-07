@@ -32,6 +32,7 @@ DEFAULT_DEMOS = (
 VERSION_FILES = (
     "setup.py",
     "ocelot/__init__.py",
+    "conda-recipe/meta.yaml",
 )
 
 
@@ -88,6 +89,18 @@ def update_versions(root: Path, version: str, *, dry_run: bool) -> None:
         root / "ocelot/__init__.py",
         r"__version__\s*=\s*['\"][^'\"]+['\"]",
         f"__version__ = '{version}'",
+        dry_run=dry_run,
+    )
+    replace_once(
+        root / "conda-recipe/meta.yaml",
+        r'version:\s*"[^"]+"',
+        f'version: "{version}"',
+        dry_run=dry_run,
+    )
+    replace_once(
+        root / "conda-recipe/meta.yaml",
+        r"git_tag:\s*v[^\s]+",
+        f"git_tag: v{version}",
         dry_run=dry_run,
     )
 

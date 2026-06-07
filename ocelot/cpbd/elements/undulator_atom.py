@@ -3,7 +3,7 @@ import logging
 import numpy as np
 
 from ocelot.cpbd.elements.element import Element
-from ocelot.cpbd.field_map import FieldMap
+from ocelot.cpbd.field_map import FieldMap, field_map_to_field_func
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
 from ocelot.cpbd.tm_params.runge_kutta_params import RungeKuttaParams
 from ocelot.cpbd.tm_params.undulator_test_params import UndulatorTestParams
@@ -170,8 +170,11 @@ class UndulatorAtom(Element):
     eid - id of undulator.
     """
 
-    def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., phase=0, end_poles='1', field_file=None, eid=None):
-        Element.__init__(self, eid)
+    def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., phase=0, end_poles='1', field_file=None, eid=None, **kwargs):
+        kwargs.setdefault('width', 0.1)       # Bends are usually wider than 0.05
+        kwargs.setdefault('height', 0.2)
+        kwargs.setdefault('color', '#87CEEB') # Standard color for Dipoles
+        super().__init__(eid, **kwargs)
         self.lperiod = lperiod
         self.nperiods = nperiods
         self.l = lperiod * nperiods
@@ -259,8 +262,32 @@ class UndulatorAtom(Element):
         B = self._default_B(R)
         return FirstOrderParams(R, B, self.tilt)
 
+    def get_mag_field(self, energy=None, end_poles=None):
+        if self.mag_field is not None:
+            return self.mag_field
+        if len(self.field_map.z_arr) != 0:
+            return field_map_to_field_func(self.field_map)
+
+        field_end_poles = self.end_poles if end_poles is None else end_poles
+        return lambda x, y, z: und_field(
+                x, y, z, self.lperiod, self.Kx,
+                nperiods=self.nperiods, phase=self.phase, end_poles=field_end_poles
+            )
+
+    def get_csr_mag_field(self, energy=None, use_end_poles=False):
+        if self.mag_field is not None:
+            return self.mag_field
+        if len(self.field_map.z_arr) != 0:
+            return field_map_to_field_func(self.field_map)
+        if use_end_poles:
+            return self.get_mag_field(energy, end_poles='3/4')
+
+        ku = 2. * pi / self.lperiod
+        by0 = self.Kx * m_e_eV * ku / speed_of_light
+        return lambda x, y, z: (0, -by0 * np.cos(ku * z), 0)
+
     def create_runge_kutta_main_params(self, energy):
-        return RungeKuttaParams(mag_field=lambda x, y, z: und_field(x, y, z, self.lperiod, self.Kx))
+        return RungeKuttaParams(mag_field=self.get_mag_field(energy))
 
     def und_field(self):
         return lambda x, y, z: und_field(x, y, z, self.lperiod, self.Kx)

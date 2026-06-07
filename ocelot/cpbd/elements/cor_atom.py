@@ -7,8 +7,11 @@ from ocelot.cpbd.r_matrix import uni_matrix
 
 
 class CorAtom(Element):
-    def __init__(self, l=0., angle=0., eid=None):
-        super().__init__(eid=eid)
+    def __init__(self, l=0., angle=0., eid=None, **kwargs):
+        kwargs.setdefault('width', 0.05)       # Bends are usually wider than 0.05
+        kwargs.setdefault('height', 0.05)
+        kwargs.setdefault('color', 'grey') # Standard color for Dipoles
+        super().__init__(eid=eid, **kwargs)
         self.l = l
         self.angle = angle
 

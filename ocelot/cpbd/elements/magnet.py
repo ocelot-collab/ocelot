@@ -1,7 +1,10 @@
 import numpy as np
+from ocelot.common.globals import speed_of_light, m_e_GeV
+from ocelot.common.math_op import get_tilt_matrix
 from ocelot.cpbd.elements.element import Element
 from ocelot.cpbd.tm_params.kick_params import KickParams
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
+from ocelot.cpbd.tm_params.runge_kutta_params import RungeKuttaParams
 from ocelot.cpbd.tm_params.second_order_params import SecondOrderParams
 from ocelot.cpbd.high_order import t_nnn
 from ocelot.cpbd.r_matrix import uni_matrix
@@ -9,11 +12,96 @@ from ocelot.cpbd.tm_utils import map_transform_with_offsets
 
 
 class Magnet(Element):
-    def __init__(self, eid=None, has_edge=False):
-        super().__init__(eid=eid, has_edge=has_edge)
+    """
+    Atom base class for magnetic elements (quadrupoles, bends, solenoids, etc.).
+
+    Physics Parameters
+    ===================
+    - angle: Bending angle or deflection [rad] (zero for quadrupoles, non-zero for bends)
+    - k1: Quadrupole strength [1/m²] (focusing/defocusing)
+    - k2: Sextupole strength [1/m³] (chromatic, nonlinear effects)
+
+    Available Hook Methods
+    =======================
+    Inherited from Element with magnetic-specific implementations:
+
+    - create_first_order_main_params(energy) → FirstOrderParams
+    - create_second_order_main_params(energy) → SecondOrderParams
+    - create_kick_entrance/main/exit_params() → KickParams
+
+    Subclasses like BendAtom add edge hooks:
+    - create_first_order_entrance/exit_params(energy)
+    - create_second_order_entrance/exit_params(energy)
+
+    See Also
+    --------
+    https://ocelot-collab.github.io/docs/docu/elements/magnet/
+    Element : Base atom class
+    """
+    def __init__(self, eid=None, has_edge=False, **kwargs):
+        super().__init__(eid=eid, has_edge=has_edge, **kwargs)
         self.angle = 0.  # Magnets Drift, Bend, Correctors (just angle)
         self.k1 = 0.  # Magnets quadropole
         self.k2 = 0.  # Magnets Sextupole
+        self.k3 = 0.  # Magnets Octupole
+
+    @staticmethod
+    def _brho(energy: float) -> float:
+        gamma = energy / m_e_GeV
+        beta = np.sqrt(1. - 1. / (gamma * gamma)) if gamma != 0 else 1.
+        return beta * energy * 1e9 / speed_of_light
+
+    def _hard_edge_field_components(self, x, y, energy: float):
+        brho = self._brho(energy)
+        h = self.angle / self.l if self.l != 0. else 0.
+        k1 = getattr(self, "k1", 0.)
+        k2 = getattr(self, "k2", 0.)
+        k3 = getattr(self, "k3", 0.)
+
+        x2 = x * x
+        y2 = y * y
+        by = brho * (
+            h
+            + k1 * x
+            + 0.5 * k2 * (x2 - y2)
+            + k3 * (x * x2 - 3. * x * y2) / 6.
+        )
+        bx = brho * (
+            k1 * y
+            + k2 * x * y
+            + k3 * (3. * x2 * y - y * y2) / 6.
+        )
+        return bx, by
+
+    def default_mag_field(self, energy: float):
+        """
+        Hard-edge magnetic field from the element strengths.
+
+        The field is longitudinally uniform and follows the normal multipole
+        convention used by the kick maps.
+        """
+        dx = self.dx
+        dy = self.dy
+        tilt = self.tilt
+        cos_t = np.cos(tilt)
+        sin_t = np.sin(tilt)
+
+        def field(x, y, z):
+            x_local = cos_t * (x - dx) + sin_t * (y - dy)
+            y_local = -sin_t * (x - dx) + cos_t * (y - dy)
+            bx_local, by_local = self._hard_edge_field_components(x_local, y_local, energy)
+
+            bx = cos_t * bx_local - sin_t * by_local
+            by = sin_t * bx_local + cos_t * by_local
+            return bx, by, 0.
+
+        return field
+
+    def get_mag_field(self, energy: float):
+        return self.mag_field if self.mag_field is not None else self.default_mag_field(energy)
+
+    def create_runge_kutta_main_params(self, energy):
+        return RungeKuttaParams(mag_field=self.get_mag_field(energy))
 
     def create_first_order_main_params(self, energy: float, delta_length: float = None) -> FirstOrderParams:
         k1 = self.k1
@@ -46,3 +134,78 @@ class Magnet(Element):
 
     def create_kick_exit_params(self) -> KickParams:
         return KickParams(dx=self.dx, dy=self.dy, angle=self.angle, tilt=self.tilt, k1=self.k1, k2=self.k2)
+
+    def get_transfer_geometry(self):
+        """
+        Geometry for magnets.
+
+        - If angle == 0: falls back to straight-element geometry (Element.get_transfer_geometry()).
+        - If angle != 0: uses a sector-like arc in the local x-s plane (y is vertical).
+          Then applies TILT as a rotation around local s, which rotates the bending plane:
+            * tilt = 0      -> horizontal bend (x-s plane)
+            * tilt = pi/2   -> vertical bend (y-s plane)
+
+        Returns:
+            (R_end, S_end, R_mid, S_mid) in local coordinates.
+
+        Important:
+            - For dipoles, TILT *does* affect the reference trajectory (bending plane rotation),
+              hence both R_* and S_* are rotated by the roll matrix.
+            - For quadrupoles/sextupoles (angle==0), TILT should NOT change trajectory;
+              it is handled in the map/field and/or drawing.
+        """
+        # 1) Straight / non-bending magnet
+        if getattr(self, "angle", 0.0) == 0.0:
+            return super().get_transfer_geometry()
+
+        L = float(getattr(self, "l", 0.0))
+        ang = float(getattr(self, "angle", 0.0))
+
+        # Guard against division by zero; a "bend" with L==0 is degenerate
+        if abs(ang) < 1e-15 or abs(L) < 1e-15:
+            return super().get_transfer_geometry()
+
+        # Curvature radius (sector-like)
+        rho = L / ang
+
+        # --- A) End point (full angle) in the *un-tilted* x-s plane ---
+        ca = np.cos(ang)
+        sa = np.sin(ang)
+
+        R_end = np.array([rho * (ca - 1.0), 0.0, rho * sa], dtype=float)
+
+        # Rotation of the local frame at the end of a bend (about local y)
+        S_end = np.array([
+            [ca, 0.0, -sa],
+            [0.0, 1.0, 0.0],
+            [sa, 0.0, ca]
+        ], dtype=float)
+
+        # --- B) Midpoint (half angle) ---
+        half = 0.5 * ang
+        ca2 = np.cos(half)
+        sa2 = np.sin(half)
+
+        R_mid = np.array([rho * (ca2 - 1.0), 0.0, rho * sa2], dtype=float)
+
+        S_mid = np.array([
+            [ca2, 0.0, -sa2],
+            [0.0, 1.0, 0.0],
+            [sa2, 0.0, ca2]
+        ], dtype=float)
+
+        # --- C) Apply TILT (roll about local s-axis) to rotate bending plane ---
+        tilt = float(getattr(self, "tilt", 0.0))
+        if tilt != 0.0:
+            from ocelot.common.math_op import get_tilt_matrix
+            T = get_tilt_matrix(tilt)  # roll about s
+
+            # Rotate the arc displacement into the tilted plane
+            R_end = T @ R_end
+            R_mid = T @ R_mid
+
+            # Similarity transform rotates the bend rotation into the tilted plane
+            S_end = T @ S_end @ T.T
+            S_mid = T @ S_mid @ T.T
+
+        return R_end, S_end, R_mid, S_mid

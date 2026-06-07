@@ -24,8 +24,11 @@ class CavityAtom(Element):
     """
 
     def __init__(self, l=0., v=0., phi=0., freq=0., vx_up=0, vy_up=0, vxx_up=0, vxy_up=0,
-                 vx_down=0, vy_down=0, vxx_down=0, vxy_down=0, eid=None):
-        super().__init__(eid=eid, has_edge=True)
+                 vx_down=0, vy_down=0, vxx_down=0, vxy_down=0, eid=None, **kwargs):
+        kwargs.setdefault('width', 0.1)       # Bends are usually wider than 0.05
+        kwargs.setdefault('height', 0.1)
+        kwargs.setdefault('color', 'yellow') # Standard color for Dipoles
+        super().__init__(eid=eid, has_edge=True, **kwargs)
         self.l = l
         self.v = v  # in GV
         self.freq = freq  # Hz
@@ -141,8 +144,21 @@ class CavityAtom(Element):
                 r56 = - z / (Ef * Ef * Ei * beta1) * (Ef + Ei) / (beta1 + beta0)
                 g0 = Ei
                 g1 = Ef
-                r55_cor = k * z * beta0 * V / m_e_GeV * np.sin(phi) * (g0 * g1 * (beta0 * beta1 - 1) + 1) / (
-                    beta1 * g1 * (g0 - g1) ** 2)
+                delta_gamma = g1 - g0
+                zero_energy_gain = abs(delta_gamma) < 1e-8 * abs(g0)
+                is_zero_crossing = zero_energy_gain and abs(cos_phi) < 1e-3
+
+                if is_zero_crossing:
+                    # analytic limit for R55 correction at φ = π/2, Δγ → 0
+                    # r55_cor = -k * z * V / (2 m_e_GeV * g0 * (g0**2 - 1))  # equivalent form
+                    r55_cor = -k * z * V / (2.0 * m_e_GeV * g0 ** 3 * beta0 ** 2)
+                else:
+                    # general RF expression (valid as long as g1 != g0)
+                    r55_cor = (
+                            k * z * beta0 * V / m_e_GeV * np.sin(phi)
+                            * (g0 * g1 * (beta0 * beta1 - 1.0) + 1.0)
+                            / (beta1 * g1 * (g0 - g1) ** 2)
+                    )
 
             r66 = Ei / Ef * beta0 / beta1
             r65 = k * np.sin(phi) * V / (Ef * beta1 * m_e_GeV)

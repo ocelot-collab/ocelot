@@ -2,7 +2,7 @@ Accelerator, radiation and x-ray optics simulation framework
 
 # Ocelot
 
-Ocelot is an open-source multiphysics simulation toolkit for accelerator physics.  
+Ocelot is an open-source multiphysics simulation toolkit for accelerator physics.
 It is designed to model Free Electron Lasers (FELs), storage rings, and transport lines using a modular and scriptable Python interface.
 
 - **Website**: [https://www.ocelot-collab.com](https://www.ocelot-collab.com)
@@ -32,16 +32,53 @@ Ocelot provides:
 
 ## Getting Started
 
-For requirements and installation instructions, see the official guide:  
+For requirements and installation instructions, see the official guide:
 👉 [**Installation & Setup**](https://www.ocelot-collab.com/docs/docu/intro)
 
-To explore tutorials, visit:  
-👉 [**Tutorial Overview**](https://www.ocelot-collab.com/docs/tutorial/intro)  
+To explore tutorials, visit:
+👉 [**Tutorial Overview**](https://www.ocelot-collab.com/docs/tutorial/intro)
 👉 [**Student-Friendly Introduction**](https://www.ocelot-collab.com/docs/tutorial/tutorial-beam-dynamics/for_students)
 
 ---
 
-We welcome feedback, contributions, and new ideas from the accelerator community!
+## Core Modules & API Reference
+
+Ocelot's core functionality is organized into key modules:
+
+### 📘 Lattice Elements & Design
+- [**Elements**](./ocelot/cpbd/elements/) - Lattice element definitions (dipoles, quadrupoles, cavities, etc.)
+  - `OpticElement`, `Element`, `Magnet` - Base classes with inheritance hierarchy
+  - `Drift`, `Bend`, `RBend`, `SBend`, `Quadrupole`, `Sextupole`, `Octupole`
+  - `Cavity`, `TDCavity`, `Undulator`, `Marker`, `Monitor`, `Aperture`
+
+### 🔬 Beam Physics & Tracking
+- [**Beam**](./ocelot/cpbd/beam/) - Beam models and particle arrays
+  - `Beam`, `Twiss` - Beam envelopes and Twiss parameters
+  - `ParticleArray`, `Particle` - Individual particle tracking
+  - `generate_parray()`, `ellipse_from_twiss()` - Beam generation utilities
+
+### 🎯 Tracking & Optics
+- [**Tracking**](./ocelot/cpbd/track.py) - Particle and beam tracking algorithms
+- [**Optics**](./ocelot/cpbd/) - Optics calculations and transfer maps
+  - `MagneticLattice` - Core lattice object for simulations
+  - `Navigator` - Lattice navigation utilities
+
+### ⚡ Physics Processes
+- [**Space Charge**](./ocelot/cpbd/sc.py) - Space charge effects
+- [**CSR**](./ocelot/cpbd/csr.py) - Coherent synchrotron radiation
+- [**Wake Fields**](./ocelot/cpbd/wake3D.py) - Longitudinal and transverse wake effects
+- [**Physics Processes**](./ocelot/cpbd/physics_proc.py) - Extensible framework for custom effects
+
+### 🔧 Advanced Features
+- [**Chromaticity Compensation**](./ocelot/cpbd/chromaticity.py)
+- [**Beam Matching**](./ocelot/cpbd/match.py) - Automated optics matching
+- [**Beam Parameter Calculations**](./ocelot/cpbd/beam_params.py)
+
+---
+
+## We welcome feedback, contributions, and new ideas
+
+
 
 - [How to create a pull request](https://www.ocelot-collab.com/docs/docu/how-to/pull_request)
 - [How to add unit tests](https://www.ocelot-collab.com/docs/docu/how-to/unit_test)

@@ -2,8 +2,8 @@ from ocelot.cpbd.elements.element import Element
 
 
 class MarkerAtom(Element):
-    def __init__(self, eid=None):
-        Element.__init__(self, eid)
+    def __init__(self, eid=None, **kwargs):
+        super().__init__(eid, **kwargs)
         self.l = 0.
 
     def __str__(self):

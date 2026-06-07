@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.elements.element import Element
 from ocelot.cpbd.elements.marker import Marker
@@ -191,8 +193,9 @@ class MagneticLattice:
             - Assigns `RungeKuttaTM` specifically for `Undulator` elements.
 
     Notes:
-        - If an element does not support the specified transfer map, the default transfer map defined in
-          the element class is used.
+        - A family-specific method request is treated as explicit and must be declared by that element wrapper.
+        - A global method request is treated as permissive: unsupported families warn and fall back to their
+          element-class default transfer map.
         - For more details, refer to Section 7 of the tutorial:
           [Small Useful Features](https://nbviewer.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/small_useful_features.ipynb).
     """
@@ -210,35 +213,60 @@ class MagneticLattice:
 
         self.update_transfer_maps()
 
-        self.__hash__ = {}
-        for e in self.sequence:
-            self.__hash__[e] = e
+        self._elem_map = {e: e for e in self.sequence}
+
+    def __getitem__(self, el):
+        # Let KeyError propagate if not found
+        return self._elem_map[el]
+
+    def __iter__(self):
+        return iter(self.sequence)
 
     @property
     def totalLen(self):
         return sum([e.l for e in self.sequence])
 
-    def get_sequence_part(self, start: E, stop: E):
-        try:
-            if start is not None:
-                id1 = self.sequence.index(start)
-            else:
-                id1 = 0
-            if stop is not None:
-                id2 = self.sequence.index(stop) + 1
-                sequence = self.sequence[id1:id2]
-            else:
-                sequence = self.sequence[id1:]
-        except:
-            print('cannot construct sequence, element not found')
-            raise
-        return sequence
+    def get_sequence_part(self, start: E | None, stop: E | None):
+        """
+        Return a sub-sequence of elements from `start` to `stop` (inclusive).
+        Raises a ValueError if either element is not found, or if `stop` precedes `start`.
 
-    def __getitem__(self, el):
+        Parameters
+        ----------
+        start : Element or None
+            Element where the subsequence starts. If None, starts from the beginning.
+        stop : Element or None
+            Element where the subsequence ends. If None, continues to the end.
+
+        Returns
+        -------
+        list
+            Sub-list of elements from start to stop (inclusive).
+        """
+        seq = self.sequence
+        if len(seq) == 0:
+            raise ValueError("No elements in sequence.")
+
         try:
-            return self.__hash__[el]
-        except:
-            return None
+            id1 = seq.index(start) if start is not None else 0
+        except ValueError:
+            raise ValueError(f"Start element {getattr(start, 'id', start)} not found in lattice.")
+
+        try:
+            id2 = seq.index(stop) if stop is not None else len(seq) - 1
+        except ValueError:
+            raise ValueError(f"Stop element {getattr(stop, 'id', stop)} not found in lattice.")
+
+        # --- new check: ensure stop is after start ---
+        if id2 < id1:
+            s_id = getattr(start, "id", start)
+            e_id = getattr(stop, "id", stop)
+            raise ValueError(
+                f"Invalid range: stop element '{e_id}' appears before start element '{s_id}' "
+                f"in the lattice sequence (indices {id1}>{id2})."
+            )
+
+        return seq[id1:id2 + 1]  # inclusive
 
     def update_transfer_maps(self):
         for i, element in enumerate(self.sequence):
@@ -251,11 +279,11 @@ class MagneticLattice:
 
             tm_class_type = self.method.get(element.__class__)
             if tm_class_type:
-                element.set_tm(tm_class_type)
+                element.set_tm(tm_class_type, request_source="explicit")
             else:
                 tm_class_type = self.method.get('global')
                 if tm_class_type:
-                    element.set_tm(tm_class_type)
+                    element.set_tm(tm_class_type, request_source="global")
 
             _logger.debug(f"update: {','.join([tm.__class__.__name__ for tm in element.tms])}")
         return self
@@ -271,7 +299,7 @@ class MagneticLattice:
 
         return self.find_indices_by_predicate(lambda elem: isinstance(elem, element))
 
-    def find_indices_by_predicate(self, predicate: Callable[Element, bool]) -> List[int]:
+    def find_indices_by_predicate(self, predicate: Callable[[Element], bool]) -> List[int]:
         """Get indices using some callable function.  Function should
         take one argument, an element of the sequence, and return
         either True or False.
@@ -351,43 +379,169 @@ class MagneticLattice:
             return Bs, Rs, Ts, S
         return Ba, Ra, Ta
 
-    def survey(self, x0=0, y0=0, z0=0, ang_x=0.0, ang_y=0.0):
+    def survey(self, X0=0, Y0=0, Z0=0, theta0=0, phi0=0, psi0=0):
         """
-        Function calculates coordinates in rectangular coordinates system at the beginning of each element in lattice.
-        we use convention from MAD8 where "a positive bend angle represents a bend to the right,
-        i.e. towards negative x vales" https://project-madwindows.web.cern.ch/MAD-resources/MAD8.13%20User%20Reference%20Manual.pdf
-        :param x0: 0, initial offset in x direction
-        :param y0: 0, initial offset in y direction
-        :param z0: 0, initial offset in z direction
-        :param ang_x: 0, initial angel in horizontal plane
-        :param ang_y: 0, initial angel in vertical plane
-        :return: x, y, z, a_x, a_y - lists of coordinates
+        Calculates the 3D survey using the exact MAD-8 recursive vector/matrix method.
+
+        :param X0, Y0, Z0: Initial global coordinates [m].
+        :param theta0: Initial azimuth angle [rad].
+        :param phi0: Initial elevation angle [rad].
+        :param psi0: Initial roll angle [rad].
+
+        :return: (mid_survey_data, end_survey_data)
+                 Two lists of dictionaries containing survey data.
+                 - mid_survey_data: Calculated at the geometric center of elements (Best for Tables).
+                 - end_survey_data: Calculated at the exit of elements (Best for Plotting).
         """
-        x = [x0]
-        y = [y0]
-        z = [z0]
-        a_x = [ang_x]
-        a_y = [ang_y]
-        for e in self.sequence:
-            if e.__class__ in [Bend, SBend, RBend] and e.angle != 0.:
-                ang_x += -e.angle * 0.5 * np.cos(e.tilt)
-                ang_y += -e.angle * 0.5 * np.sin(e.tilt)
-                s = 2 * e.l * np.sin(e.angle * 0.5) / e.angle
-                x0 += s * np.sin(ang_x)
-                y0 += s * np.sin(ang_y)
-                z0 += s * np.cos(np.sqrt(ang_x ** 2 + ang_y ** 2))
-                ang_x += -e.angle * 0.5 * np.cos(e.tilt)
-                ang_y += -e.angle * 0.5 * np.sin(e.tilt)
-            else:
-                x0 += e.l * np.sin(ang_x)
-                y0 += e.l * np.sin(ang_y)
-                z0 += e.l * np.cos(np.sqrt(ang_x ** 2 + ang_y ** 2))
-            x.append(x0)
-            y.append(y0)
-            z.append(z0)
-            a_x.append(ang_x)
-            a_y.append(ang_y)
-        return x, y, z, a_x, a_y
+        V = np.array([X0, Y0, Z0])
+        S_pos = 0.0
+
+        # Initial Matrices
+        M_theta = np.array([[np.cos(theta0), 0, np.sin(theta0)], [0, 1, 0], [-np.sin(theta0), 0, np.cos(theta0)]])
+        M_phi = np.array([[1, 0, 0], [0, np.cos(phi0), np.sin(phi0)], [0, -np.sin(phi0), np.cos(phi0)]])
+        from ocelot.common.math_op import get_tilt_matrix
+        M_psi = get_tilt_matrix(psi0)
+
+        W = M_theta @ M_phi @ M_psi
+
+        mid_survey_data = []
+        end_survey_data = []
+
+        # Helper: Now accepts v_start and v_end vectors
+        def get_survey_data(w_mat, w_start, v_start, v_end, s_val, el):
+            # 1. Scalars for Excel/Pandas
+            xpd, ypd, zpd = w_mat[0, 2], w_mat[1, 2], w_mat[2, 2]
+            val_phi = np.clip(ypd, -1.0, 1.0)
+            phi = np.arcsin(val_phi)
+            theta = np.arctan2(xpd, zpd)
+            psi_angle = np.arctan2(w_mat[1, 0], w_mat[1, 1])
+
+            length = getattr(el, 'l', 0.0) if el else 0.0
+            tilt = getattr(el, 'tilt', 0.0) if el else 0.0
+
+            return {
+                # --- Excel/Table Data (Scalars) ---
+                "LENGTH": length,
+                "TILT": tilt,
+                "S": s_val,
+                "X": v_end[0], "Y": v_end[1], "Z": v_end[2],  # Current position
+                "THETA": theta, "PHI": phi, "PSI": psi_angle,
+                "XPD": xpd, "YPD": ypd, "ZPD": zpd,
+
+                # --- Layout/Plotting Data (Vectors/Matrices) ---
+                "W": w_mat.copy(),  # end or mid
+                "W_start": w_start.copy(),
+                "r_start": v_start.copy(),  # Vector [x,y,z] at element start
+                "r_end": v_end.copy(),  # Vector [x,y,z] at element end
+
+                "element": el
+            }
+
+        # Add Start Point
+        # Start/End are same for the zero-length marker at 0.0
+        start_point_data = get_survey_data(W, W, V, V, S_pos, None)
+        mid_survey_data.append(start_point_data)
+        end_survey_data.append(start_point_data)
+
+        for elem in self.sequence:
+            R_end, S_end, R_mid, S_mid = elem.get_transfer_geometry()
+
+            W_start = W.copy()
+            V_start = V.copy()
+
+            # --- 1. MIDPOINT (For Tables) ---
+            V_mid_global = V_start + W_start @ R_mid
+            W_mid_global = W_start @ S_mid
+
+            L = getattr(elem, 'l', 0.0)
+            S_mid_val = S_pos + L / 2.0
+
+            # For midpoint data, 'r_end' is the center, 'r_start' is entry
+            mid_survey_data.append(get_survey_data(W_mid_global,W_start, V_start, V_mid_global, S_mid_val, elem))
+
+            # --- 2. ENDPOINT (For Layouts/Connectivity) ---
+            V_end_global = V_start + W_start @ R_end
+            W_end_global = W_start @ S_end
+            S_pos += L
+
+            # For endpoint data, we have the full element segment
+            end_survey_data.append(get_survey_data(W_end_global, W_start, V_start, V_end_global, S_pos, elem))
+
+            # Update state
+            V = V_end_global
+            W = W_end_global
+
+        return mid_survey_data, end_survey_data
+
+    def survey_longlist(
+        self,
+        X0=0,
+        Y0=0,
+        Z0=0,
+        theta0=0,
+        phi0=0,
+        chi0=0,
+        xpd0=None,
+        ypd0=None,
+        zpd0=None,
+    ):
+        """
+        Calculates survey and converts angles/coordinates to the 'LongList' engineering convention.
+
+        Mapping:
+        - THETA (Azimuth)   -> Becomes PHI (Elevation)
+        - PHI (Elevation)   -> Becomes -THETA (-Azimuth)
+        - PSI (Roll)        -> Renamed to CHI
+        - XPD               -> Becomes YPD (Consistent with angle swap)
+        - YPD               -> Becomes -XPD
+        """
+        if xpd0 is not None and ypd0 is not None and zpd0 is not None:
+            val_phi = np.clip(ypd0, -1.0, 1.0)
+            phi0 = np.arcsin(val_phi)
+            theta0 = np.arctan2(xpd0, zpd0)
+
+        # Convert LongList input angles to MAD-8 convention for survey()
+        mad_theta0 = -phi0
+        mad_phi0 = theta0
+        mad_psi0 = chi0
+
+        # 1. Get the raw physics data (Assuming this returns dicts with 'PSI', 'THETA', 'PHI')
+        mid_phys, end_phys = self.survey(X0, Y0, Z0, mad_theta0, mad_phi0, mad_psi0)
+
+        # 2. Define the transformation logic
+        def to_longlist_convention(data_list):
+            new_list = []
+            for item in data_list:
+                # Shallow copy to protect original data
+                new_item = item.copy()
+
+                # --- 1. Rename PSI to CHI ---
+                # .pop('PSI') gets the value AND removes 'PSI' from new_item
+                # This ensures you don't have duplicate keys.
+                new_item['CHI'] = new_item.pop('PSI', 0.0)
+
+                # --- 2. Swap Angles ---
+                mad_theta = item['THETA']
+                mad_phi = item['PHI']
+
+                new_item['THETA'] = mad_phi
+                new_item['PHI'] = -mad_theta
+
+                # --- 3. Swap Direction Cosines (Consistency) ---
+                # If we swap angles, we must swap the unit vectors too.
+                # If Theta -> Phi (X -> Y), then XPD -> YPD.
+                # If Phi -> -Theta (Y -> -X), then YPD -> -XPD.
+                mad_xpd = item['XPD']
+                mad_ypd = item['YPD']
+
+                new_item['XPD'] = mad_ypd
+                new_item['YPD'] = -mad_xpd
+
+                new_list.append(new_item)
+            return new_list
+
+        return to_longlist_convention(mid_phys), to_longlist_convention(end_phys)
+
 
     def print_sequence(self, start: E = None, stop: E = None):
         sequence = self.get_sequence_part(start, stop)

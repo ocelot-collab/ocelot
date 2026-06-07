@@ -5,6 +5,7 @@ __author__ = 'Sergey Tomin'
 from typing import Any, Callable, Dict, List, Tuple, Type, Union
 
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 from scipy.integrate import simpson
 import copy
 
@@ -696,3 +697,249 @@ class BunchCompressorUpdate:
         r56_n, t566_n, u5666_n, Sref_n = chicane_RTU(yoke_len=dipole_length, dip_dist=bc_gap, r=rho, type="c")
         print(f"Was: R56 = {r56 * 1000} mm, T566 = {t566*1000} mm, Sref = {Sref} m, rho = {rho_old} m")
         print(f"New: R56 = {r56_n * 1000} mm, T566 = {t566_n * 1000} mm, Sref = {Sref_n} m, rho = {rho} m")
+
+
+def rf_longitudinal_map(
+    v: float,
+    phi: float,
+    vh: float,
+    phih: float,
+    E0: float,
+    delta1: float = 0.0,
+    delta2: float = 0.0,
+    delta3: float = 0.0,
+    n: int = 3,
+    freq: float = 1.3e9,
+) -> Tuple[float, float, float, float]:
+    """
+    Propagate the longitudinal energy expansion coefficients through an RF
+    section consisting of a fundamental harmonic and an n-th harmonic linearizer.
+
+    Parameters
+    ----------
+    v : float
+        Fundamental RF peak voltage [GeV].
+    phi : float
+        Fundamental RF phase [deg].
+    vh : float
+        n-th harmonic RF peak voltage [GeV].
+    phih : float
+        n-th harmonic phase [deg].
+    E0 : float
+        Reference energy at the entrance [GeV].
+    delta1 : float
+        δ'(0) at the linac entrance.
+    delta2 : float
+        δ''(0) at the linac entrance.
+    delta3 : float
+        δ'''(0) at the linac entrance.
+    n : int
+        Harmonic number (default: 3).
+    freq : float
+        Fundamental RF frequency [Hz].
+
+    Returns
+    -------
+    E1 : float
+        Reference energy at the linac exit.
+    delta1 : float
+        δ'(0) at the linac exit.
+    delta2 : float
+        δ''(0) at the linac exit.
+    delta3 : float
+        δ'''(0) at the linac exit.
+    """
+    c = 2.99792458e8  # speed of light [m/s]
+    k = 2.0 * np.pi * freq / c
+
+    M = np.array(
+        [
+            [1.0,         0.0,     1.0,            0.0],
+            [0.0,        -k,       0.0,         -(n * k)],
+            [-k**2,       0.0,  -(n * k) ** 2,   0.0],
+            [0.0,         k**3,    0.0,        (n * k) ** 3],
+        ]
+    )
+
+    V = np.array(
+        [
+            v * np.cos(np.deg2rad(phi)),
+            v * np.sin(np.deg2rad(phi)),
+            vh * np.cos(np.deg2rad(phih)),
+            vh * np.sin(np.deg2rad(phih)),
+        ]
+    )
+
+    # At entrance: P_in = [E, E δ', E δ'', E δ''']
+    P_in = E0 * np.array(
+        [1.0, delta1, delta2, delta3]
+    )
+
+    # After RF
+    P_out = P_in + M @ V
+
+    E1 = P_out[0]
+    delta1_prime = P_out[1] / E1
+    delta1_double_prime = P_out[2] / E1
+    delta1_triple_prime = P_out[3] / E1
+
+    return E1, delta1_prime, delta1_double_prime, delta1_triple_prime
+
+
+def bc_longitudinal_map(
+    delta1: float,
+    delta2: float,
+    delta3: float,
+    R56: float,
+    T566: float = 0.0,
+    U5666: float = 0.0,
+) -> Tuple[float, float, float, float]:
+    """
+    Propagate longitudinal derivatives δ'(0), δ''(0), δ'''(0) through a bunch
+    compressor, evaluated at the bunch center s=0.
+
+    The incoming relative energy deviation is expanded around s=0 as
+        δ₁(s) = δ₁'(0) s + δ₁''(0) s² / 2 + δ₁'''(0) s³ / 6,
+    with δ₁(0) = 0.
+
+    The bunch compressor is described (up to third order in δ) by
+        s₂ = s₁ - (R56 δ₁ + T566 δ₁² + U5666 δ₁³),
+        δ₂ = δ₁.
+
+    At the bunch center (s₁=0, δ₁(0)=0), the Jacobian simplifies to
+        f' = ds₂/ds₁ = 1 - R56 δ₁'(0).
+
+    The derivatives at the exit are
+
+        δ₂'(0)   = δ₁'(0) / f',
+        δ₂''(0)  = [δ₁''(0) + 2 T566 δ₁'(0)³] / f'³,
+        δ₂'''(0) = [ δ₁'''(0) (1 - R56 δ₁'(0))
+                     + 6 T566 δ₁'(0)² δ₁''(0)
+                     + 6 U5666 δ₁'(0)⁴ ] / f'⁵.
+
+    Parameters
+    ----------
+    delta1 : float
+        δ₁'(0) at the entrance of the BC (chirp at the bunch center).
+    delta2 : float
+        δ₁''(0) at the entrance (curvature at the center).
+    delta3 : float
+        δ₁'''(0) at the entrance (skew at the center).
+    R56 : float
+        Linear longitudinal dispersion of the bunch compressor [m].
+    T566 : float, optional
+        Second-order longitudinal dispersion T566 [m]. Default is 0.0.
+    U5666 : float, optional
+        Third-order longitudinal dispersion U5666 [m]. Default is 0.0.
+
+    Returns
+    -------
+    delta2_prime : float
+        δ₂'(0) at the BC exit (chirp at the bunch center).
+    delta2_double_prime : float
+        δ₂''(0) at the BC exit (curvature at the center).
+    delta2_triple_prime : float
+        δ₂'''(0) at the BC exit (skew at the center).
+    fprime : float
+        Jacobian f' = ds₂/ds₁ at s₁=0.
+        The compression factor at the bunch center is
+            C(0) = ds₁/ds₂ = 1 / f'.
+    """
+    d1 = delta1
+    d2 = delta2
+    d3 = delta3
+
+    # Center values of F', F'', F'''
+    Fp   = R56
+    Fpp  = 2.0 * T566
+    Fppp = 6.0 * U5666
+
+    # Jacobian at s₁=0
+    fprime = 1.0 - Fp * d1
+
+    # First derivative after BC: δ₂'(0)
+    delta2_prime = d1 / fprime
+
+    # Second derivative after BC: δ₂''(0)
+    delta2_double_prime = (d2 + Fpp * d1**3) / fprime**3
+
+    # Third derivative after BC: δ₂'''(0)
+    delta2_triple_prime = (
+        d3 * (1.0 - Fp * d1)
+        + 3*R56 * d2**2
+        + 12 * T566 * d1 **2 * d2
+        + 6 * U5666 * d1 **4 * (1 - R56 * d1)
+        + 12 * T566**2 * d1**5
+    ) / fprime**5
+
+    return delta2_prime, delta2_double_prime, delta2_triple_prime, fprime
+
+
+def local_compression(
+    s: float,
+    d1: float,
+    d2: float,
+    d3: float,
+    R56: float,
+    T566: float = 0.0,
+    U5666: float = 0.0,
+) -> Tuple[float, float]:
+    """
+    Compute the **local compression factor** and the new longitudinal
+    coordinate `s2` after a third-order bunch compressor.
+
+    The energy deviation is approximated by a Taylor expansion around the
+    bunch center:
+
+        δ(s)  = d1 * s + d2 * s² / 2 + d3 * s³ / 6
+        δ'(s) = d1 + d2 * s + d3 * s² / 2
+
+    The bunch compressor transformation (up to third order) is:
+
+        s₂ = s − ( R56 * δ + T566 * δ² + U5666 * δ³ )
+        δ₂(s₂) = δ(s)
+
+    The Jacobian of the transformation is:
+
+        f'(s) = 1 − ( R56 + 2*T566*δ + 3*U5666*δ² ) * δ'(s)
+
+    The **local compression factor** is defined as:
+
+        C_local = 1 / f'(s)
+
+    Parameters
+    ----------
+    s : float
+        Longitudinal position relative to bunch center.
+    d1, d2, d3 : float
+        First, second, and third derivatives of the incoming energy
+        deviation δ₁ at the bunch center.
+        These correspond to δ₁′(0), δ₁″(0), δ₁‴(0).
+    R56 : float
+        Linear longitudinal dispersion of the bunch compressor.
+    T566 : float, optional
+        Quadratic longitudinal dispersion term. Default: 0.0
+    U5666 : float, optional
+        Cubic longitudinal dispersion term. Default: 0.0
+
+    Returns
+    -------
+    C_local : float
+        The local compression factor 1 / f'(s).
+    s2 : float
+        The transformed longitudinal coordinate after the compressor.
+
+    """
+    # Energy deviation δ(s)
+    d_s = d1 * s + 0.5 * d2 * s**2 + (1.0 / 6.0) * d3 * s**3
+
+    # Derivative δ'(s)
+    d1_s = d1 + d2 * s + 0.5 * d3 * s**2
+
+    # Jacobian f'(s)
+    f1 = 1.0 - (R56 + 2.0 * T566 * d_s + 3.0 * U5666 * d_s**2) * d1_s
+
+    # Longitudinal mapping s → s2 (correct sign)
+    s2 = s - (R56 * d_s + T566 * d_s**2 + U5666 * d_s**3)
+
+    return 1.0 / f1, s2

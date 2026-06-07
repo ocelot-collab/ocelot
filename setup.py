@@ -6,7 +6,7 @@ long_description = (this_directory / "README.md").read_text(encoding='utf-8')
 
 setup(
     name='ocelot-collab',
-    version='25.07.1',
+    version='26.06.0',
     description='Accelerator, radiation and x-ray optics simulation framework',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -19,7 +19,14 @@ setup(
         'demos': 'demos'
     },
     install_requires=[
-        'numpy', 'scipy', 'matplotlib', 'pandas', 'h5py'
+        'numpy',
+        'scipy',
+        'matplotlib',
+        'pandas',
+        'h5py',
+        'numexpr>=2.6.1',
+        'pyfftw>=0.10',
+        'numba',
     ],
     extras_require={'docs': ['Sphinx', 'alabaster', 'sphinxcontrib-jsmath']},
     package_data={

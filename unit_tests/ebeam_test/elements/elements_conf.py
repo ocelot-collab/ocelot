@@ -7,7 +7,7 @@ from ocelot import *
 from ocelot import XYQuadrupole
 
 """lattice elements description"""
-
+m = Marker()
 D = Drift(l=1, eid="D")
 Qf = Quadrupole(l=0.3, k1=1, eid="Qf")
 Qd = Quadrupole(l=0.3, k1=-1, eid="Qd")
@@ -20,7 +20,7 @@ octd = Octupole(l=0.3,  k3=-300, eid="of")
 
 @pytest.fixture(scope='module')
 def cell():
-    return (D, Qf, D, Qd, D, octf, D, qxy, D, octd, D, Qf, D, Qd, D)
+    return (m, D, Qf, D, Qd, D, octf, D, qxy, D, octd, D, Qf, D, Qd, D)
 
 
 @pytest.fixture(scope='module')

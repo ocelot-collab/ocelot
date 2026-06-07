@@ -1,4 +1,5 @@
-import sys
+import inspect
+from numbers import Number
 
 import numpy as np
 
@@ -50,11 +51,9 @@ class LatticeIO:
         @return: A string that contains the cell of the lattice in a python readable format
         """
         lines = []
-        names = []
-        for elem in lattice.sequence:
-            # TODO: Edge and CouplerKick are not elements.
-            if elem.__class__.__name__ not in ("Edge", "CouplerKick"):
-                names.append(elem.name)
+        if any(not hasattr(elem, "name") for elem in lattice.sequence):
+            LatticeIO._create_var_name(LatticeIO._unique_sequence_elements(lattice.sequence))
+        names = [elem.name for elem in lattice.sequence]
 
         new_names = []
         for i, name in enumerate(names):
@@ -146,20 +145,16 @@ class LatticeIO:
     @staticmethod
     def _get_elements(lattice):
         """
-        Filters the elements in lattice and remove the fake elements (Edge, CouplerKick).
+        Collect unique lattice elements in sequence order.
         :param lattice: input lattice
         :return: A list of elements
         """
-        elements = []
-        for element in lattice.sequence:
-            element_type = element.__class__.__name__
-            # TODO: Edge and CouplerKick are not elements.
-            if element_type in ('Edge', "CouplerKick"):
-                continue
-            if element not in elements:
-                elements.append(element)
-        elements = LatticeIO._create_var_name(elements)
-        return elements
+        return LatticeIO._create_var_name(LatticeIO._unique_sequence_elements(lattice.sequence))
+
+    @staticmethod
+    def _unique_sequence_elements(sequence):
+        """Return unique sequence elements while preserving their first occurrence order."""
+        return list(dict.fromkeys(sequence))
 
     @staticmethod
     def _find_obj_and_create_name(lattice, types):
@@ -290,30 +285,38 @@ class LatticeIO:
         :param element: input Element
         :return: A String that contains an matrix element in a python readable format
         """
-        for key in element.element.__dict__:
-            if isinstance(element.element.__dict__[key], np.ndarray):
-                # r - elements
-                if np.shape(element.element.__dict__[key]) == (6, 6):
-                    for i in range(6):
-                        for j in range(6):
-                            val = element.element.__dict__[key][i, j]
-                            if np.abs(val) > 1e-9:
-                                params.append(key + str(i + 1) + str(j + 1) + '=' + str(val))
-                # t - elements
-                elif np.shape(element.element.__dict__[key]) == (6, 6, 6):
-                    for i in range(6):
-                        for j in range(6):
-                            for k in range(6):
-                                val = element.element.__dict__[key][i, j, k]
-                                if np.abs(val) > 1e-9:
-                                    params.append(key + str(i + 1) + str(j + 1) + str(k + 1) + '=' + str(val))
-                # b - elements
-                if np.shape(element.element.__dict__[key]) == (6, 1):
-                    for i in range(6):
-                        val = element.element.__dict__[key][i, 0]
+        for key in ("r", "t", "b"):
+            value = getattr(element, key)
+            if np.shape(value) == (6, 6):
+                for i in range(6):
+                    for j in range(6):
+                        val = value[i, j]
                         if np.abs(val) > 1e-9:
-                            params.append(key + str(i + 1) + '=' + str(val))
+                            params.append(key + str(i + 1) + str(j + 1) + '=' + str(val))
+            elif np.shape(value) == (6, 6, 6):
+                for i in range(6):
+                    for j in range(6):
+                        for k in range(6):
+                            val = value[i, j, k]
+                            if np.abs(val) > 1e-9:
+                                params.append(key + str(i + 1) + str(j + 1) + str(k + 1) + '=' + str(val))
+            elif np.shape(value) == (6, 1):
+                for i in range(6):
+                    val = value[i, 0]
+                    if np.abs(val) > 1e-9:
+                        params.append(key + str(i + 1) + '=' + str(val))
         return params
+
+    @staticmethod
+    def _element_init_params(element):
+        """Return public wrapper constructor parameters used for serialization."""
+        parameters = inspect.signature(type(element).__init__).parameters.values()
+        return [
+            param.name
+            for param in parameters
+            if param.name not in ("self", "tm")
+            and param.kind not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+        ]
 
     @staticmethod
     def element_def_string(element) -> str:
@@ -325,42 +328,40 @@ class LatticeIO:
         params = []
 
         element_type = element.__class__.__name__
-        element_ref = getattr(sys.modules[__name__], element_type)()
-        params_order = element_ref.element.__init__.__code__.co_varnames
-        argcount = element_ref.element.__init__.__code__.co_argcount
+        element_ref = type(element)()
+        params_order = LatticeIO._element_init_params(element)
 
-        for param in params_order[:argcount]:
-            if param == 'self':
-                continue
-
+        for param in params_order:
             # fix for parameter 'eid'
             if param == 'eid':
                 params.append('eid=\'' + element.id + '\'')
                 continue
 
-            if isinstance(element.element.__dict__[param], np.ndarray):
+            value = getattr(element, param)
+            value_ref = getattr(element_ref, param)
 
-                if not np.array_equal(element.element.__dict__[param], element_ref.element.__dict__[param]):
-                    params.append(param + '=' + np.array2string(element.element.__dict__[param], separator=', '))
+            if isinstance(value, np.ndarray):
+                if not np.array_equal(value, value_ref):
+                    params.append(param + '=' + np.array2string(value, separator=', '))
                 continue
 
-            if isinstance(element.element.__dict__[param], (int, float, complex)):
+            if isinstance(value, Number):
 
                 # fix for parameters 'e1' and 'e2' in RBend element
                 if element_type == 'RBend' and param in ('e1', 'e2'):
-                    val = element.element.__dict__[param] - element.angle / 2.0
+                    val = value - element.angle / 2.0
                     if val != 0.0:
                         params.append(param + '=' + str(val))
                     continue
 
-                if element.element.__dict__[param] != element_ref.element.__dict__[param]:
-                    params.append(param + '=' + str(element.element.__dict__[param]))
+                if value != value_ref:
+                    params.append(param + '=' + str(value))
                 continue
 
-            if isinstance(element.element.__dict__[param], str):
+            if isinstance(value, str):
 
-                if element.element.__dict__[param] != element_ref.element.__dict__[param]:
-                    params.append(param + '=\'' + element.element.__dict__[param] + '\'')
+                if value != value_ref:
+                    params.append(param + '=\'' + value + '\'')
                 continue
 
         if element.__class__.__name__ == "Matrix":

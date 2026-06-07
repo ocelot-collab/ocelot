@@ -320,6 +320,59 @@ def test_beam_matching(lattice, lattice_inj, update_ref_values=False):
 
     assert check_result(result)
 
+
+def test_particle_array_match_to_twiss(lattice, lattice_inj=None, update_ref_values=False):
+    """ParticleArray.match_to_twiss should match the beam to the target optics."""
+    tws_in = Twiss(beta_x=0.29, beta_y=0.29, alpha_x=-0.8, alpha_y=-0.8, E=0.005)
+    tws_target = Twiss(beta_x=10.0, beta_y=5.0, alpha_x=0.0, alpha_y=-0.1, E=tws_in.E)
+
+    np.random.seed(11)
+    p_array = generate_parray(chirp=0.0, charge=5e-9, nparticles=100000, energy=tws_in.E, tws=tws_in)
+
+    matched = p_array.match_to_twiss(tws_target)
+
+    assert matched is p_array
+
+    tws = p_array.get_twiss()
+    result = [
+        check_value(tws.alpha_x, tws_target.alpha_x, tolerance=2e-2, tolerance_type='absolute', assert_info='alpha_x'),
+        check_value(tws.alpha_y, tws_target.alpha_y, tolerance=2e-2, tolerance_type='absolute', assert_info='alpha_y'),
+        check_value(tws.beta_x, tws_target.beta_x, tolerance=2e-2, tolerance_type='relative', assert_info='beta_x'),
+        check_value(tws.beta_y, tws_target.beta_y, tolerance=2e-2, tolerance_type='relative', assert_info='beta_y'),
+    ]
+
+    assert check_result(result)
+
+
+def test_particle_array_match_to_twiss_slice_and_offsets(lattice, lattice_inj=None, update_ref_values=False):
+    """Slice matching should use the target optics and optionally remove offsets."""
+    tws_in = Twiss(beta_x=0.29, beta_y=0.29, alpha_x=-0.8, alpha_y=-0.8, E=0.005)
+    tws_target = Twiss(beta_x=8.0, beta_y=4.5, alpha_x=0.2, alpha_y=-0.3, E=tws_in.E)
+
+    np.random.seed(12)
+    p_array = generate_parray(chirp=0.0, charge=5e-9, nparticles=120000, energy=tws_in.E, tws=tws_in)
+    p_array.rparticles[0] += 1.5e-4
+    p_array.rparticles[1] -= 2.0e-5
+    p_array.rparticles[2] -= 2.5e-4
+    p_array.rparticles[3] += 3.0e-5
+
+    p_array.match_to_twiss(tws_target, slice="Imax", remove_offsets=True)
+
+    tws = p_array.get_twiss_from_slice("Imax")
+    result = [
+        check_value(tws.alpha_x, tws_target.alpha_x, tolerance=4e-2, tolerance_type='absolute', assert_info='slice alpha_x'),
+        check_value(tws.alpha_y, tws_target.alpha_y, tolerance=4e-2, tolerance_type='absolute', assert_info='slice alpha_y'),
+        check_value(tws.beta_x, tws_target.beta_x, tolerance=4e-2, tolerance_type='relative', assert_info='slice beta_x'),
+        check_value(tws.beta_y, tws_target.beta_y, tolerance=4e-2, tolerance_type='relative', assert_info='slice beta_y'),
+        check_value(np.mean(p_array.x()), 0.0, tolerance=1e-12, tolerance_type='absolute', assert_info='mean x'),
+        check_value(np.mean(p_array.px()), 0.0, tolerance=1e-12, tolerance_type='absolute', assert_info='mean px'),
+        check_value(np.mean(p_array.y()), 0.0, tolerance=1e-12, tolerance_type='absolute', assert_info='mean y'),
+        check_value(np.mean(p_array.py()), 0.0, tolerance=1e-12, tolerance_type='absolute', assert_info='mean py'),
+    ]
+
+    assert check_result(result)
+
+
 def setup_module(module):
 
     f = open(pytest.TEST_RESULTS_FILE, 'a')
@@ -362,6 +415,8 @@ def test_update_ref_values(lattice, lattice_inj, cmdopt):
     update_functions.append('test_bend_angle_match')
     update_functions.append('test_inj_lattice')
     update_functions.append('test_beam_matching')
+    update_functions.append('test_particle_array_match_to_twiss')
+    update_functions.append('test_particle_array_match_to_twiss_slice_and_offsets')
 
     if cmdopt in update_functions:
         result = eval(cmdopt)(lattice, lattice_inj, True)

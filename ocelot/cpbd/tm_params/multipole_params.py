@@ -4,6 +4,13 @@ from ocelot.cpbd.r_matrix import rot_mtx
 
 
 class MultipoleParams(TMParams):
+    """
+    Coefficient list for the dedicated ``MultipoleTM`` kick polynomial.
+
+    ``kn`` stores the normal multipole strengths in the order expected by the
+    multipole transformation.
+    """
+
     def __init__(self, kn) -> None:
         super().__init__()
         self.kn = kn

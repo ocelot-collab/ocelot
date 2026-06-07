@@ -31,18 +31,21 @@ try:
 except:
     extrema_chk = 0
 
-try:
-    from mpi4py import MPI
-except ImportError:
-    IS_MPI = False
-else:
-    if is_an_mpi_process():
+# Avoid importing mpi4py in non-MPI runs: mpi4py auto-initializes MPI at import.
+IS_MPI = False
+COMM = None
+N_CORES = 1
+RANK = 0
+if is_an_mpi_process():
+    try:
+        from mpi4py import MPI
+    except ImportError:
+        _logger.warning("MPI environment detected but mpi4py is not installed; MPI features are disabled.")
+    else:
         IS_MPI = True
         COMM = MPI.COMM_WORLD
         N_CORES = COMM.Get_size()
         RANK = COMM.Get_rank()
-    else:
-        IS_MPI = False
 
 def aperture_limit(lat, xlim = 1, ylim = 1):
     tws=twiss(lat, Twiss(), nPoints=1000)
@@ -154,8 +157,8 @@ def freq_analysis(track_list, lat, nturns, harm=True, diap=0.10, nearest=False, 
     def beta_freq(lat):
 
         tws = twiss(lat, Twiss())
-        nux = tws[-1].mux/2./pi*nsuperperiods
-        nuy = tws[-1].muy/2./pi*nsuperperiods
+        nux = tws[-1].mux/2./np.pi*nsuperperiods
+        nuy = tws[-1].muy/2./np.pi*nsuperperiods
         print ("freq. analysis: Qx = ", nux, " Qy = ", nuy)
         nux = abs(int(nux+0.5) - nux)
         nuy = abs(int(nuy+0.5) - nuy)
@@ -267,7 +270,7 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
     #sigma_x = sqrt((sigma_e*tws0.Dx)**2 + emit*tws0.beta_x)
     #sigma_xp = sqrt((sigma_e*tws0.Dxp)**2 + emit*tws0.gamma_x)
     if type == "contour":
-        t = np.linspace(0,2*pi, num)
+        t = np.linspace(0,2*np.pi, num)
         x = n_t_sigma*beam.sigma_x*np.cos(t)
         y = n_t_sigma*beam.sigma_xp*np.sin(t)
     else:

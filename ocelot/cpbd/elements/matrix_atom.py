@@ -17,7 +17,7 @@ class MatrixAtom(Element):
     """
 
     def __init__(self, l=0., delta_e=0, eid=None, **kwargs):
-        Element.__init__(self, eid)
+        super().__init__(eid, **kwargs)
         self.l = l
 
         self.r = np.zeros((6, 6))

@@ -31,9 +31,9 @@ def optics_from_tfs(tfs_table):
     twiss.E = header["ENERGY"]
     twiss.emit_x = header["EX"]
     twiss.emit_y = header["EY"]
-    rel_gamma = header["GAMMA"]
-    twiss.emit_xn = twiss.emit_x * rel_gamma
-    twiss.emit_yn = twiss.emit_y * rel_gamma
+    # Twiss stores normalized emittance internally as beta*gamma*emit.
+    # Once E is set, assigning emit_x / emit_y is enough to populate the
+    # normalized values consistently via the Twiss property setters.
 
     first = tfs_table.iloc[0]
     twiss.alpha_x = first["ALFX"]
@@ -86,6 +86,7 @@ class MADXLatticeConverter:
         return elements.SBend(eid=row.NAME,
                               l=row.L,
                               angle=row.ANGLE,
+                              k1=row.K1L/row.L,
                               tilt=row.TILT,
                               e1=row.E1,
                               e2=row.E2)

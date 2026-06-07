@@ -1,7 +1,9 @@
 import numpy as np
 
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
+from ocelot.cpbd.tm_params.runge_kutta_params import RungeKuttaParams
 from ocelot.cpbd.high_order import m_e_GeV
+from ocelot.common.globals import speed_of_light
 from ocelot.cpbd.elements.element import Element
 
 
@@ -12,8 +14,11 @@ class SolenoidAtom(Element):
     k - strength B0/(2B*rho)
     """
 
-    def __init__(self, l=0., k=0., eid=None):
-        Element.__init__(self, eid)
+    def __init__(self, l=0., k=0., eid=None, **kwargs):
+        kwargs.setdefault('width', 0.1)       # Bends are usually wider than 0.05
+        kwargs.setdefault('height', 0.1)
+        kwargs.setdefault('color', 'magenta') # Standard color for Dipoles
+        super().__init__(eid, **kwargs)
         self.k = k  # B0/(2B*rho)
         self.l = l
 
@@ -28,6 +33,23 @@ class SolenoidAtom(Element):
         R = self.R_main_matrix(energy=energy, length=delta_length if delta_length != None else self.l)
         B = self._default_B(R)
         return FirstOrderParams(R, B, self.tilt)
+
+    def default_mag_field(self, energy: float):
+        gamma = energy / m_e_GeV
+        beta = np.sqrt(1. - 1. / (gamma * gamma)) if gamma != 0 else 1.
+        brho = beta * energy * 1e9 / speed_of_light
+        bz = 2. * self.k * brho
+
+        def field(x, y, z):
+            return 0., 0., bz
+
+        return field
+
+    def get_mag_field(self, energy: float):
+        return self.mag_field if self.mag_field is not None else self.default_mag_field(energy)
+
+    def create_runge_kutta_main_params(self, energy):
+        return RungeKuttaParams(mag_field=self.get_mag_field(energy))
 
     def R_main_matrix(self, energy, length):
 

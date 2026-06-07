@@ -1,13 +1,10 @@
 import numpy as np
 
-
 from ocelot.cpbd.elements.magnet import Magnet
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
-from ocelot.cpbd.tm_params.runge_kutta_params import RungeKuttaParams
 from ocelot.cpbd.tm_params.second_order_params import SecondOrderParams
 from ocelot.cpbd.high_order import fringe_ent, fringe_ext
-from ocelot.cpbd.r_matrix import rot_mtx
-from ocelot.common.globals import speed_of_light, m_e_GeV
+from ocelot.cpbd.r_matrix import bend_edge_matrix
 
 
 class BendAtom(Magnet):
@@ -28,8 +25,12 @@ class BendAtom(Magnet):
     """
 
     def __init__(self, l=0., angle=0., k1=0., k2=0., e1=0., e2=0., tilt=0.0,
-                 gap=0., h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None):
-        super().__init__(eid=eid, has_edge=True)
+                 gap=0., h_pole1=0., h_pole2=0., fint=0., fintx=None, eid=None, **kwargs):
+        kwargs.setdefault('width', 0.1)       # Bends are usually wider than 0.05
+        kwargs.setdefault('height', 0.1)
+        kwargs.setdefault('color', 'blue') # Standard color for Dipoles
+
+        super().__init__(eid=eid, has_edge=True, **kwargs)
         self.l = l
         self.angle = angle
         self.k1 = k1
@@ -60,17 +61,11 @@ class BendAtom(Magnet):
         s += 'eid="' + str(self.id) + '")' if self.id is not None else ")"
         return s
 
+    def _curvature(self):
+        return self.angle / self.l if self.l != 0. else 0.
+
     def _R_edge(self, fint, edge):
-        if self.l != 0.:
-            self.h = self.angle / self.l
-        else:
-            self.h = 0
-        sec_e = 1. / np.cos(edge)
-        phi = fint * self.h * self.gap * sec_e * (1. + np.sin(edge) ** 2)
-        R = np.eye(6)
-        R[1, 0] = self.h * np.tan(edge)
-        R[3, 2] = -self.h * np.tan(edge - phi)
-        return R
+        return bend_edge_matrix(h=self._curvature(), edge=edge, gap=self.gap, fint=fint)
 
     def create_first_order_entrance_params(self, energy: float, delta_length: float = 0.0) -> FirstOrderParams:
         R = self._R_edge(self.fint, self.e1)
@@ -83,33 +78,21 @@ class BendAtom(Magnet):
         return FirstOrderParams(R, B, self.tilt)
 
     def create_second_order_entrance_params(self, energy: float, delta_length: float = 0.0) -> SecondOrderParams:
+        h = self._curvature()
         first_order_params = self.create_first_order_entrance_params(energy)
-        _, T = fringe_ent(h=self.h, k1=self.k1, e=self.e1, h_pole=self.h_pole1,
+        _, T = fringe_ent(h=h, k1=self.k1, e=self.e1, h_pole=self.h_pole1,
                           gap=self.gap, fint=self.fint)
         return SecondOrderParams(first_order_params.R, first_order_params.B, T, self.tilt, self.dx, self.dy)
 
     def create_second_order_exit_params(self, energy: float, delta_length: float = 0.0) -> SecondOrderParams:
+        h = self._curvature()
         first_order_params = self.create_first_order_exit_params(energy)
-        _, T = fringe_ext(h=self.h, k1=self.k1, e=self.e2, h_pole=self.h_pole2,
+        _, T = fringe_ext(h=h, k1=self.k1, e=self.e2, h_pole=self.h_pole2,
                           gap=self.gap, fint=self.fintx)
         return SecondOrderParams(first_order_params.R, first_order_params.B, T, self.tilt, self.dx, self.dy)
 
-    def create_runge_kutta_main_params(self, energy):
-        gamma = energy / m_e_GeV
-        igamma2 = 0.
-
-        if gamma != 0:
-            igamma2 = 1. / (gamma * gamma)
-
-        beta = np.sqrt(1. - igamma2)
-
-        B = self.angle/self.l * beta * energy*1e9/speed_of_light if self.l != 0. else 0.
-        By = B * np.cos(self.tilt)
-        Bx = B * np.sin(self.tilt)
-        return RungeKuttaParams(mag_field=lambda x, y, z: (Bx, By, 0.))
-
     def create_runge_kutta_entrance_params(self, energy):
-        return RungeKuttaParams(mag_field=lambda x, y, z: (0., 0., 0.))
+        return super().create_runge_kutta_main_params(energy)
 
     def create_runge_kutta_exit_params(self, energy):
-        return RungeKuttaParams(mag_field=lambda x, y, z: (0., 0., 0.))
+        return super().create_runge_kutta_main_params(energy)

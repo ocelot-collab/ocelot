@@ -2,85 +2,68 @@
 
 All notable changes to OCELOT will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-~and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).~ (Not yet, maybe it won't.  Versioning is based on year.month.day.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+Versioning is date based: `YY.MM.patch`.
 
 ## [Unreleased]
 
-### Changed
+- None yet.
 
-- The `CSR` class now gives an explicit `logging` `error` when failing in `arcline` and
-  a more useful explanation.  This error often occurs because the user has mixed CSR for
-  vertical bends with horizontal bends.
-- `Navigator.add_physics_process` should now be a lot faster by doing fewer unnecessary deepcopies.
+## [26.06.0] - 2026-06-07
 
 ### Added
 
-- New properties on `ParticleArrray`, `beta` and `gamma`, providing the relativistic
-  properties of each particle.
-- New method `sort` on `ParticleArray` for possibly sorting in place with respect to one
-  of the properties or functions (e.g. `beta`, `x`, `p0c`, etc.) returning the indices
-  that sort the `ParticleArray`.
-- Implementation of `__len__` for `ParticleArray` which simply returns the number of
-  particles it contains.  Identical in function to `size`.
-- `get_envelope` now also calculates the normalised emittances `emit_xn` and `emit_yn`,
-  not just the geometric ones, as was previously the case.
-- Added `overwrite_progress` kwarg to `cpbd.track.track` function which allows
-  tracking progress to optionally be written on new lines rather than
-  overwritten repeatedly using carriage returns. This is particularly useful
-  when logging the output of a running ocelot simulation to avoid extremely long
-  lines and unreadable log files.
-- Inactive processes in `Navigator` instances are now stored in the
-  `inactive_proccses` attribute. This way processes attached to a `Navigator`
-  remain accessible in that for the lifetime of the Navigator.
-- New `ParameterScanner` class in `cpbd.track` for scanning arbitrary parameters
-  in parallel (either using multiprocessing mpi4py). For example one might scan
-  different compression schemes. Results are compiled into a single hdf5 file.
-- insert_markers_by_predicate now has optional arbitrary name suffixes for the markers
-- Twiss.from_series allows for Twiss instances to be made from pd.Series (or a dictionary for example).
-- ParticleArray slicing: `parray[10:100]` returns a ParticleArray instance with slices rparticles and q_array.
-- `remove_coupler_kick` convenience method for Cavity class
-- Integrated quad strengths for `k1` and `k2` convenience getters/setters (`k1l` and `k2l).
-- Added new method `Navigator.add_physics_processes` for adding multiple physics processes at the same time.  This will be a lot fastwe when lots of physics processes are to be added.
->>>>>>> 6fdd98a24d013057498abd8e9ccf734939ef30e7
-- `Navigator.jump_to` method allowing a `Navigator` instance to jump
-  to arbitrary points in z along the magnetic lattice.  Useful as it
-  does not require modifying the underling beamling to achieve
-  equivalent behaviour.
-- new `__repr__` methods for some common physics processes: `CSR`, `SmoothBeam`, `SpaceCharge` and `WakeTable`.
-- `SmoothBeam` mslice attribute can now be set in the `__init__`.
-- `extract_slice` method on SliceParameters instances
-- modified the 'MagneticLattice.transfer_maps()' method. When using the 'output_at_each_step=True' flag,
-  the method returns (Bs, Rs, Ts, S), where 'S' is a list of coordinates after each transfer map.
-- New `WakeTable3` and `Wake3` class for third order Taylor expansion of wakefield tracking.
-- New wake table for the wakefields of parallel plate structure based on analytical results, `WakeTableParallelPlate_origin`, `WakeTableParallelPlate`, 
-  `WakeTableParallelPlate3_origin`, `WakeTableParallelPlate3`. The waketables with `origin` use point charge wake at the vicinity of the drive particle, which is the upper limit for wake. 
-  The other two waketables contain exponential decay term. The waketables with `3` provide third order Taylor expansion and should be used with `Wake3`.
+- Added Runge-Kutta transfer maps for arbitrary magnetic fields, including the
+  OCELOT and global-frame RK variants, constructor parameters, field tests, and
+  tutorial material.
+- Added element offset support in constructors and tests covering offset-aware
+  RK tracking.
+- Added the object-oriented matcher module, matcher tests, SVD weights, and
+  ParticleArray Twiss matching support.
+- Added BBA utilities, response-matrix caching, per-measurement launch modes,
+  tutorial material, and unit tests.
+- Added LongWake and LinLongWake tracking support with tests and reference data.
+- Added lattice layout and survey tooling, including 2D/3D plotting helpers,
+  survey demos, and survey tests.
+- Added architecture contract tests for element transfer-map selection,
+  slicing, wrapper atoms, matrix maps, energy gain, and undulator behavior.
+- Added legacy matching tutorial notebooks and updated THz source, R-matrix,
+  compression, and high-resolution optics tutorials.
+- Added release-preparation automation in `scripts/prepare_release.py`.
 
-- added ParticleArray.get_twiss() method which calls get_envelop()
-- Twiss recalculates gamma_x/y and emit_x/y automatically
-- added link between quads to match function, e.g. vars = [{QF: 1.0, QD: -1.0}],
-- Added dispersion auto correction in get_envelope function, it calculates dispersion from statistics and correct it if needed
-- added image analysis functions to utils 
-- added LSC for undulators 
-- added in LSC feature to control size of the slice for transverse beam sizes calculation
-- added new feature to show_density(). now it can plot particles with scatter plot and color of the individual particle will correspond to density - slower but maybe can be visual pleasing for presentations
-  
->>>>>>> 6fdd98a24d013057498abd8e9ccf734939ef30e7
+### Changed
+
+- Refactored `ocelot.cpbd.beam` into a package with dedicated modules for core
+  beam objects, particles, generation, analysis, utilities, and noise.
+- Clarified and documented CPBD element and transfer-map contracts, parameter
+  containers, wrapper APIs, slice behavior, and supported methods.
+- Updated lattice serializers and adaptors to use the public wrapper API.
+- Cleaned up default element transfer-map selection rules and matrix slice atom
+  naming.
+- Made `numexpr`, `pyfftw`, and `numba` required package dependencies in
+  `setup.py`; the public installation docs previously listed them as optional
+  speed-up dependencies.
+- Restored package metadata compatibility with Python 3.9+.
 
 ### Fixed
 
-- fixed bugs in matching function if Drift length is in list of variables. 
-- fixed bug with match function delta constrain
-- fixed geometrical angle approximation in get_envelope function 
-- fixed bug with navigator reset_position() method. now it also call physics process .prepare() method
+- Fixed sliced Runge-Kutta tracking behavior and revised the RK tracking
+  tutorial.
+- Fixed RBend edge angles after angle updates and deduplicated first-order bend
+  edge matrix calculations.
+- Fixed Twiss emittance handling when energy is not provided.
+- Fixed adaptor attribute access and TFS import behavior.
+- Fixed MPI imports so MPI is imported only when used.
+- Fixed cavity second-order terms for the phase-90-degree removable singularity
+  and negative-gain fallback behavior.
+- Fixed matching edge cases, including Drift length variables and delta
+  constraints.
+- Fixed floating-point handling reported in issue #293.
 
 ### Removed
 
-- None yet.
+- Removed the monolithic `ocelot/cpbd/beam.py` implementation in favor of the
+  new `ocelot.cpbd.beam` package structure.
 
-### Deprecated
-
-- None yet.
-
-[unreleased]: https://github.com/ocelot-collab/ocelot/compare/dev_2021..HEAD
+[Unreleased]: https://github.com/ocelot-collab/ocelot/compare/v26.06.0...HEAD
+[26.06.0]: https://github.com/ocelot-collab/ocelot/compare/v25.07.0...v26.06.0

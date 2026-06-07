@@ -1,7 +1,6 @@
 import numpy as np
 
 from ocelot.cpbd.transformations.transfer_map import TransferMap
-from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.high_order import m_e_GeV
 from ocelot.common.globals import speed_of_light
 from ocelot.cpbd.elements.element import Element
@@ -19,10 +18,9 @@ class TDCavityAtom(Element):
     tilt - tilt of cavity in [rad]
     """
     default_tm = TransferMap
-    additional_tms = [SecondTM]
 
-    def __init__(self, l=0., freq=0.0, phi=0.0, v=0., tilt=0.0, eid=None):
-        Element.__init__(self, eid)
+    def __init__(self, l=0., freq=0.0, phi=0.0, v=0., tilt=0.0, eid=None, **kwargs):
+        super().__init__(eid, **kwargs)
         self.l = l
         self.v = v  # in GV
         self.freq = freq  # Hz

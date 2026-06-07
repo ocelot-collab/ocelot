@@ -14,7 +14,7 @@ import multiprocessing
 from scipy.special import exp1, k1
 from ocelot.cpbd.physics_proc import PhysProc
 from ocelot.common.math_op import conj_sym
-from ocelot.cpbd.beam import s_to_cur
+from ocelot.cpbd.beam import s_to_cur, signal_to_spectrum
 from ocelot.common import conf
 from ocelot.cpbd.elements import Undulator
 from scipy.interpolate import interp1d
@@ -292,6 +292,7 @@ class LSC(PhysProc):
     """
     def __init__(self, step=1, **kwargs):
         PhysProc.__init__(self, step)
+        self.K_s_func = None
         self.step_profile = kwargs.get("step_profile", False)
         self.smooth_param = kwargs.get("smooth_param", 0.1)
         self.bounds = kwargs.get("bounds", [-0.4, 0.4])
@@ -337,7 +338,7 @@ class LSC(PhysProc):
             k += (-1) ** i * factorial(i) / (x ** (i + 1))
         T[inda] = k
         Z = 1j * Z0 / (4 * pi * speed_of_light*gamma**2) * w * T * dz
-        return Z # --> Omm/m
+        return Z # --> Omm
 
     def imp_step_lsc(self, gamma, rb, w, dz):
         """
@@ -369,19 +370,27 @@ class LSC(PhysProc):
 
     def wake2impedance(self, s, w):
         """
-        Fourier transform with exp(iwt)
-        s - Meter
-        w - V/C
-        f - Hz
-        y - Om
+        Compute the longitudinal impedance from a wake potential.
+
+        This is a wrapper around `signal_to_spectrum`. The interpretation
+        depends on the input units:
+
+        Parameters
+        ----------
+        s : ndarray
+            Longitudinal coordinate [m], uniformly spaced.
+        w : ndarray
+            Wake potential per unit charge W(s) [V/C].
+
+        Returns
+        -------
+        f : ndarray
+            Frequency array [Hz].
+        Z : ndarray (complex)
+            Longitudinal impedance Z(ω) [Ω].
         """
-        ds = s[1] - s[0]
-        dt = ds / speed_of_light
-        n = len(s)
-        f = 1 / dt * np.arange(0, n) / n
-        shift = 1#np.exp(1j * f * t0 * 2 * np.pi)
-        y = dt * np.fft.fft(w, n) * shift
-        return f, y
+        return signal_to_spectrum(s, w)
+
 
     def impedance2wake(self, f, y):
         """

@@ -18,8 +18,8 @@ from scipy.interpolate import splrep, splev
 
 from ocelot.rad.spline_py import cspline_coef
 from ocelot.common.globals import m_e_GeV, h_eV_s, q_e, speed_of_light, ro_e
-from ocelot.cpbd.elements.undulator_atom import und_field
 from ocelot.cpbd.elements import Undulator
+from ocelot.cpbd.field_map import field_map2field_func as _field_map2field_func
 from ocelot.cpbd.high_order import rk_track_in_field
 from ocelot.cpbd import track
 from ocelot.cpbd.navi import Navigator
@@ -276,9 +276,7 @@ def quantum_diffusion(energy, Kx, lperiod, L, quantum_diff=False):
 
 
 def field_map2field_func(z, By):
-    tck = splrep(z, By, k=3)
-    def func(x, y, z): return (0, splev(z, tck, der=0), 0)
-    return func
+    return _field_map2field_func(z, By)
 
 
 def gintegrator(Xscr, Yscr, Erad, motion, screen, n, n_end, gamma, half_step):
@@ -711,17 +709,7 @@ def track4rad_beam(p_array, lat, energy_loss=False, quantum_diff=False, accuracy
             U0 = U0 + Uq
 
             mag_length = elem.l
-            if elem.mag_field is not None:
-                mag_field = elem.mag_field
-            else:
-                if len(elem.field_map.z_arr) != 0:
-                    # print("Field_map exist! Creating mag_field(x, y, z)")
-                    unit_coef = 0.001 if elem.field_map.units == "mm" else 1
-                    mag_length = elem.field_map.l * unit_coef
-                    z_array = (elem.field_map.z_arr - elem.field_map.z_arr[0]) * unit_coef
-                    mag_field = field_map2field_func(z=z_array, By=elem.field_map.By_arr)
-                else:
-                    def mag_field(x, y, z): return und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=elem.nperiods, phase=elem.phase, end_poles=elem.end_poles)
+            mag_field = elem.element.create_runge_kutta_main_params(energy).mag_field
                     
             N = int((mag_length * 1500 + 100) * accuracy)
             if hasattr(elem, "npoints") and isinstance(elem.npoints, numbers.Number):

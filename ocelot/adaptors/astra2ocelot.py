@@ -1,5 +1,5 @@
 # from numpy.core.umath import sqrt
-from ocelot.common.globals import m_e_eV
+from ocelot.common.globals import m_e_eV, m_e_GeV
 from ocelot.cpbd.beam import *
 import numpy as np
 

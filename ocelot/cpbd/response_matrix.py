@@ -5,6 +5,7 @@ from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.track import tracking_step
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.beam import Particle
+from ocelot.cpbd.tm_utils import transfer_maps_mult
 import copy
 import os
 import numpy as np
@@ -397,7 +398,7 @@ class LinacDisperseTmatrixRM(MeasureResponseMatrix):
                     continue
                 # Tc = np.zeros((6, 6, 6))
                 Rb = elem.transfer_map.R(E)
-                Tb = deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
+                Tb = copy.deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
                 # Ra = dot(Rb, Ra)
                 Ba = np.zeros((6, 1))
                 Bb = np.zeros((6, 1))

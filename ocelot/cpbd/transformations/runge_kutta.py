@@ -1,13 +1,16 @@
-from copy import copy
-
-from ocelot.cpbd.high_order import rk_field
+from ocelot.cpbd.high_order import rk_field, rk_field_to_ocelot
 from ocelot.cpbd.transformations.transfer_map import TransferMap, TMTypes
 from ocelot.cpbd.elements.element import Element
 
 
-class RungeKuttaTM(TransferMap):
+class RungeKuttaGlobalTM(TransferMap):
     """[summary]
-    Implementation of the Runge Kutta transformation.
+    Runge-Kutta transformation in the fixed global field frame.
+
+    This is the historical ``RungeKuttaTM`` behavior.  It is useful when the
+    output should remain in the Cartesian coordinates used by the field
+    integrator, for example trajectory generation for SR/CSR-style workflows.
+
     The concrete element atom have to implement: 
     create_runga_kutta_main_params(self) -> RungeKuttaParams
     If the element has edges is also have to implement:
@@ -47,4 +50,31 @@ class RungeKuttaTM(TransferMap):
 
     def map_function(self, X, energy: float):
         params = self.get_params(energy)
-        return rk_field(X, self.s_start, self.delta_length if self.delta_length != None else self.length, self.npoints, energy, params.mag_field, self.long_dynamics)
+        length = self.delta_length if self.delta_length is not None else self.length
+        return rk_field(X, self.s_start, self.s_start + length, self.npoints, energy, params.mag_field, self.long_dynamics)
+
+
+class RungeKuttaTM(RungeKuttaGlobalTM):
+    """
+    Legacy name for :class:`RungeKuttaGlobalTM`.
+
+    Kept for backwards compatibility with existing Ocelot examples and user
+    lattices.  New beam tracking code that expects Ocelot-relative coordinates
+    should use ``RungeKuttaOcelotTM``.
+    """
+    pass
+
+
+class RungeKuttaOcelotTM(RungeKuttaGlobalTM):
+    """
+    Runge-Kutta transformation that returns Ocelot-relative beam coordinates.
+
+    The field integration itself is still performed in the fixed Cartesian
+    frame.  An internal zero reference particle is tracked through the same
+    field and the beam is projected back to the transported reference frame at
+    the element exit.
+    """
+    def map_function(self, X, energy: float):
+        params = self.get_params(energy)
+        length = self.delta_length if self.delta_length is not None else self.length
+        return rk_field_to_ocelot(X, self.s_start, self.s_start + length, self.npoints, energy, params.mag_field, self.long_dynamics)

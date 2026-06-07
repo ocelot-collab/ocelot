@@ -367,7 +367,7 @@ def slice_energy_analysis(z, p, nparts_in_slice=500, filter_base=2, filter_iter=
     z : array-like
         Longitudinal positions of particles (in meters).
     p : array-like
-        Momenta of particles (in MeV/c).
+        Energies of particles (in MeV).
     nparts_in_slice : int, optional
         Number of particles per slice for slice analysis. Default is 500.
     filter_base : int, optional
@@ -385,10 +385,9 @@ def slice_energy_analysis(z, p, nparts_in_slice=500, filter_base=2, filter_iter=
         Slice mean energy (in MeV) interpolated and smoothed.
     """
     n = 100
-    pc_1 = np.sqrt(p**2 - m_e_MeV**2)  # Convert p to kinetic energy [MeV/c]
 
     # Perform slice analysis (energy in eV)
-    _, mEs, _, _, mEsEs, _ = slice_analysis(z, pc_1 * 1e6, nparts_in_slice)
+    _, mEs, _, _, mEsEs, _ = slice_analysis(z, p * 1e6, nparts_in_slice)
 
     # Unique z positions
     z = np.unique(z)
@@ -401,8 +400,8 @@ def slice_energy_analysis(z, p, nparts_in_slice=500, filter_base=2, filter_iter=
     # Interpolate to regular grid and convert to MeV
     se = interp1(z, sE, s)
     me = interp1(z, mE, s)
-    se = simple_filter(se, filter_base, filter_iter) * 1e-6
-    me = simple_filter(me, filter_base, filter_iter) * 1e-6
+    se = simple_filter(se, filter_base, filter_iter) * 1e-6 # back to MeV
+    me = simple_filter(me, filter_base, filter_iter) * 1e-6 # Back to MeV
 
     return s, se, me
 
@@ -716,13 +715,13 @@ def plot_image_reconst_and_slice(img_proc, y_px_size, e_px_size_in_MeV,
 
     # --- Transformed density ---
     show_density(img_x_tran, img_y_tran, ax=axs[1], grid=False, figsize=(6, 4),
-                 xlabel="s [$\mu$m]", ylabel="E [MeV]", cmap=colormap)
+                 xlabel=r"s [$\mu$m]", ylabel="E [MeV]", cmap=colormap)
 
     # --- Overlay mean energy ---
     if s_slice is not None and me_slice is not None:
         axs[1].plot(s_slice, me_slice, "C0", lw=2)
         axs[1].set_title("Mean Slice Energy")
-        axs[1].set_xlabel("s [$\mu$m]")
+        axs[1].set_xlabel(r"s [$\mu$m]")
         axs[1].set_ylabel("E [MeV]")
 
     # --- Twin axis: CRISP current ---

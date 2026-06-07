@@ -1,6 +1,7 @@
 """
 user interface for viewing/editing electron optics layouts
 """
+from __future__ import annotations
 
 from ocelot.cpbd.physics_proc import *
 from scipy import stats
@@ -416,7 +417,7 @@ def plot_betas(ax, S, beta_x, beta_y, font_size):
 
 
 def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=True, font_size=12, excld_legend=None,
-                  figsize=None, plt_figure=None):
+                  figsize=None, plt_figure=None, title=None):
     """
     function for plotting: lattice (bottom section), vertical and horizontal beta-functions (middle section),
     other parameters (top section) such as "Dx", "Dy", "E", "mux", "muy", "alpha_x", "alpha_y", "gamma_x", "gamma_y"
@@ -440,7 +441,8 @@ def plot_opt_func(lat, tws, top_plot=["Dx"], legend=True, fig_name=None, grid=Tr
             fig = plt.figure(fig_name, figsize=figsize)
     else:
         fig = plt_figure
-
+    if title:
+        fig.suptitle(title, fontsize=font_size)
     plt.rc('axes', grid=grid)
     plt.rc('grid', color='0.75', linestyle='-', linewidth=0.5)
     left, width = 0.1, 0.85
@@ -579,8 +581,8 @@ def plot_API(lat, legend=True, fig_name=1, grid=True, font_size=12,
         axes = (ax_extra, ax_xy)
 
     else:
-        rect2 = [left, 0.19, width, 0.69]  # ax_xy
-        rect3 = [left, 0.07, width, 0.10]  # ax_el
+        rect2 = [left, 0.33, width, 0.6]  # ax_xy
+        rect3 = [left, 0.12, width, 0.20]  # ax_el
         ax_xy = fig.add_axes(rect2)
         ax_el = fig.add_axes(rect3, sharex=ax_xy)
 
@@ -1062,13 +1064,13 @@ def show_e_beam(p_array, nparts_in_slice=5000, smooth_param=0.05, nbins_x=200, n
 
 
     plt.setp(ax_c.get_xticklabels(), visible=False)
-    plt.ylabel("$I\,[\mathrm{A}]$")
+    plt.ylabel(r"$I\,[\mathrm{A}]$")
     plt.grid(grid)
 
     ax_ys = plt.subplot(326, sharex=ax_sp)
 
     show_density(p_array_copy.tau() * tau_factor, p_array_copy.y() * 1e3, ax=ax_ys, nbins_x=nbins_x, nbins_y=nbins_y,
-                 interpolation=interpolation, xlabel=tau_label, ylabel='$y\,[\mathrm{mm}]$', nfig=50,
+                 interpolation=interpolation, xlabel=tau_label, ylabel=r'$y\,[\mathrm{mm}]$', nfig=50,
                  title="Side view", figsize=None, grid=grid, cmap=cmap, **filtered)
     if show_moments:
         plt.plot(slice_params.s * tau_factor, slice_params.my * 1e3, "k", lw=2)
@@ -1263,7 +1265,7 @@ def compare_beams(p_array_1, p_array_2, nparts_in_slice1=5000, nparts_in_slice2=
              label=fr"$I_{{\mathrm{{max}}}}={i2max:.0f}\,\mathrm{{A}}$ {legend_beam2}")
     plt.legend()
     plt.setp(ax_c.get_xticklabels(), visible=False)
-    plt.ylabel("$I\,[\mathrm{A}]$")
+    plt.ylabel(r"$I\,[\mathrm{A}]$")
     plt.grid(True)
 
     # my_rainbow = deepcopy(plt.get_cmap('rainbow'))

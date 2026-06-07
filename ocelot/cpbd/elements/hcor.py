@@ -4,6 +4,7 @@ import logging
 from ocelot.cpbd.transformations.transformation import Transformation
 from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.elements.hcor_atom import HcorAtom
+from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 logger = logging.getLogger(__name__)
@@ -15,5 +16,8 @@ class Hcor(OpticElement):
     l - length of magnet in [m],
     angle - angle of bend in [rad],
     """
-    def __init__(self, l=0., angle=0., eid=None, tm=TransferMap):
-        super().__init__(HcorAtom(l=l, angle=angle, eid=eid), tm=tm, default_tm=TransferMap)
+    default_tm = TransferMap
+    supported_tms = {TransferMap, SecondTM}
+
+    def __init__(self, l=0., angle=0., eid=None, tm=None, **kwargs):
+        super().__init__(HcorAtom(l=l, angle=angle, eid=eid, **kwargs), tm=tm)

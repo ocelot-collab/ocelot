@@ -2,67 +2,17 @@ __author__ = 'Sergey'
 
 
 from numpy.linalg import inv
+import pandas as pd
+from typing import Iterable
 
 from ocelot.cpbd.transformations.transfer_map import TransferMap
-from ocelot.cpbd.beam import Twiss, twiss_iterable_to_df
 
 from ocelot.cpbd.r_matrix import *
 from ocelot.cpbd.tm_utils import SecondOrderMult
 from ocelot.cpbd.transformations.second_order import SecondTM
+from ocelot.cpbd.beam import Twiss, twiss_iterable_to_df
 
 _logger = logging.getLogger(__name__)
-
-
-class MethodTM:
-    """
-    The class creates a transfer map for elements that depend on user-defined parameters ("parameters").
-    By default, the parameters = {"global": TransferMap}, which means that all elements will have linear transfer maps.
-    You can also specify different transfer maps for any type of element.
-
-    Example:
-    --------
-    # use linear matrices for all elements except Sextupole which will have nonlinear kick map (KickTM)
-    method = MethodTM()
-    method.global_method = TransferMap
-    method.params[Sextupole] = KickTM
-
-    # All elements are assigned matrices of the second order.
-    # For elements for which there are no matrices of the second order are assigned default matrices, e.g. linear matrices.
-    method2 = MethodTM()
-    method2.global_method = SecondTM
-
-    """
-
-    def __init__(self, params=None):
-        logger.warning("obsolete, use dictionary instead: {'global': SecondTM}")
-        if params is None:
-            self.params = {'global': TransferMap}
-        else:
-            self.params = params
-
-        if "global" in self.params:
-            self.global_method = self.params['global']
-        else:
-            self.global_method = TransferMap
-        self.sec_order_mult = SecondOrderMult()
-        self.nkick = self.params['nkick'] if 'nkick' in self.params else 1
-
-    def to_dict(self):
-        res = self.params
-        if self.params.get('global') != self.global_method:
-            res['global'] = self.global_method
-        if not self.params.get('nkick') != self.nkick:
-            res['nkick'] = self.nkick
-
-        # OLD BEHAVIOR: old CorrectorTM has been splitted in First Order and Second Order to keep
-        # the old behavior VCor's and Hcor's tm is set to SecondTM which is equal to
-        # the old CorrectorTM.
-        if not res.get('Vcor'):
-            res['Vcor'] = SecondTM
-
-        if not res.get('Hcor'):
-            res['Hcor'] = SecondTM
-        return res
 
 
 def lattice_transfer_map(lattice, energy):
@@ -93,13 +43,14 @@ def trace_z(lattice, obj0, z_array):
     usage: twiss = trace_z(lattice, twiss_0, [1.23, 2.56, ...]) ,
     to calculate Twiss params at 1.23m, 2.56m etc.
     """
+    eps = 1e-12
     obj_list = []
     i = 0
     elem = lattice.sequence[i]
     L = elem.l
     obj_elem = obj0
     for z in z_array:
-        while z > L:
+        while z > L + eps and i + 1 < len(lattice.sequence):
             for tm in lattice.sequence[i].first_order_tms:
                 obj_elem = tm * obj_elem
             i += 1
@@ -107,6 +58,10 @@ def trace_z(lattice, obj0, z_array):
             L += elem.l
 
         delta_l = z - (L - elem.l)
+        if delta_l < 0:   # safeguard against floating-point issues
+            delta_l = 0.0
+        elif delta_l > elem.l:
+            delta_l = elem.l
         first_order_tms = elem.get_section_tms(start_l=0.0, delta_l=delta_l, first_order_only=True)
 
         obj_z = obj_elem
@@ -253,19 +208,57 @@ def twiss_fast(lattice, tws0=None):
         return None
 
 
-def merge_maps(t_maps):
-    tm0 = TransferMap()
-    t_maps_new = []
-    for tm in t_maps:
-        if tm.__class__ == TransferMap:
-            tm0 = tm * tm0
-        else:
-            t_maps_new.append(tm0)
-            t_maps_new.append(tm)
-            tm0 = TransferMap()
-    t_maps_new.append(tm0)
-    return t_maps_new
 
+class MethodTM:
+    """
+    The class creates a transfer map for elements that depend on user-defined parameters ("parameters").
+    By default, the parameters = {"global": TransferMap}, which means that all elements will have linear transfer maps.
+    You can also specify different transfer maps for any type of element.
+
+    Example:
+    --------
+    # use linear matrices for all elements except Sextupole which will have nonlinear kick map (KickTM)
+    method = MethodTM()
+    method.global_method = TransferMap
+    method.params[Sextupole] = KickTM
+
+    # All elements are assigned matrices of the second order.
+    # For elements for which there are no matrices of the second order are assigned default matrices, e.g. linear matrices.
+    method2 = MethodTM()
+    method2.global_method = SecondTM
+
+    """
+
+    def __init__(self, params=None):
+        logger.warning("obsolete, use dictionary instead: {'global': SecondTM}")
+        if params is None:
+            self.params = {'global': TransferMap}
+        else:
+            self.params = params
+
+        if "global" in self.params:
+            self.global_method = self.params['global']
+        else:
+            self.global_method = TransferMap
+        self.sec_order_mult = SecondOrderMult()
+        self.nkick = self.params['nkick'] if 'nkick' in self.params else 1
+
+    def to_dict(self):
+        res = self.params
+        if self.params.get('global') != self.global_method:
+            res['global'] = self.global_method
+        if not self.params.get('nkick') != self.nkick:
+            res['nkick'] = self.nkick
+
+        # OLD BEHAVIOR: old CorrectorTM has been splitted in First Order and Second Order to keep
+        # the old behavior VCor's and Hcor's tm is set to SecondTM which is equal to
+        # the old CorrectorTM.
+        if not res.get('Vcor'):
+            res['Vcor'] = SecondTM
+
+        if not res.get('Hcor'):
+            res['Hcor'] = SecondTM
+        return res
 
 '''
 returns two solutions for a periodic fodo, given the mean beta

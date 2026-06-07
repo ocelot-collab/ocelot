@@ -50,7 +50,8 @@ class RungeKuttaGlobalTM(TransferMap):
 
     def map_function(self, X, energy: float):
         params = self.get_params(energy)
-        return rk_field(X, self.s_start, self.delta_length if self.delta_length != None else self.length, self.npoints, energy, params.mag_field, self.long_dynamics)
+        length = self.delta_length if self.delta_length is not None else self.length
+        return rk_field(X, self.s_start, self.s_start + length, self.npoints, energy, params.mag_field, self.long_dynamics)
 
 
 class RungeKuttaTM(RungeKuttaGlobalTM):
@@ -75,4 +76,5 @@ class RungeKuttaOcelotTM(RungeKuttaGlobalTM):
     """
     def map_function(self, X, energy: float):
         params = self.get_params(energy)
-        return rk_field_to_ocelot(X, self.s_start, self.delta_length if self.delta_length != None else self.length, self.npoints, energy, params.mag_field, self.long_dynamics)
+        length = self.delta_length if self.delta_length is not None else self.length
+        return rk_field_to_ocelot(X, self.s_start, self.s_start + length, self.npoints, energy, params.mag_field, self.long_dynamics)

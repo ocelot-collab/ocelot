@@ -396,15 +396,20 @@ class OpticElement:
                 return tm_list
 
         main_tm_class = self.get_tm(TMTypes.MAIN, first_order_only).__class__
+        params = {}
+        if not first_order_only:
+            params = copy(self._kwargs)
+            if "RungeKutta" in main_tm_class.__name__:
+                params["s_start"] = start_l
 
         if (start_l + delta_l > total_length or np.isclose(start_l + delta_l, total_length)):
             delta_l_red = total_length - start_l
-            tm_list.append(main_tm_class.from_element(element=self.element, tm_type=TMTypes.MAIN, delta_l=delta_l_red))
+            tm_list.append(main_tm_class.from_element(element=self.element, tm_type=TMTypes.MAIN, delta_l=delta_l_red, **params))
             if self.element.has_edge and not ignore_edges:
                 tm = self.get_tm(TMTypes.EXIT, first_order_only)
                 tm_list.append(copy(tm))
         else:
-            tm_list.append(main_tm_class.from_element(element=self.element, tm_type=TMTypes.MAIN, delta_l=delta_l))
+            tm_list.append(main_tm_class.from_element(element=self.element, tm_type=TMTypes.MAIN, delta_l=delta_l, **params))
         # tms.append(TMTypes.ROT_EXIT)
         return tm_list
 

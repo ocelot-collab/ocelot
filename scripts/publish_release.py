@@ -145,7 +145,7 @@ def build_conda(root: Path, args: argparse.Namespace, env: dict[str, str]) -> Pa
     if not croot.is_absolute():
         croot = root / croot
 
-    command = ["conda", "build"]
+    command = ["conda", "build", "--no-anaconda-upload"]
     command.extend(["--croot", str(croot)])
     for channel in args.conda_build_channel:
         command.extend(["-c", channel])

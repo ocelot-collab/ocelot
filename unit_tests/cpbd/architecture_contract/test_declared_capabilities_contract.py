@@ -25,7 +25,7 @@ from ocelot.cpbd.elements.xyquadruple import XYQuadrupole
 from ocelot.cpbd.elements.quadrupole import Quadrupole
 from ocelot.cpbd.transformations.kick import KickTM
 from ocelot.cpbd.transformations.multipole import MultipoleTM
-from ocelot.cpbd.transformations.runge_kutta import RungeKuttaTM
+from ocelot.cpbd.transformations.runge_kutta import RungeKuttaGlobalTM, RungeKuttaOcelotTM, RungeKuttaTM
 from ocelot.cpbd.transformations.runge_kutta_tr import RungeKuttaTrTM
 from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.transformations.transfer_map import TransferMap
@@ -37,23 +37,23 @@ DECLARED_TM_FACTORIES = [
     ("Aperture", lambda: Aperture(xmax=1e-3, ymax=2e-3, eid="AP_META"), (TransferMap, SecondTM)),
     ("Marker", lambda: Marker(eid="MK_META"), (TransferMap, SecondTM)),
     ("Monitor", lambda: Monitor(l=0.1, eid="MON_META"), (TransferMap, SecondTM)),
-    ("Drift", lambda: Drift(l=0.2, eid="D_META"), (TransferMap, SecondTM, KickTM, RungeKuttaTM, RungeKuttaTrTM)),
+    ("Drift", lambda: Drift(l=0.2, eid="D_META"), (TransferMap, SecondTM, KickTM, RungeKuttaGlobalTM, RungeKuttaOcelotTM, RungeKuttaTM, RungeKuttaTrTM)),
     ("Hcor", lambda: Hcor(l=0.2, angle=1e-4, eid="HC_META"), (TransferMap, SecondTM)),
     ("Vcor", lambda: Vcor(l=0.2, angle=1e-4, eid="VC_META"), (TransferMap, SecondTM)),
-    ("Quadrupole", lambda: Quadrupole(l=0.4, k1=1.2, k2=0.3, eid="Q_META"), (TransferMap, SecondTM, KickTM)),
-    ("Sextupole", lambda: Sextupole(l=0.2, k2=2.5, eid="SX_META"), (TransferMap, SecondTM, KickTM)),
-    ("Octupole", lambda: Octupole(l=0.2, k3=3.5, eid="OC_META"), (TransferMap, SecondTM, KickTM)),
-    ("Bend", lambda: Bend(l=1.1, angle=0.15, e1=0.03, e2=0.02, eid="B_META"), (TransferMap, SecondTM, KickTM, RungeKuttaTM, RungeKuttaTrTM)),
-    ("SBend", lambda: SBend(l=1.1, angle=0.15, e1=0.03, e2=0.02, eid="SB_META"), (TransferMap, SecondTM, KickTM, RungeKuttaTM, RungeKuttaTrTM)),
-    ("RBend", lambda: RBend(l=1.1, angle=0.15, e1=0.03, e2=0.02, eid="RB_META"), (TransferMap, SecondTM, KickTM, RungeKuttaTM, RungeKuttaTrTM)),
+    ("Quadrupole", lambda: Quadrupole(l=0.4, k1=1.2, k2=0.3, eid="Q_META"), (TransferMap, SecondTM, KickTM, RungeKuttaGlobalTM, RungeKuttaOcelotTM, RungeKuttaTM, RungeKuttaTrTM)),
+    ("Sextupole", lambda: Sextupole(l=0.2, k2=2.5, eid="SX_META"), (TransferMap, SecondTM, KickTM, RungeKuttaGlobalTM, RungeKuttaOcelotTM, RungeKuttaTM, RungeKuttaTrTM)),
+    ("Octupole", lambda: Octupole(l=0.2, k3=3.5, eid="OC_META"), (TransferMap, SecondTM, KickTM, RungeKuttaGlobalTM, RungeKuttaOcelotTM, RungeKuttaTM, RungeKuttaTrTM)),
+    ("Bend", lambda: Bend(l=1.1, angle=0.15, e1=0.03, e2=0.02, eid="B_META"), (TransferMap, SecondTM, KickTM, RungeKuttaGlobalTM, RungeKuttaOcelotTM, RungeKuttaTM, RungeKuttaTrTM)),
+    ("SBend", lambda: SBend(l=1.1, angle=0.15, e1=0.03, e2=0.02, eid="SB_META"), (TransferMap, SecondTM, KickTM, RungeKuttaGlobalTM, RungeKuttaOcelotTM, RungeKuttaTM, RungeKuttaTrTM)),
+    ("RBend", lambda: RBend(l=1.1, angle=0.15, e1=0.03, e2=0.02, eid="RB_META"), (TransferMap, SecondTM, KickTM, RungeKuttaGlobalTM, RungeKuttaOcelotTM, RungeKuttaTM, RungeKuttaTrTM)),
     ("Matrix", lambda: Matrix(l=0.2, delta_e=0.001, eid="M_META"), (TransferMap, SecondTM)),
     ("Cavity", lambda: Cavity(l=0.3, v=0.002, freq=1.3e9, phi=0.0, eid="C_META"), (CavityTM,)),
     ("TDCavity", lambda: TDCavity(l=0.3, v=0.002, freq=2.8e9, phi=0.0, eid="TDS_META"), (TransferMap, SecondTM)),
     ("TWCavity", lambda: TWCavity(l=0.3, v=0.002, freq=1.3e9, phi=0.0, eid="TWC_META"), (TWCavityTM,)),
     ("Multipole", lambda: Multipole(kn=[0.1, 0.2], eid="MP_META"), (MultipoleTM,)),
     ("XYQuadrupole", lambda: XYQuadrupole(l=0.3, x_offs=1e-3, y_offs=-1e-3, k1=0.2, eid="XY_META"), (TransferMap,)),
-    ("Solenoid", lambda: Solenoid(l=0.2, k=0.3, eid="SOL_META"), (TransferMap, SecondTM)),
-    ("Undulator", lambda: Undulator(lperiod=0.03, nperiods=5, Kx=1.0, eid="U_META"), (TransferMap, SecondTM, RungeKuttaTM, RungeKuttaTrTM, UndulatorTestTM)),
+    ("Solenoid", lambda: Solenoid(l=0.2, k=0.3, eid="SOL_META"), (TransferMap, SecondTM, RungeKuttaGlobalTM, RungeKuttaOcelotTM, RungeKuttaTM, RungeKuttaTrTM)),
+    ("Undulator", lambda: Undulator(lperiod=0.03, nperiods=5, Kx=1.0, eid="U_META"), (TransferMap, SecondTM, RungeKuttaGlobalTM, RungeKuttaOcelotTM, RungeKuttaTM, RungeKuttaTrTM, UndulatorTestTM)),
     ("UnknownElement", lambda: UnknownElement(l=0.2, eid="UNK_META"), (TransferMap, SecondTM, KickTM)),
 ]
 
@@ -128,7 +128,7 @@ def test_declared_supported_tms_are_buildable(family_name, factory, declared_tms
 
 
 def test_multi_method_wrappers_declare_their_buildable_tm_surface():
-    tm_candidates = (TransferMap, SecondTM, KickTM, RungeKuttaTM, RungeKuttaTrTM, UndulatorTestTM)
+    tm_candidates = (TransferMap, SecondTM, KickTM, RungeKuttaGlobalTM, RungeKuttaOcelotTM, RungeKuttaTM, RungeKuttaTrTM, UndulatorTestTM)
 
     for family_name, factory, _ in DECLARED_TM_FACTORIES:
         element = factory()
@@ -146,16 +146,18 @@ def test_multi_method_wrappers_declare_their_buildable_tm_surface():
         assert element.supported_tms == buildable_tms, family_name
 
 
-def test_explicit_undeclared_tm_request_raises_for_generic_wrapper():
-    quad = Quadrupole(l=0.3, k1=0.4, eid="Q_WARN")
+def test_quadrupole_accepts_explicit_runge_kutta_tm_request():
+    quad = Quadrupole(l=0.3, k1=0.4, eid="Q_RK")
 
-    with pytest.raises(RuntimeError, match="Quadrupole does not declare support for RungeKuttaTM"):
-        quad.set_tm(RungeKuttaTM)
+    quad.set_tm(RungeKuttaTM)
+
+    assert all(isinstance(tm, RungeKuttaTM) for tm in quad.tms)
 
 
-def test_constructor_request_for_undeclared_generic_tm_raises():
-    with pytest.raises(RuntimeError, match="Quadrupole does not declare support for RungeKuttaTM"):
-        Quadrupole(l=0.7, k1=0.4, tm=RungeKuttaTM, eid="Q_CTOR")
+def test_constructor_request_for_runge_kutta_tm_on_quadrupole_builds():
+    quad = Quadrupole(l=0.7, k1=0.4, tm=RungeKuttaTM, eid="Q_CTOR")
+
+    assert all(isinstance(tm, RungeKuttaTM) for tm in quad.tms)
 
 
 def test_constructor_request_for_undeclared_single_method_family_raises():

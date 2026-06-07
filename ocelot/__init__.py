@@ -49,7 +49,7 @@ __all__ = [
 
     # === Transfer Maps & Transformations ===
     "CavityTM", "TransferMap", "KickTM", "MultipoleTM", "PulseTM",
-    "RungeKuttaTM", "RungeKuttaTrTM", "SecondTM", "TWCavityTM",
+    "RungeKuttaGlobalTM", "RungeKuttaOcelotTM", "RungeKuttaTM", "RungeKuttaTrTM", "SecondTM", "TWCavityTM",
     "UndulatorTestTM", "TMTypes",
 
     # === Transfer Map Parameters ===

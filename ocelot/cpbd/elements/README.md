@@ -446,9 +446,20 @@ Examples:
 - `TransferMap`
 - `SecondTM`
 - `KickTM`
-- `RungeKuttaTM`
+- `RungeKuttaGlobalTM`
+- `RungeKuttaTM` (legacy name for `RungeKuttaGlobalTM`)
+- `RungeKuttaOcelotTM`
 - `CavityTM`
 - `MultipoleTM`
+
+For RK tracking there are now two coordinate contracts:
+
+- `RungeKuttaGlobalTM` integrates and returns the fixed Cartesian field-frame
+  coordinates used by the RK solver; the legacy `RungeKuttaTM` name inherits
+  this behavior for backwards compatibility
+- `RungeKuttaOcelotTM` uses the same RK field integration but tracks an
+  internal zero reference particle and converts the beam back to Ocelot
+  coordinates relative to the transported reference trajectory
 
 ### 3. Atom hook surface
 
@@ -511,14 +522,14 @@ The columns below deliberately separate:
 
 | Family | Has edge | Linear optics / Twiss path | Declared / selectable active TMs | Extra internal or legacy-buildable paths | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `Drift` | No | `TransferMap` via `DriftAtom` first-order hook | `TransferMap`, `SecondTM`, `KickTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | none | Useful no-edge reference family. |
-| `Quadrupole` | No | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `SecondTM`, `KickTM` | none | Wrapper also exposes convenience properties `k1l` and `k2l`. |
-| `Sextupole` | No | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `SecondTM`, `KickTM` | none | `KickTM` is the important nonlinear tracking path here. |
-| `Octupole` | No | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `SecondTM`, `KickTM` | none | `k3` only enters the dedicated kick path; `SecondTM` still comes from inherited generic `Magnet` second-order hooks. |
-| `Solenoid` | No | `TransferMap` via solenoid-specific first-order hook | `TransferMap`, `SecondTM` | none | `SecondTM` currently comes from the generic `Element` second-order fallback, not from a solenoid-specific nonlinear model. |
+| `Drift` | No | `TransferMap` via `DriftAtom` first-order hook | `TransferMap`, `SecondTM`, `KickTM`, `RungeKuttaGlobalTM`, `RungeKuttaOcelotTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | none | Useful no-edge reference family; with an attached `mag_field`, RK can behave as a generic field region. |
+| `Quadrupole` | No | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `SecondTM`, `KickTM`, `RungeKuttaGlobalTM`, `RungeKuttaOcelotTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | none | Wrapper also exposes convenience properties `k1l` and `k2l`; RK uses the hard-edge quadrupole field unless `mag_field` is attached. |
+| `Sextupole` | No | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `SecondTM`, `KickTM`, `RungeKuttaGlobalTM`, `RungeKuttaOcelotTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | none | `KickTM` remains the compact nonlinear tracking path; RK uses the hard-edge sextupole field unless `mag_field` is attached. |
+| `Octupole` | No | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `SecondTM`, `KickTM`, `RungeKuttaGlobalTM`, `RungeKuttaOcelotTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | none | `k3` enters `KickTM` and the hard-edge RK field; `SecondTM` still comes from inherited generic `Magnet` second-order hooks. |
+| `Solenoid` | No | `TransferMap` via solenoid-specific first-order hook | `TransferMap`, `SecondTM`, `RungeKuttaGlobalTM`, `RungeKuttaOcelotTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | none | `SecondTM` currently comes from the generic `Element` second-order fallback; RK uses a hard-edge longitudinal field. |
 | `Hcor` / `Vcor` | No | `TransferMap` via `CorAtom` first-order hook | `TransferMap`, `SecondTM` | none | These are not `Magnet` subclasses, so they do not inherit generic kick hooks. |
 | `XYQuadrupole` | No | `TransferMap` via `XYQuadrupoleAtom` first-order hook | `TransferMap` only | the atom also has `SecondTM` and inherited `KickTM` hook surface, but the wrapper intentionally exposes only first-order active tracking | Important wrapper-level exception. |
-| `Bend`, `SBend`, `RBend` | Yes | `TransferMap` via bend entrance/main/exit first-order hooks | `TransferMap`, `SecondTM`, `KickTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | none | `KickTM` is declared here because the bend atoms do provide the full inherited `Magnet` kick hook family, including edges. |
+| `Bend`, `SBend`, `RBend` | Yes | `TransferMap` via bend entrance/main/exit first-order hooks | `TransferMap`, `SecondTM`, `KickTM`, `RungeKuttaGlobalTM`, `RungeKuttaOcelotTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | none | `KickTM` is declared here because the bend atoms do provide the full inherited `Magnet` kick hook family, including edges. |
 
 ### RF, field-integrated, and special families
 
@@ -527,7 +538,7 @@ The columns below deliberately separate:
 | `Cavity` | Yes | `TransferMap` via cavity-specific first-order entrance/main/exit hooks | `CavityTM` only | first-order `TransferMap` exists for optics but is not exposed as an active tracking method | Most important complex reference family for edge handling and `delta_e`. |
 | `TWCavity` | Yes | `TransferMap` via traveling-wave cavity first-order hooks | `TWCavityTM` only | first-order `TransferMap` exists for optics but is not exposed as an active tracking method | The atom currently warns that this family is unfinished. |
 | `TDCavity` | No | `TransferMap` via `TDCavityAtom` first-order hook | `TransferMap`, `SecondTM` | none | A straightforward no-edge RF family that follows the normal wrapper-declared TM contract. |
-| `Undulator` | No | `TransferMap` via `UndulatorAtom` first-order hook | `TransferMap`, `SecondTM`, `RungeKuttaTM`, `RungeKuttaTrTM`, `UndulatorTestTM` | none | `MagneticLattice.update_transfer_maps()` also has special-case length handling when a field map is attached. |
+| `Undulator` | No | `TransferMap` via `UndulatorAtom` first-order hook | `TransferMap`, `SecondTM`, `RungeKuttaGlobalTM`, `RungeKuttaOcelotTM`, `RungeKuttaTM`, `RungeKuttaTrTM`, `UndulatorTestTM` | none | `MagneticLattice.update_transfer_maps()` also has special-case length handling when a field map is attached. |
 | `Multipole` | No | `TransferMap` via `MultipoleAtom` first-order hook | `MultipoleTM` only | first-order `TransferMap` exists for optics but the wrapper intentionally exposes only `MultipoleTM` as an active tracking method | This first-order path is a linearized multipole optics map, not a pure drift. |
 
 ### Matrix Slice Policy
@@ -667,7 +678,7 @@ Overview:
 | `SecondOrderParams` | `R`, `B`, `T`, `tilt`, `dx`, `dy` | `SecondTM` | linear part plus second-order tensor and source offsets used when the atom built the nonlinear map |
 | `CavityParams` | `R`, `B`, `tilt`, `v`, `freq`, `phi` | `CavityTM`, `TWCavityTM` | linear cavity map plus RF settings needed for energy gain and longitudinal RF terms |
 | `KickParams` | `dx`, `dy`, `tilt`, `angle`, `k1`, `k2`, `k3` | `KickTM` | strengths and offsets for algorithmic kick tracking rather than a prebuilt matrix |
-| `RungeKuttaParams` | `mag_field` callable | `RungeKuttaTM`, `RungeKuttaTrTM` | field callback used by the integrator |
+| `RungeKuttaParams` | `mag_field` callable | `RungeKuttaGlobalTM`, `RungeKuttaOcelotTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | field callback used by the integrator; global RK returns fixed-frame trajectory coordinates, Ocelot RK converts back to coordinates relative to the transported reference trajectory |
 | `MultipoleParams` | `kn` | `MultipoleTM` | multipole coefficient list for the dedicated multipole kick polynomial |
 | `UndulatorTestParams` | `lperiod`, `Kx`, `ax` | `UndulatorTestTM` | minimal metadata for the simplified/test undulator map |
 
@@ -762,11 +773,11 @@ to keep it explicit and centralized in `OpticElement`.
 
 Current rule:
 
-- if `Quadrupole.supported_tms = {TransferMap, SecondTM, KickTM}`, that means a beam may be tracked through this wrapper with first-order `TransferMap`, second-order `SecondTM`, or kick-based `KickTM`
+- if `Quadrupole.supported_tms = {TransferMap, SecondTM, KickTM, RungeKuttaGlobalTM, RungeKuttaOcelotTM, RungeKuttaTM, RungeKuttaTrTM}`, that means a beam may be tracked through this wrapper with first-order `TransferMap`, second-order `SecondTM`, kick-based `KickTM`, or RK field integration
 - if the user requests `SecondTM` on that `Quadrupole`, the wrapper treats that as an explicitly supported active tracking method
 - if `Quadrupole.supported_tms` contains `TransferMap`, that also means `TransferMap` may be used as the active beam-tracking method for `ParticleArray` tracking
-- if the user requests an undeclared TM such as `RungeKuttaTM` directly through `quad.set_tm(RungeKuttaTM)` or `Quadrupole(..., tm=RungeKuttaTM)`, the wrapper raises because that is an explicit unsupported request
-- if a lattice applies `method={"global": RungeKuttaTM}`, the same undeclared request is treated as permissive: the wrapper warns and falls back to `default_tm`
+- if the user requests an undeclared TM directly through `quad.set_tm(...)` or a constructor `tm=...`, the wrapper raises because that is an explicit unsupported request
+- if a lattice applies an undeclared global method, the same undeclared request is treated as permissive: the wrapper warns and falls back to `default_tm`
 - if `Cavity.supported_tms = {CavityTM}` and the user requests `TransferMap` directly, the wrapper raises because `Cavity` exposes only one active tracking TM
 - if a lattice applies `method={"global": SecondTM}` to a sequence containing a `Cavity`, the wrapper warns and falls back to `CavityTM`
 

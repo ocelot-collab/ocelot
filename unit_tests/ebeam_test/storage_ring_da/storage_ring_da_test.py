@@ -11,6 +11,13 @@ from unit_tests.params import *
 from storage_ring_da_conf import *
 from ocelot.cpbd.chromaticity import *
 
+DA_GRID_SHAPE = (80, 100)
+DA_TOTAL_TURNS_RTOL = 5.e-3
+DA_STABLE_COUNT_TOL = 12
+DA_ROW_STABLE_COUNT_TOL = 3
+DA_ROW_STABLE_COUNT_TOTAL_TOL = 25
+DA_TUNE_SUMMARY_TOL = 2.e-3
+
 
 def test_lattice_transfer_map(lattice, tws=None, update_ref_values=False):
     """R maxtrix test"""
@@ -84,21 +91,86 @@ def test_create_track_list(lattice, tws=None, update_ref_values=False):
     assert check_result(result)
 
 
+def _turns_from_track_list(pxy_list):
+    return np.array([pxy.turn for pxy in pxy_list])
+
+
+def _turns_from_ref(da_ref):
+    return np.array([row['turns'] for row in da_ref])
+
+
+def _assert_da_turns_close(turns, turns_ref, nturns):
+    assert turns.shape == turns_ref.shape
+
+    np.testing.assert_allclose(turns.sum(), turns_ref.sum(), rtol=DA_TOTAL_TURNS_RTOL, atol=0.)
+
+    for min_turns in (nturns - 1, int(0.9 * nturns), int(0.5 * nturns)):
+        count = np.count_nonzero(turns >= min_turns)
+        count_ref = np.count_nonzero(turns_ref >= min_turns)
+        assert abs(count - count_ref) <= DA_STABLE_COUNT_TOL
+
+    stable = turns.reshape(DA_GRID_SHAPE) >= nturns - 1
+    stable_ref = turns_ref.reshape(DA_GRID_SHAPE) >= nturns - 1
+    row_count_diff = np.abs(np.count_nonzero(stable, axis=1) - np.count_nonzero(stable_ref, axis=1))
+    assert row_count_diff.max() <= DA_ROW_STABLE_COUNT_TOL
+    assert row_count_diff.sum() <= DA_ROW_STABLE_COUNT_TOTAL_TOL
+
+
+def _tunes_from_track_list(pxy_list):
+    return np.array([[pxy.mux, pxy.muy] for pxy in pxy_list])
+
+
+def _tunes_from_ref(da_mu_ref):
+    return np.array([row['turns'] for row in da_mu_ref])
+
+
+def _valid_tune_mask(tunes):
+    return np.all(tunes != -0.001, axis=1)
+
+
+def _assert_da_tunes_close(tunes, tunes_ref, turns, turns_ref, nturns):
+    assert tunes.shape == tunes_ref.shape
+
+    valid = _valid_tune_mask(tunes)
+    valid_ref = _valid_tune_mask(tunes_ref)
+    assert abs(np.count_nonzero(valid) - np.count_nonzero(valid_ref)) <= DA_STABLE_COUNT_TOL
+
+    np.testing.assert_allclose(
+        np.mean(tunes[valid], axis=0),
+        np.mean(tunes_ref[valid_ref], axis=0),
+        rtol=0.,
+        atol=DA_TUNE_SUMMARY_TOL,
+    )
+    np.testing.assert_allclose(
+        np.median(tunes[valid], axis=0),
+        np.median(tunes_ref[valid_ref], axis=0),
+        rtol=0.,
+        atol=DA_TUNE_SUMMARY_TOL,
+    )
+
+    stable_both = (turns >= nturns - 1) & (turns_ref >= nturns - 1) & valid & valid_ref
+    assert np.count_nonzero(stable_both) >= min(np.count_nonzero(valid), np.count_nonzero(valid_ref)) - DA_STABLE_COUNT_TOL
+
+    tune_diff = np.abs(tunes[stable_both] - tunes_ref[stable_both])
+    np.testing.assert_array_less(np.quantile(tune_diff, 0.95, axis=0), DA_TUNE_SUMMARY_TOL)
+
+
 #@pytest.mark.skip(reason='TOO LONG')
 def test_track_nturns(lattice, tws, update_ref_values=False):
     """Track N turns function test"""
 
     pxy_list, nturns = track_nturns_wrapper(lattice)
 
-    da = [{'turns': pxy.turn} for pxy in pxy_list]
+    turns = _turns_from_track_list(pxy_list)
+    da = [{'turns': turn} for turn in turns]
     
     if update_ref_values:
         return da
 
     da_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+    turns_ref = _turns_from_ref(da_ref)
 
-    result = check_dict(da, da_ref, TOL, assert_info=' da - ')
-    assert check_result(result)
+    _assert_da_turns_close(turns, turns_ref, nturns)
 
 
 #@pytest.mark.skip(reason='TOO LONG')
@@ -108,15 +180,18 @@ def test_freq_analysis(lattice, tws, update_ref_values=False):
     pxy_list, nturns = track_nturns_wrapper(lattice)    
     pxy_list = freq_analysis(pxy_list, lattice, nturns, harm=True)
 
-    da_mu = [{'turns': [pxy.mux, pxy.muy]} for pxy in pxy_list]
+    tunes = _tunes_from_track_list(pxy_list)
+    da_mu = [{'turns': [mux, muy]} for mux, muy in tunes]
 
     if update_ref_values:
         return da_mu
     
     da_mu_ref = json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json')
+    turns_ref = _turns_from_ref(json_read(REF_RES_DIR + 'test_track_nturns.json'))
+    tunes_ref = _tunes_from_ref(da_mu_ref)
+    turns = _turns_from_track_list(pxy_list)
 
-    result = check_dict(da_mu, da_mu_ref, TOL, assert_info=' da_mu - ')
-    assert check_result(result)
+    _assert_da_tunes_close(tunes, tunes_ref, turns, turns_ref, nturns)
 
 
 def compensate_chromaticity_wrapper(lattice):

@@ -11,13 +11,12 @@ import numpy as np
 from scipy.integrate import cumulative_trapezoid
 
 from ocelot.common import math_op
-from ocelot.common.globals import m_e_eV, m_e_GeV, pi, speed_of_light
+from ocelot.common.globals import m_e_GeV, pi, speed_of_light
 from ocelot.cpbd.beam import Particle, s_to_cur
 from ocelot.cpbd.elements.bend import Bend
 from ocelot.cpbd.elements.rbend import RBend
 from ocelot.cpbd.elements.sbend import SBend
 from ocelot.cpbd.elements.undulator import Undulator
-from ocelot.cpbd.elements.undulator_atom import und_field
 from ocelot.cpbd.elements.xyquadruple import XYQuadrupole
 from ocelot.cpbd.high_order import arcline, rk_track_in_field
 from ocelot.cpbd.physics_proc import PhysProc
@@ -1008,28 +1007,16 @@ class CSR(PhysProc):
                 elif elem.__class__ == Undulator:
                     print("ENERGY = ",self.energy)
                     gamma = self.energy/m_e_GeV
-                    ku = 2 * np.pi / elem.lperiod
                     delta_z = elem.lperiod * elem.nperiods
                     # delta_s += 0.5* delta_z / (gamma ) ** 2 * (1 + 0.5 * (elem.Kx ) ** 2)
 
                     delta_s = delta_z * (1 + 0.25*(elem.Kx/gamma) ** 2)
 
-                    By = elem.Kx * m_e_eV * 2. * pi / (elem.lperiod * speed_of_light)
-                    Bx = elem.Ky * m_e_eV * 2. * pi / (elem.lperiod * speed_of_light)
-
-                    def mag_field(x, y, z): return (0, -By * np.cos(ku * z), 0)
-
-                    # ending poles 1/4, -3/4, 1, -1, ... (or -1/4, 3/4, -1, 1)
-                    if self.end_poles:
-                        def mag_field(x, y, z): return und_field(x, y, z, elem.lperiod, elem.Kx, nperiods=elem.nperiods, end_poles='3/4')
+                    mag_field = elem.element.get_csr_mag_field(self.energy, use_end_poles=self.end_poles)
 
                 else:
                     delta_z = delta_s * np.sin(elem.angle) / elem.angle if elem.angle != 0 else delta_s
-                    hx = elem.angle / elem.l * np.cos(elem.tilt)
-                    hy = elem.angle / elem.l * np.sin(elem.tilt)
-                    By = self.energy * 1e9 * beta * hx / speed_of_light
-                    Bx = -self.energy * 1e9 * beta * hy / speed_of_light
-                    def mag_field(x, y, z): return (Bx, By, 0)
+                    mag_field = elem.element.create_runge_kutta_main_params(self.energy).mag_field
 
                 sre0 = self.csr_traj[:, -1]
                 N = int(max(1, np.round(delta_s / step)))

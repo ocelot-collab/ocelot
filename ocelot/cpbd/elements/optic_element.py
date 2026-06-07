@@ -93,6 +93,8 @@ class OpticElement:
             self._first_order_tms = self._create_tms(self.element, TransferMap)
         except (AttributeError, NotImplementedError) as exc:
             raise self._tm_contract_error(TransferMap, first_order_only=True) from exc
+        atom_tm_params = getattr(self.element, "params", {})
+        params = {**atom_tm_params, **params}
         self._kwargs = params  # Storing transforamtion sp
         requested_tm = self.default_tm if tm is None else self._normalize_tm_request(
             tm, request_source="explicit", stacklevel=5

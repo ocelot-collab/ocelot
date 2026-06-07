@@ -58,10 +58,13 @@ class Element:
         self.dx = kwargs.pop('dx', 0.)
         self.dy = kwargs.pop('dy', 0.)
         self.mag_field = kwargs.pop('mag_field', None)
+        self.params = {}
+        for tm_param in ("npoints", "s_start"):
+            if tm_param in kwargs:
+                self.params[tm_param] = kwargs.pop(tm_param)
         self.width = kwargs.pop('width', 0.05)    # transverse width of the element. it used only in the beamline plotting
         self.height = kwargs.pop('height', 0.05)     # transverse height of the element. it used only in the beamline plotting
         self.color = kwargs.pop('color', None) # color of element. it used only in the beamline plotting
-        self.params = {}
 
     def __hash__(self):
         return hash(id(self))

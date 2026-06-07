@@ -4,6 +4,8 @@ import numpy as np
 from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.elements.quadrupole_atom import QuadrupoleAtom
 from ocelot.cpbd.transformations.kick import KickTM
+from ocelot.cpbd.transformations.runge_kutta import RungeKuttaGlobalTM, RungeKuttaOcelotTM, RungeKuttaTM
+from ocelot.cpbd.transformations.runge_kutta_tr import RungeKuttaTrTM
 from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 
@@ -53,7 +55,7 @@ class Quadrupole(OpticElement):
     QuadrupoleAtom : Physics implementation
     """
     default_tm = TransferMap
-    supported_tms = {TransferMap, SecondTM, KickTM}
+    supported_tms = {TransferMap, SecondTM, KickTM, RungeKuttaGlobalTM, RungeKuttaOcelotTM, RungeKuttaTM, RungeKuttaTrTM}
 
     def __init__(self, l: float = 0., k1: float = 0, k2: float = 0., tilt: float = 0., eid: str | None = None, tm=None, **kwargs):
         super().__init__(QuadrupoleAtom(l=l, k1=k1, k2=k2, tilt=tilt, eid=eid, **kwargs), tm=tm)

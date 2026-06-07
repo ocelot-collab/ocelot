@@ -1,8 +1,10 @@
 import numpy as np
+from ocelot.common.globals import speed_of_light, m_e_GeV
 from ocelot.common.math_op import get_tilt_matrix
 from ocelot.cpbd.elements.element import Element
 from ocelot.cpbd.tm_params.kick_params import KickParams
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
+from ocelot.cpbd.tm_params.runge_kutta_params import RungeKuttaParams
 from ocelot.cpbd.tm_params.second_order_params import SecondOrderParams
 from ocelot.cpbd.high_order import t_nnn
 from ocelot.cpbd.r_matrix import uni_matrix
@@ -41,6 +43,65 @@ class Magnet(Element):
         self.angle = 0.  # Magnets Drift, Bend, Correctors (just angle)
         self.k1 = 0.  # Magnets quadropole
         self.k2 = 0.  # Magnets Sextupole
+        self.k3 = 0.  # Magnets Octupole
+
+    @staticmethod
+    def _brho(energy: float) -> float:
+        gamma = energy / m_e_GeV
+        beta = np.sqrt(1. - 1. / (gamma * gamma)) if gamma != 0 else 1.
+        return beta * energy * 1e9 / speed_of_light
+
+    def _hard_edge_field_components(self, x, y, energy: float):
+        brho = self._brho(energy)
+        h = self.angle / self.l if self.l != 0. else 0.
+        k1 = getattr(self, "k1", 0.)
+        k2 = getattr(self, "k2", 0.)
+        k3 = getattr(self, "k3", 0.)
+
+        x2 = x * x
+        y2 = y * y
+        by = brho * (
+            h
+            + k1 * x
+            + 0.5 * k2 * (x2 - y2)
+            + k3 * (x * x2 - 3. * x * y2) / 6.
+        )
+        bx = brho * (
+            k1 * y
+            + k2 * x * y
+            + k3 * (3. * x2 * y - y * y2) / 6.
+        )
+        return bx, by
+
+    def default_mag_field(self, energy: float):
+        """
+        Hard-edge magnetic field from the element strengths.
+
+        The field is longitudinally uniform and follows the normal multipole
+        convention used by the kick maps.
+        """
+        dx = self.dx
+        dy = self.dy
+        tilt = self.tilt
+        cos_t = np.cos(tilt)
+        sin_t = np.sin(tilt)
+
+        def field(x, y, z):
+            x_local = cos_t * (x - dx) + sin_t * (y - dy)
+            y_local = -sin_t * (x - dx) + cos_t * (y - dy)
+            bx_local, by_local = self._hard_edge_field_components(x_local, y_local, energy)
+
+            bx = cos_t * bx_local - sin_t * by_local
+            by = sin_t * bx_local + cos_t * by_local
+            return bx, by, 0.
+
+        return field
+
+    def get_mag_field(self, energy: float):
+        return self.mag_field if self.mag_field is not None else self.default_mag_field(energy)
+
+    def create_runge_kutta_main_params(self, energy):
+        return RungeKuttaParams(mag_field=self.get_mag_field(energy))
 
     def create_first_order_main_params(self, energy: float, delta_length: float = None) -> FirstOrderParams:
         k1 = self.k1

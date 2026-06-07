@@ -2,11 +2,9 @@ import numpy as np
 
 from ocelot.cpbd.elements.magnet import Magnet
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
-from ocelot.cpbd.tm_params.runge_kutta_params import RungeKuttaParams
 from ocelot.cpbd.tm_params.second_order_params import SecondOrderParams
 from ocelot.cpbd.high_order import fringe_ent, fringe_ext
 from ocelot.cpbd.r_matrix import bend_edge_matrix
-from ocelot.common.globals import speed_of_light, m_e_GeV
 
 
 class BendAtom(Magnet):
@@ -93,22 +91,8 @@ class BendAtom(Magnet):
                           gap=self.gap, fint=self.fintx)
         return SecondOrderParams(first_order_params.R, first_order_params.B, T, self.tilt, self.dx, self.dy)
 
-    def create_runge_kutta_main_params(self, energy):
-        gamma = energy / m_e_GeV
-        igamma2 = 0.
-
-        if gamma != 0:
-            igamma2 = 1. / (gamma * gamma)
-
-        beta = np.sqrt(1. - igamma2)
-
-        B = self.angle/self.l * beta * energy*1e9/speed_of_light if self.l != 0. else 0.
-        By = B * np.cos(self.tilt)
-        Bx = B * np.sin(self.tilt)
-        return RungeKuttaParams(mag_field=lambda x, y, z: (Bx, By, 0.))
-
     def create_runge_kutta_entrance_params(self, energy):
-        return RungeKuttaParams(mag_field=lambda x, y, z: (0., 0., 0.))
+        return super().create_runge_kutta_main_params(energy)
 
     def create_runge_kutta_exit_params(self, energy):
-        return RungeKuttaParams(mag_field=lambda x, y, z: (0., 0., 0.))
+        return super().create_runge_kutta_main_params(energy)

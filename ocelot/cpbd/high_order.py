@@ -1079,6 +1079,151 @@ def rk_field(rparticles, s_start, s_stop, N, energy, mag_field, long_dynamics=Tr
     return rparticles
 
 
+def _rotation_between(v_from, v_to):
+    v_from = v_from / np.linalg.norm(v_from)
+    v_to = v_to / np.linalg.norm(v_to)
+    axis = np.cross(v_from, v_to)
+    sin_a = np.linalg.norm(axis)
+    cos_a = np.dot(v_from, v_to)
+
+    if sin_a < 1.e-14:
+        if cos_a > 0:
+            return np.eye(3)
+        axis = np.cross(v_from, np.array([1., 0., 0.]))
+        if np.linalg.norm(axis) < 1.e-14:
+            axis = np.cross(v_from, np.array([0., 1., 0.]))
+        axis = axis / np.linalg.norm(axis)
+        sin_a = 0.
+        cos_a = -1.
+    else:
+        axis = axis / sin_a
+
+    kx, ky, kz = axis
+    k = np.array([
+        [0., -kz, ky],
+        [kz, 0., -kx],
+        [-ky, kx, 0.],
+    ])
+    return np.eye(3) + sin_a * k + (1. - cos_a) * (k @ k)
+
+
+def _transported_exit_frame(ref_directions):
+    t_hat = ref_directions[0] / np.linalg.norm(ref_directions[0])
+    x_hat = np.array([1., 0., 0.])
+    x_hat = x_hat - np.dot(x_hat, t_hat) * t_hat
+    x_hat = x_hat / np.linalg.norm(x_hat)
+    y_hat = np.cross(t_hat, x_hat)
+
+    for direction in ref_directions[1:]:
+        t_new = direction / np.linalg.norm(direction)
+        rot = _rotation_between(t_hat, t_new)
+        x_hat = rot @ x_hat
+        x_hat = x_hat - np.dot(x_hat, t_new) * t_new
+        x_hat = x_hat / np.linalg.norm(x_hat)
+        y_hat = np.cross(t_new, x_hat)
+        t_hat = t_new
+
+    return x_hat, y_hat, t_hat
+
+
+def _cumulative_path_lengths(traj):
+    paths = np.zeros((traj.shape[0], traj.shape[2]))
+    dz = traj[1:, 4, :] - traj[:-1, 4, :]
+    xp = traj[1:, 1, :]
+    yp = traj[1:, 3, :]
+    paths[1:, :] = np.cumsum(dz * np.sqrt(1. + xp * xp + yp * yp), axis=0)
+    return paths
+
+
+def _interp_on_grid(values, index, weight):
+    if index == 0:
+        return values[0]
+    return (1. - weight) * values[index - 1] + weight * values[index]
+
+
+def rk_field_to_ocelot(rparticles, s_start, s_stop, N, energy, mag_field, long_dynamics=True):
+    """
+    Track particles through a static magnetic field and return Ocelot coordinates.
+
+    ``rk_track_in_field`` integrates in a fixed Cartesian frame.  This helper
+    tracks an internal zero reference particle, finds the reference exit point by
+    path length, transports the transverse frame along that reference trajectory,
+    and projects the beam back to coordinates relative to that reference.
+    """
+    if s_start > s_stop:
+        print("rk_field_to_ocelot: s_start > s_stop. Setup s_start = 0")
+        s_start = 0.
+
+    target_path = s_stop - s_start
+    if target_path <= 1.e-15:
+        return rparticles
+
+    ref_particle = np.zeros((6, 1))
+    work = np.hstack((ref_particle, rparticles.copy()))
+    traj = rk_track_in_field(work, s_stop, N, energy, mag_field, s_start=s_start)
+    traj = traj.reshape(N, 9, work.shape[1])
+
+    z_grid = traj[:, 4, 0]
+    paths = _cumulative_path_lengths(traj)
+    ref_path = paths[:, 0]
+
+    target_path = min(target_path, ref_path[-1])
+    index = int(np.searchsorted(ref_path, target_path, side="left"))
+    if index == 0:
+        weight = 0.
+    else:
+        denom = ref_path[index] - ref_path[index - 1]
+        weight = 0. if abs(denom) < 1.e-15 else (target_path - ref_path[index - 1]) / denom
+
+    state_at_exit_z = _interp_on_grid(traj, index, weight)
+    paths_at_exit_z = _interp_on_grid(paths, index, weight)
+    z_exit = _interp_on_grid(z_grid, index, weight)
+
+    ref_directions = np.column_stack((
+        traj[:index, 1, 0],
+        traj[:index, 3, 0],
+        np.ones(index),
+    ))
+    exit_ref_direction = np.array([state_at_exit_z[1, 0], state_at_exit_z[3, 0], 1.])
+    if len(ref_directions) == 0:
+        ref_directions = exit_ref_direction.reshape(1, 3)
+    else:
+        ref_directions = np.vstack((ref_directions, exit_ref_direction))
+
+    x_hat, y_hat, t_hat = _transported_exit_frame(ref_directions)
+
+    positions = np.vstack((
+        state_at_exit_z[0],
+        state_at_exit_z[2],
+        np.ones(work.shape[1]) * z_exit,
+    ))
+    directions = np.vstack((
+        state_at_exit_z[1],
+        state_at_exit_z[3],
+        np.ones(work.shape[1]),
+    ))
+
+    ref_position = positions[:, [0]]
+    plane_offset = t_hat @ (positions - ref_position)
+    direction_projection = t_hat @ directions
+    dz_to_plane = -plane_offset / direction_projection
+    positions_at_plane = positions + directions * dz_to_plane
+    paths_at_plane = paths_at_exit_z + dz_to_plane * np.linalg.norm(directions, axis=0)
+
+    dpos = positions_at_plane[:, 1:] - positions_at_plane[:, [0]]
+    particle_directions = directions[:, 1:]
+    particle_direction_projection = direction_projection[1:]
+
+    rparticles[0, :] = x_hat @ dpos
+    rparticles[1, :] = (x_hat @ particle_directions) / particle_direction_projection
+    rparticles[2, :] = y_hat @ dpos
+    rparticles[3, :] = (y_hat @ particle_directions) / particle_direction_projection
+    if long_dynamics:
+        rparticles[4, :] = rparticles[4, :] + paths_at_plane[1:] - paths_at_plane[0]
+    rparticles[5, :] = state_at_exit_z[5, 1:]
+    return rparticles
+
+
 def scipy_track_in_field(y0, l, N, energy, mag_field):# y0, l, N, energy, mag_field
     z = np.linspace(0.,l, num=N)
     def func(y, z, fields):

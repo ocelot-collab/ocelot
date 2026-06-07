@@ -1,6 +1,7 @@
 __author__ = 'Sergey Tomin'
 
 import numpy as np
+from scipy.interpolate import splrep, splev
 
 def length_array(xyz_array):
     inds = xyz_array[xyz_array[:-1]>xyz_array[1:]]
@@ -126,6 +127,21 @@ class FieldMap:
             self.x_arr, self.y_arr, self.z_arr, self.Bx_arr, self.By_arr, self.Bz_arr = read_tabular_file(field_file)
         self.l = self.z_arr[-1] - self.z_arr[0]
             #return SRWLMagFld3D(locArBx, locArBy, locArBz, xNp, yNp, zNp, xRange, yRange, zRange, 1)
+
+
+def field_map2field_func(z, By):
+    tck = splrep(z, By, k=3)
+
+    def func(x, y, z):
+        return 0., splev(z, tck, der=0), 0.
+
+    return func
+
+
+def field_map_to_field_func(field_map):
+    unit_coef = 0.001 if field_map.units == "mm" else 1.
+    z_array = (field_map.z_arr - field_map.z_arr[0]) * unit_coef
+    return field_map2field_func(z=z_array, By=field_map.By_arr)
 
 """
 

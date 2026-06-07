@@ -1,6 +1,6 @@
 from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.elements.undulator_atom import UndulatorAtom
-from ocelot.cpbd.transformations.runge_kutta import RungeKuttaTM
+from ocelot.cpbd.transformations.runge_kutta import RungeKuttaGlobalTM, RungeKuttaOcelotTM, RungeKuttaTM
 from ocelot.cpbd.transformations.runge_kutta_tr import RungeKuttaTrTM
 from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.transformations.transfer_map import TransferMap
@@ -36,8 +36,9 @@ class Undulator(OpticElement):
     Tracking Methods
     ----------------
     - TransferMap (default): simplified paraxial approximation
-    - RungeKuttaTM: high-order numerical field integration
-    - RungeKuttaTrTM: field-integrated tracking variant
+    - RungeKuttaGlobalTM / RungeKuttaTM: fixed-frame field integration
+    - RungeKuttaOcelotTM: RK field integration converted back to Ocelot coordinates
+    - RungeKuttaTrTM: transverse-only fixed-frame RK variant
     - SecondTM: second-order analytic maps
     - UndulatorTestTM: testing/simplified model
 
@@ -56,8 +57,11 @@ class Undulator(OpticElement):
     UndulatorAtom : Physics implementation
     """
     default_tm = TransferMap
-    supported_tms = {TransferMap, SecondTM, RungeKuttaTM, RungeKuttaTrTM, UndulatorTestTM}
+    supported_tms = {TransferMap, SecondTM, RungeKuttaGlobalTM, RungeKuttaOcelotTM, RungeKuttaTM, RungeKuttaTrTM, UndulatorTestTM}
 
-    def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., phase=0, end_poles='1', field_file=None, eid=None, tm=None, **params):
-        super().__init__(UndulatorAtom(lperiod=lperiod, nperiods=nperiods, Kx=Kx, Ky=Ky, phase=phase, end_poles=end_poles, field_file=field_file, eid=eid),
-                         tm=tm, **params)
+    def __init__(self, lperiod=0., nperiods=0, Kx=0., Ky=0., phase=0, end_poles='1', field_file=None,
+                 mag_field=None, eid=None, tm=None, **params):
+        atom = UndulatorAtom(lperiod=lperiod, nperiods=nperiods, Kx=Kx, Ky=Ky, phase=phase,
+                             end_poles=end_poles, field_file=field_file, eid=eid)
+        atom.mag_field = mag_field
+        super().__init__(atom, tm=tm, **params)

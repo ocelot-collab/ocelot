@@ -81,7 +81,7 @@ def test_magnetic_lattice_periodic_twiss_with_cav():
     s = 0.0
     ref = np.array([beta_x, beta_y, alpha_x, alpha_y, gamma_x, gamma_y, E, s])
     res = np.array([tw_p.beta_x, tw_p.beta_y, tw_p.alpha_x, tw_p.alpha_y, tw_p.gamma_x, tw_p.gamma_y, tw_p.E, tw_p.s])
-    assert (ref == res).all()
+    np.testing.assert_allclose(res, ref, rtol=1.e-12, atol=1.e-14)
 
 def test_magnetic_lattice_periodic_twiss():
     d2 = Drift(l=0.5)
@@ -106,6 +106,5 @@ def test_magnetic_lattice_periodic_twiss():
     s = 0.0
     ref = np.array([beta_x, beta_y, alpha_x, alpha_y, gamma_x, gamma_y, E, s])
     res = np.array([tw_p.beta_x, tw_p.beta_y, tw_p.alpha_x, tw_p.alpha_y, tw_p.gamma_x, tw_p.gamma_y, tw_p.E, tw_p.s])
-    assert (ref == res).all()
-
+    np.testing.assert_allclose(res, ref, rtol=1.e-12, atol=1.e-14)
 

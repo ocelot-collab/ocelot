@@ -55,8 +55,9 @@ class Element:
         self.l = 0.
         self.angle = 0.
         self.tilt = 0.  # rad, pi/4 to turn positive quad into negative skew
-        self.dx = 0.
-        self.dy = 0.
+        self.dx = kwargs.pop('dx', 0.)
+        self.dy = kwargs.pop('dy', 0.)
+        self.mag_field = kwargs.pop('mag_field', None)
         self.width = kwargs.pop('width', 0.05)    # transverse width of the element. it used only in the beamline plotting
         self.height = kwargs.pop('height', 0.05)     # transverse height of the element. it used only in the beamline plotting
         self.color = kwargs.pop('color', None) # color of element. it used only in the beamline plotting

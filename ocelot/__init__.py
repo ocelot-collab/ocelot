@@ -2,7 +2,7 @@
 general ocelot description
 """
 
-__version__ = '26.06.0'
+__version__ = '26.06.1'
 
 
 __all__ = [

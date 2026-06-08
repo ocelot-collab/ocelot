@@ -9,6 +9,33 @@ Versioning is date based: `YY.MM.patch`.
 
 - None yet.
 
+## [26.06.1] - 2026-06-08
+
+### Added
+
+- Added `scripts/publish_release.py` for explicit PyPI and Anaconda artifact
+  publishing after release preparation.
+- Added `scripts/RELEASE.md` with the recommended release checklist and command
+  order.
+
+### Changed
+
+- Made global lattice transfer-map requests permissive and silent when an
+  element family does not support the requested active transformation. The
+  element now falls back to its `default_tm`, while explicit unsupported
+  family-specific requests still raise an error.
+- Updated element architecture documentation to describe explicit versus global
+  transfer-map selection.
+- Ignored generated `*.egg-info/` package metadata directories.
+- Cleaned up selected electron-beam demo scripts.
+
+### Fixed
+
+- Fixed the conda release build script metadata for the `ocelot-collab`
+  package.
+- Removed repeated global transfer-map fallback warnings for cavities during
+  common optics and tracking calls such as `twiss`.
+
 ## [26.06.0] - 2026-06-07
 
 ### Added
@@ -65,5 +92,6 @@ Versioning is date based: `YY.MM.patch`.
 - Removed the monolithic `ocelot/cpbd/beam.py` implementation in favor of the
   new `ocelot.cpbd.beam` package structure.
 
-[Unreleased]: https://github.com/ocelot-collab/ocelot/compare/v26.06.0...HEAD
+[Unreleased]: https://github.com/ocelot-collab/ocelot/compare/v26.06.1...HEAD
+[26.06.1]: https://github.com/ocelot-collab/ocelot/compare/v26.06.0...v26.06.1
 [26.06.0]: https://github.com/ocelot-collab/ocelot/compare/v25.07.0...v26.06.0

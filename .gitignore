@@ -10,7 +10,7 @@
 .venv
 build/
 dist/
-ocelot.egg-info/
+*.egg-info/
 .DS_Store
 arcline_traj.png
 arcline_traj_0.png

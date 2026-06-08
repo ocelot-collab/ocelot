@@ -1,6 +1,5 @@
 from copy import copy
 from typing import List, Type
-import warnings
 
 import numpy as np
 
@@ -41,7 +40,7 @@ class OpticElement:
     - ``default_tm``: Family fallback when tm=None
     - ``supported_tms``: Wrapper-selectable active methods (if declared)
     - Explicit requests must be in supported_tms (raises otherwise)
-    - Global lattice requests may warn and fall back to default_tm
+    - Global lattice requests may fall back silently to default_tm
 
     See Also
     --------
@@ -97,7 +96,7 @@ class OpticElement:
         params = {**atom_tm_params, **params}
         self._kwargs = params  # Storing transforamtion sp
         requested_tm = self.default_tm if tm is None else self._normalize_tm_request(
-            tm, request_source="explicit", stacklevel=5
+            tm, request_source="explicit"
         )
         self._activate_tm(requested_tm, **params)
         self.__is_init = True  # needed to disable __getattr__ and __setattr__ in __init__ phase. Do not add new attributes after.
@@ -262,14 +261,6 @@ class OpticElement:
         """Return True when the wrapper explicitly declares the TM as supported."""
         return self.supported_tms is not None and tm in self.supported_tms
 
-    def _warn_global_tm_fallback(self, tm: Type[Transformation], stacklevel: int) -> None:
-        """Warn when a global lattice TM request falls back to the family default."""
-        warnings.warn(
-            f"{self.__class__.__name__} does not declare support for {tm.__name__}; "
-            f"global lattice request falls back to default {self.default_tm.__name__}.",
-            stacklevel=stacklevel,
-        )
-
     @staticmethod
     def _validate_request_source(request_source: str) -> None:
         """Validate the public request source contract."""
@@ -278,13 +269,12 @@ class OpticElement:
                 f"Unsupported request_source={request_source!r}. Expected 'explicit' or 'global'."
             )
 
-    def _normalize_tm_request(self, tm: Type[Transformation], request_source: str, stacklevel: int) -> Type[Transformation]:
+    def _normalize_tm_request(self, tm: Type[Transformation], request_source: str) -> Type[Transformation]:
         """Normalize TM requests according to the wrapper policy and request source."""
         self._validate_request_source(request_source)
         if tm == self.default_tm or self._is_declared_tm(tm):
             return tm
         if request_source == "global":
-            self._warn_global_tm_fallback(tm, stacklevel=stacklevel)
             return self.default_tm
         raise RuntimeError(
             f"{self.__class__.__name__} does not declare support for {tm.__name__}. "
@@ -355,9 +345,9 @@ class OpticElement:
 
         Declared support is expected to be buildable. Explicit undeclared
         requests are treated as errors, while ``request_source='global'``
-        allows a warning and fallback to ``default_tm``.
+        allows fallback to ``default_tm``.
         """
-        requested_tm = self._normalize_tm_request(tm, request_source=request_source, stacklevel=4)
+        requested_tm = self._normalize_tm_request(tm, request_source=request_source)
         new_kwargs = params if params and params != self._kwargs else None
         if requested_tm != self._tm_class_type or new_kwargs:
             if new_kwargs:

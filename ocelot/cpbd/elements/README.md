@@ -125,7 +125,7 @@ Important:
 - not every family allows every TM to stay active
 - families such as `Cavity`, `TWCavity`, `Multipole`, and `XYQuadrupole` expose only one active TM by declaring `supported_tms = {default_tm}`
 - those single-method families still keep their `TransferMap` path in `first_order_tms` for optics / Twiss calculations, not for active beam tracking; explicit requests for another active TM raise. See the `TM Roles` section below.
-- only broad global lattice requests such as `method={"global": SecondTM}` are allowed to warn and fall back to `default_tm`
+- broad global lattice requests such as `method={"global": SecondTM}` are allowed to fall back silently to `default_tm`
 
 This is the central call chain:
 
@@ -777,15 +777,15 @@ Current rule:
 - if the user requests `SecondTM` on that `Quadrupole`, the wrapper treats that as an explicitly supported active tracking method
 - if `Quadrupole.supported_tms` contains `TransferMap`, that also means `TransferMap` may be used as the active beam-tracking method for `ParticleArray` tracking
 - if the user requests an undeclared TM directly through `quad.set_tm(...)` or a constructor `tm=...`, the wrapper raises because that is an explicit unsupported request
-- if a lattice applies an undeclared global method, the same undeclared request is treated as permissive: the wrapper warns and falls back to `default_tm`
+- if a lattice applies an undeclared global method, the same undeclared request is treated as permissive: the wrapper falls back to `default_tm`
 - if `Cavity.supported_tms = {CavityTM}` and the user requests `TransferMap` directly, the wrapper raises because `Cavity` exposes only one active tracking TM
-- if a lattice applies `method={"global": SecondTM}` to a sequence containing a `Cavity`, the wrapper warns and falls back to `CavityTM`
+- if a lattice applies `method={"global": SecondTM}` to a sequence containing a `Cavity`, the wrapper falls back to `CavityTM`
 
 This also explains the `TransferMap` / `SecondTM` case under global lattice
 assignment:
 
 - if a family does not list `TransferMap` or `SecondTM` in `supported_tms`, then `MagneticLattice(method={"global": TransferMap})` or `MagneticLattice(method={"global": SecondTM})` does not force that family to use those methods
-- instead, the wrapper warns and falls back to its `default_tm`
+- instead, the wrapper falls back silently to its `default_tm`
 - `Cavity` is the clearest example: global `TransferMap` or global `SecondTM` still leaves the active tracking method at `CavityTM`, while the `TransferMap` optics path remains available in `first_order_tms`
 
 Internally, `OpticElement.set_tm(...)` distinguishes these cases with
@@ -807,7 +807,7 @@ Current outcomes are:
 - explicit undeclared request:
   raise an error
 - global undeclared request:
-  warn and fall back to `default_tm`
+  fall back silently to `default_tm`
 - declared support that cannot actually be built from atom hooks:
   raise an error, because that is a broken wrapper declaration
 
@@ -936,7 +936,7 @@ Current policy in the main architecture:
 - the `TransferMap` optics path used by `first_order_tms` is a separate concept and may exist even when `TransferMap` is not an allowed active TM for the wrapper
 - declared TMs must actually build from the atom hooks; otherwise that is treated as a bug in the declaration
 - explicit undeclared requests raise
-- global undeclared requests warn and fall back to `default_tm`
+- global undeclared requests fall back silently to `default_tm`
 - families with `supported_tms = {default_tm}` therefore stay on that single active TM unless they are asked for it explicitly
 
 Goal:
@@ -971,7 +971,7 @@ Current rule:
 
 - declared support that cannot be built raises clearly
 - explicit undeclared requests raise clearly
-- global lattice requests warn and fall back to `default_tm`
+- global lattice requests fall back silently to `default_tm`
 - families that expose only `supported_tms = {default_tm}` therefore keep that TM active under global reassignment
 
 This keeps user-facing behavior conservative while still making bad

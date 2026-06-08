@@ -194,7 +194,7 @@ class MagneticLattice:
 
     Notes:
         - A family-specific method request is treated as explicit and must be declared by that element wrapper.
-        - A global method request is treated as permissive: unsupported families warn and fall back to their
+        - A global method request is treated as permissive: unsupported families fall back silently to their
           element-class default transfer map.
         - For more details, refer to Section 7 of the tutorial:
           [Small Useful Features](https://nbviewer.org/github/ocelot-collab/ocelot/blob/dev/demos/ipython_tutorials/small_useful_features.ipynb).

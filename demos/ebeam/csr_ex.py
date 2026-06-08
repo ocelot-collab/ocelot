@@ -1,5 +1,6 @@
 __author__ = 'Sergey Tomin'
-
+import sys
+sys.path.append("../../")
 from ocelot import *
 from ocelot.gui.accelerator import *
 import time

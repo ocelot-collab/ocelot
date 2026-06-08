@@ -1,4 +1,6 @@
 __author__ = 'Sergey Tomin'
+import sys
+sys.path.append("../../")
 import matplotlib
 from ocelot import *
 from ocelot.gui import *

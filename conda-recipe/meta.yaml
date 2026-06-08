@@ -1,10 +1,10 @@
 package:
   name: ocelot
-  version: "26.06.0"
+  version: "26.06.1"
 
 source:
   git_url: https://github.com/ocelot-collab/ocelot.git
-  git_tag: v26.06.0
+  git_tag: v26.06.1
 
 build:
   noarch: python

@@ -119,7 +119,7 @@ class Navigator:
                 The physical process starts at the beginning of elem1 and ends at the beginning of elem2.
     """
 
-    def __init__(self, lattice, unit_step=1):
+    def __init__(self, lattice, unit_step=1.0):
 
         self.lat = lattice
         if len(self.lat.sequence) < 2:
@@ -130,7 +130,7 @@ class Navigator:
         self.z0 = 0.  # current position of navigator
         self.n_elem = 0  # current index of the element in lattice
         self.sum_lengths = 0.  # sum_lengths = Sum[lat.sequence[i].l, {i, 0, n_elem-1}]
-        self.unit_step = unit_step  # unit step for physics processes
+        self.unit_step = unit_step  # global minimum unit step in [m] for all physics processes
         self.proc_kick_elems = []
         self.kill_process = False  # for case when calculations are needed to terminated e.g. from gui
         self.inactive_processes = [] # processes are sometimes deactivated during tracking

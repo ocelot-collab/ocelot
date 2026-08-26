@@ -1694,6 +1694,7 @@ class MatchProblem:
         tol: float = 1.0e-8,
         verbose: bool = False,
         restore_if_fail: bool = False,
+        strict_success: bool = True,
     ) -> MatchResult:
         """Run numerical optimization and return the best found solution.
 
@@ -1713,6 +1714,10 @@ class MatchProblem:
             Scalar tolerance forwarded to the underlying SciPy solver.
         restore_if_fail:
             If ``True`` and solve fails, restore initial variable values.
+        strict_success:
+            If ``True`` perform additional checks like checking if all targets
+            are met. Non-strict means that the status of the numerical optimizer
+            is forwarded only.
         """
 
         active_vars = self._active_variables()
@@ -1855,6 +1860,17 @@ class MatchProblem:
         merit_eval, target_reports, objective_reports, _state = self.evaluate()
         if not np.isfinite(merit_eval):
             merit_eval = merit
+
+        if strict_success:
+            unmet = [report for report in target_reports if not report.met]
+            if success and unmet:
+                success = False
+                message = (
+                    f"Matching failed because some targets were not met:\n - "
+                    f"{'\n - '.join(map(lambda t: f"{t.name}: {repr(t)}", unmet))}"
+                    f"\n"
+                    f"This is a consequence of the strict success requirement. The solver reports:\n{message}"
+                )
 
         if restore_if_fail and not success:
             _apply_x(x_saved)

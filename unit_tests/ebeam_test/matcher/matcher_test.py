@@ -150,6 +150,37 @@ def test_vary_drift_length_with_finite_limits():
     assert 2.0 <= result.variables["D1_l"] <= 5.0
 
 
+def test_solve_with_strict_success_requires_all_targets_to_be_met():
+    lat, _start, dvar, end = _simple_drift_lattice(1.0)
+    problem = MatchProblem(lat, _twiss_seed())
+    problem.vary_element(dvar, quantity="l", limits=(0.0, 1.0), name="D1_l")
+    problem.target_twiss(end, "s", value=2.0, weight=1.0e6, tol=0.0)
+
+    result = problem.solve(solver="ls_trf", max_iter=80, tol=1.0e-10)
+
+    assert result.optimize_result.success
+    assert not result.success
+    assert not result.target_reports[0].met
+
+
+def test_solve_with_non_strict_success_forwards_optimizer_status():
+    lat, _start, dvar, end = _simple_drift_lattice(1.0)
+    problem = MatchProblem(lat, _twiss_seed())
+    problem.vary_element(dvar, quantity="l", limits=(0.0, 1.0), name="D1_l")
+    problem.target_twiss(end, "s", value=2.0, weight=1.0e6, tol=0.0)
+
+    result = problem.solve(
+        solver="ls_trf",
+        max_iter=80,
+        tol=1.0e-10,
+        strict_success=False,
+    )
+
+    assert result.optimize_result.success
+    assert result.success
+    assert not result.target_reports[0].met
+
+
 def test_vary_bend_angle_with_limits():
     start = Marker(eid="START")
     bvar = Bend(l=1.0, angle=0.20, eid="BVAR")

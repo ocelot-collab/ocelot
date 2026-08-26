@@ -97,6 +97,46 @@ def _single_quad_lattice(k1=1.0, length=1.0):
     return lat, start, quad, end
 
 
+def _fodo_lattice(k1=1.0, quad_length=1.0, drift_length=1.0):
+    start = Marker(eid="START")
+    quad1 = Quadrupole(l=quad_length, k1=k1, eid="Q1")
+    quad2 = Quadrupole(l=quad_length, k1=-k1, eid="Q2")
+    drift = Drift(l=drift_length, eid="D")
+    end = Marker(eid="END")
+    lat = MagneticLattice((start, *([quad1, drift, quad2, drift] * 10), end))
+    return lat, start, quad1, quad2, drift, end
+
+
+def _phase_advance(R, plane: str, twiss0: Twiss, twiss1: Twiss) -> float:
+    """Returns the phase advance between two Twiss states given the transfer matrix R between them."""
+    match plane:
+        case "x":
+            R = R[:2, :2]
+            beta0 = twiss0.beta_x
+            alpha0 = twiss0.alpha_x
+            beta1 = twiss1.beta_x
+        case "y":
+            R = R[2:4, 2:4]
+            beta0 = twiss0.beta_y
+            alpha0 = twiss0.alpha_y
+            beta1 = twiss1.beta_y
+
+    return np.atan2(
+        R[0, 1] / np.sqrt(beta0 * beta1),
+        R[0, 0] * np.sqrt(beta0 / beta1) - alpha0 * R[0, 1] / np.sqrt(beta0 * beta1),
+    )
+
+
+def _phase_advance_from_lattice(
+    lat: MagneticLattice, start, stop, tw0: Twiss, plane: str
+) -> float:
+    # note: hack to get sublattice, does not include copy of methods/phys_procs
+    lat = MagneticLattice(lat.get_sequence_part(start, stop))
+    tw1 = twiss(lat, tw0)[-1]
+    R = lat.transfer_maps(energy=tw0.E)[1]
+    return _phase_advance(R, plane, tw0, tw1)
+
+
 def test_twiss_target_on_element():
     lat, _start, dvar, end = _simple_drift_lattice(0.7)
     problem = MatchProblem(lat, _twiss_seed())
@@ -204,7 +244,9 @@ def test_vary_cavity_phase_to_match_end_energy():
     lat, _start, cav, end = _simple_cavity_lattice(v=0.03, phi=20.0)
     problem = MatchProblem(lat, _twiss_seed())
     problem.vary_element(cav, "phi", limits=(0.0, 60.0), name="CAV_phi")
-    problem.target_twiss(end, "E", value=1.0 + 0.03 * np.cos(np.deg2rad(30.0)), weight=1.0e6, tol=0.0)
+    problem.target_twiss(
+        end, "E", value=1.0 + 0.03 * np.cos(np.deg2rad(30.0)), weight=1.0e6, tol=0.0
+    )
 
     result = problem.solve(solver="ls_trf", max_iter=120, tol=1.0e-12)
     assert result.success
@@ -235,7 +277,7 @@ def test_twiss_delta_wrap_phase_equivalence():
     target_equiv = dmu_actual - 2.0 * np.pi
 
     problem_wrapped = MatchProblem(lat, _twiss_seed())
-    with pytest.warns(UserWarning, match="target_phase_advance"):
+    with pytest.warns(DeprecationWarning, match="target_phase_advance"):
         problem_wrapped.target_twiss_delta(
             start,
             end,
@@ -336,8 +378,12 @@ def test_partial_periodic_twiss_can_mix_with_strict_targets():
     assert all(report.met for report in reports)
     assert np.isclose(state.twiss_at(end).alpha_x, 0.0, atol=1.0e-8)
     assert np.isclose(state.twiss_at(end).beta_y, 9.0, atol=1.0e-8)
-    assert np.isclose(state.twiss_at(end).beta_x, state.twiss_at(start).beta_x, atol=1.0e-8)
-    assert np.isclose(state.twiss_at(end).alpha_y, state.twiss_at(start).alpha_y, atol=1.0e-8)
+    assert np.isclose(
+        state.twiss_at(end).beta_x, state.twiss_at(start).beta_x, atol=1.0e-8
+    )
+    assert np.isclose(
+        state.twiss_at(end).alpha_y, state.twiss_at(start).alpha_y, atol=1.0e-8
+    )
 
 
 def test_rmatrix_entry_target():
@@ -392,27 +438,7 @@ def test_rmatrix_block_target():
     assert np.isclose(dvar.l, 2.4, atol=1.0e-4)
 
 
-def test_phase_advance_target_stable_and_unstable_planes():
-    lat, start, _quad, end = _single_quad_lattice(k1=1.0, length=1.0)
-
-    problem = MatchProblem(lat, _twiss_seed())
-    problem.target_phase_advance(start, end, "x", value=1.0, weight=1.0, tol=1.0e-12)
-    problem.target_phase_advance(start, end, "y", value=1j, weight=1.0, tol=1.0e-12)
-
-    merit, reports, _objectives, _state = problem.evaluate()
-
-    assert np.isclose(merit, 0.0, atol=1.0e-20)
-    assert all(report.met for report in reports)
-    assert reports[0].details["type"] == "floquet_phase"
-    assert reports[0].details["plane"] == "x"
-    assert np.isclose(reports[0].details["actual_re"], 1.0, atol=1.0e-12)
-    assert np.isclose(reports[0].details["actual_im"], 0.0, atol=1.0e-12)
-    assert reports[1].details["plane"] == "y"
-    assert np.isclose(reports[1].details["actual_re"], 0.0, atol=1.0e-12)
-    assert np.isclose(reports[1].details["actual_im"], 1.0, atol=1.0e-12)
-
-
-def test_phase_advance_target_is_independent_of_initial_twiss():
+def test_phase_advance_target_depends_on_initial_twiss():
     lat, start, _quad, end = _single_quad_lattice(k1=1.0, length=1.0)
 
     tw_a = _twiss_seed()
@@ -423,39 +449,98 @@ def test_phase_advance_target_is_independent_of_initial_twiss():
     reports = []
     tracked_phase_deltas = []
     for tw0 in (tw_a, tw_b):
+        phase = _phase_advance_from_lattice(lat, start, end, tw0, "x")
         problem = MatchProblem(lat, tw0)
-        problem.target_phase_advance(start, end, "x", value=1.0, weight=1.0, tol=1.0e-12)
+        problem.target_phase_advance(
+            start, end, "x", value=phase, weight=1.0, tol=1.0e-12
+        )
         _merit, target_reports, _objectives, state = problem.evaluate()
         reports.append(target_reports[0])
         tracked_phase_deltas.append(state.twiss_at(end).mux - state.twiss_at(start).mux)
 
-    assert all(np.isclose(report.residual_norm, 0.0, atol=1.0e-12) for report in reports)
+    assert all(
+        np.isclose(report.residual_norm, 0.0, atol=1.0e-12) for report in reports
+    )
     assert not np.isclose(tracked_phase_deltas[0], tracked_phase_deltas[1], atol=1.0e-6)
 
 
 def test_phase_advance_target_can_match_quadrupole_strength():
-    lat, start, quad, end = _single_quad_lattice(k1=0.64, length=1.0)
+    target_k1 = 1.44
+    lat, start, quad, end = _single_quad_lattice(k1=target_k1, length=1.0)
+    target_phase = _phase_advance_from_lattice(lat, start, end, _twiss_seed(), "x")
+
+    quad.k1 = 0.64
 
     problem = MatchProblem(lat, _twiss_seed())
     problem.vary_element(quad, "k1", limits=(0.01, 4.0), name="Q.k1")
-    problem.target_phase_advance(start, end, "x", value=1.2, weight=1.0e6, tol=0.0)
+    problem.target_phase_advance(
+        start, end, "x", value=target_phase, weight=1.0e6, tol=0.0
+    )
 
     result = problem.solve(solver="ls_trf", max_iter=120, tol=1.0e-12)
 
     assert result.success
-    assert np.isclose(quad.k1, 1.44, atol=1.0e-5)
+    assert np.isclose(quad.k1, target_k1, atol=1.0e-5)
 
 
-def test_phase_advance_target_rejects_invalid_target_values():
+def test_phase_advance_target_wraps_phase():
     lat, start, _quad, end = _single_quad_lattice(k1=1.0, length=1.0)
+    phase = _phase_advance_from_lattice(lat, start, end, _twiss_seed(), "x")
+
     problem = MatchProblem(lat, _twiss_seed())
+    problem.target_phase_advance(
+        start, end, "x", value=phase + 2.0 * np.pi, tol=1.0e-12
+    )
 
-    with pytest.raises(ValueError, match="non-negative"):
-        problem.target_phase_advance(start, end, "x", value=-0.1)
+    merit, reports, _objectives, _state = problem.evaluate()
 
-    with pytest.raises(ValueError, match="purely imaginary"):
-        problem.target_phase_advance(start, end, "x", value=0.1 + 1j)
+    assert np.isclose(merit, 0.0, atol=1.0e-20)
+    assert reports[0].met
 
+
+def test_phase_advance_target_phase_edge_cases_and_periodicity():
+    """Ensure matching can handle phase advance values outside [-pi, pi] and acts periodically the same."""
+    
+    def do(delta_phase):
+        lat, start, quad1, quad2, drift, end = _fodo_lattice(
+            k1=1.0, quad_length=1.0, drift_length=1.0
+        )
+        phase = _phase_advance_from_lattice(lat, start, end, _twiss_seed(), "x")
+
+        problem = MatchProblem(lat, _twiss_seed())
+        problem.vary_element(quad1, "k1", limits=(0.01, 100.0), name="Q1.k1")
+        problem.vary_element(quad2, "k1", limits=(-100.0, -0.01), name="Q2.k1")
+        problem.vary_element(drift, "l", limits=(0.1, 100.0), name="D.l")
+        problem.target_phase_advance(start, end, "x", value=phase + delta_phase, tol=1.0e-8)
+        result = problem.solve(tol=1e-12)
+
+        diff = _phase_advance_from_lattice(lat, start, end, _twiss_seed(), "x") - phase
+        assert np.isclose(1 - np.cos(diff - delta_phase), 0.0, atol=1.0e-8)
+        assert result.success and result.target_reports[0].met
+
+    # edge cases
+    do(-np.pi)
+    do(+np.pi)
+    do(-2*np.pi)
+    do(2*np.pi)
+
+    # periodicity
+    do(0.321 - 3 * np.pi)
+    do(0.321 - 2 * np.pi)
+    do(0.321 - 1 * np.pi)
+    do(0.321 + 0 * np.pi)
+    do(0.321 + 1 * np.pi)
+    do(0.321 + 2 * np.pi)
+    do(0.321 + 3 * np.pi)
+
+    # periodicity
+    do(2/3 * np.pi - 3 * np.pi)
+    do(2/3 * np.pi - 2 * np.pi)
+    do(2/3 * np.pi - 1 * np.pi)
+    do(2/3 * np.pi + 0 * np.pi)
+    do(2/3 * np.pi + 1 * np.pi)
+    do(2/3 * np.pi + 2 * np.pi)
+    do(2/3 * np.pi + 3 * np.pi)
 
 def test_power_supply_linked_variable():
     start = Marker(eid="S")

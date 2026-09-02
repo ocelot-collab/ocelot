@@ -71,6 +71,44 @@ The root facade is curated and lazy-loaded, so short-lived scripts can start
 quickly without importing plotting, radiation, pandas, SciPy, or optional
 acceleration modules until those features are actually used.
 
+## Repeated Elements and Position Lookups
+
+A lattice may reuse the same element object at several positions. This is
+useful when those placements intentionally share parameters, but the object by
+itself then does not identify one position:
+
+```python
+import ocelot as ocl
+
+d = ocl.Drift(l=1.0, eid="D")
+q = ocl.Quadrupole(l=0.3, k1=1.0, eid="Q")
+lat = ocl.MagneticLattice((d, q, d))
+
+lat.find_element_indices(d)                 # [0, 2]
+lat.resolve_element_index(d, occurrence=0) # 0
+lat.resolve_element_index(d, occurrence=1) # 2
+```
+
+APIs that accept only an element object and require one lattice position raise
+`ValueError` when that instance is repeated instead of silently choosing its
+first or last occurrence. Element IDs are not used for this check because IDs
+need not be unique.
+
+Attaching calculated Twiss parameters directly to elements remains available
+as a convenience for small scripts. Attach only selected unique elements when
+the lattice contains reused objects:
+
+```python
+tws0 = ocl.Twiss(beta_x=10.0, beta_y=12.0)
+tws = ocl.twiss(lat, tws0, attach2elem=[q])
+print(q.tws.beta_x)  # Twiss at the exit of the unique q occurrence
+```
+
+`attach2elem=True` requires every element instance in the lattice to be unique.
+A selected repeated instance also raises because one `element.tws` attribute
+cannot represent several locations. Matcher results can address deliberate
+repetitions explicitly with `state.twiss_at(element, occurrence=n)`.
+
 ---
 
 ## Core Modules & API Reference

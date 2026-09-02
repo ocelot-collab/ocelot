@@ -103,6 +103,32 @@ When adding or changing an element, check the architecture-contract tests in
 method path and the first-order optics path unless the existing contract says
 otherwise.
 
+## Element Identity and Lattice Occurrences
+
+The same element object may intentionally appear more than once in
+`MagneticLattice.sequence`, for example to share a magnet strength or reuse
+equal-length drifts. Repeated instances are valid for ordered propagation, but
+an element object alone does not identify one lattice position.
+
+For location-sensitive code:
+
+- Compare element occurrences by identity (`is`), not by `id` strings or
+  physics parameters. Element IDs are not required to be unique.
+- Use `MagneticLattice.find_element_indices(element)` to obtain all occurrence
+  indices.
+- Use `MagneticLattice.resolve_element_index(element)` when the caller requires
+  a unique occurrence. It raises for absent or repeated instances. Pass the
+  zero-based `occurrence` argument only in APIs that explicitly support it.
+- Do not use `sequence.index(element)` or map an element object directly to one
+  position-dependent value without first proving uniqueness.
+- Keep repeated instances legal at lattice construction. Validate ambiguity at
+  the API boundary that needs a unique position.
+
+`twiss(..., attach2elem=True)` therefore requires every attached element to be
+unique. To attach only selected unique elements when other lattice objects are
+reused, pass an iterable such as `attach2elem=[q1, b1]`. Matcher state uses
+`state.twiss_at(element, occurrence=n)` for deliberate repeated occurrences.
+
 ## Import Guidance
 
 `from ocelot import *` is a legacy tutorial style. Keep the public facade

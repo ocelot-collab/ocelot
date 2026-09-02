@@ -13,33 +13,12 @@ class ProcessTable:
         self.lat = lattice
 
     def _find_unique_index(self, elem, arg_name: str) -> int:
-        """
-        Find a unique index of `elem` in lattice.sequence by identity (is).
+        """Resolve a unique physics-process boundary in the lattice."""
 
-        If the element is not found or appears more than once,
-        raise a ValueError to avoid ambiguity for physics processes.
-        """
-        matches = [i for i, e in enumerate(self.lat.sequence) if e is elem]
-
-        if not matches:
-            raise ValueError(
-                f"add_physics_proc: element passed as {arg_name} "
-                f"({getattr(elem, 'id', repr(elem))}) is not present in lattice.sequence."
-            )
-
-        if len(matches) > 1:
-            raise ValueError(
-                "add_physics_proc: element passed as "
-                f"{arg_name} ({getattr(elem, 'id', repr(elem))}) appears "
-                f"{len(matches)} times in lattice.sequence. "
-                "This is ambiguous for physics processes. "
-                "Please create separate element instances for each occurrence, e.g.\n"
-                "    q1a = Quadrupole(l=1, k1=1)\n"
-                "    q1b = Quadrupole(l=1, k1=1)\n"
-                "and use those distinct objects in the lattice."
-            )
-
-        return matches[0]
+        try:
+            return self.lat.resolve_element_index(elem)
+        except ValueError as exc:
+            raise ValueError(f"add_physics_proc: invalid {arg_name}: {exc}") from exc
 
     def searching_kick_proc(self, physics_proc, elem1):
         """

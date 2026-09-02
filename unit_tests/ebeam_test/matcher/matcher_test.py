@@ -108,6 +108,25 @@ def test_twiss_target_on_element():
     assert np.isclose(dvar.l, 2.2, atol=1.0e-4)
 
 
+def test_match_state_resolves_repeated_element_occurrences_explicitly():
+    start = Marker(eid="START")
+    shared = Drift(l=0.5, eid="D")
+    end = Marker(eid="END")
+    lat = SimpleMagneticLattice((start, shared, shared, end))
+
+    problem = MatchProblem(lat, _twiss_seed())
+    _merit, _targets, _objectives, state = problem.evaluate()
+
+    with pytest.raises(ValueError, match=r"indices \[1, 2\]"):
+        state.twiss_at(shared)
+
+    assert np.isclose(state.twiss_at(shared, occurrence=0).s, 0.5)
+    assert np.isclose(state.twiss_at(shared, occurrence=1).s, 1.0)
+    assert [tw.s for tw in state.twisses_at(shared)] == [0.5, 1.0]
+    assert shared not in state.twiss_by_element
+    assert state.twiss_by_element[end] is state.twiss_at(end)
+
+
 def test_vary_drift_length_with_finite_limits():
     lat, _start, dvar, end = _simple_drift_lattice(3.0)
     problem = MatchProblem(lat, _twiss_seed())

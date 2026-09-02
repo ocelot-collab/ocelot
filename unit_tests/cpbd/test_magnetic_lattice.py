@@ -31,6 +31,35 @@ def test_magnetic_lattice_find_indices_by_predicate():
     assert indices == [1, 3]
 
 
+def test_magnetic_lattice_resolves_element_occurrences_by_identity():
+    shared = Drift(l=0.1, eid="D")
+    same_id_but_distinct = Drift(l=0.2, eid="D")
+    lattice = MagneticLattice((shared, same_id_but_distinct, shared))
+
+    assert lattice.find_element_indices(shared) == [0, 2]
+    assert lattice.find_element_indices(same_id_but_distinct) == [1]
+    assert lattice.resolve_element_index(shared, occurrence=0) == 0
+    assert lattice.resolve_element_index(shared, occurrence=1) == 2
+    assert lattice.resolve_element_index(same_id_but_distinct) == 1
+
+    with pytest.raises(ValueError, match=r"indices \[0, 2\]"):
+        lattice.resolve_element_index(shared)
+    with pytest.raises(ValueError, match="occurrence 2 is out of range"):
+        lattice.resolve_element_index(shared, occurrence=2)
+
+
+def test_get_sequence_part_rejects_an_ambiguous_element_boundary():
+    shared = Drift(l=0.1, eid="D")
+    marker = Marker(eid="END")
+    lattice = MagneticLattice((shared, marker, shared))
+
+    with pytest.raises(ValueError, match=r"indices \[0, 2\]"):
+        lattice.get_sequence_part(start=shared, stop=marker)
+
+    with pytest.raises(ValueError, match=r"indices \[0, 2\]"):
+        lattice.transfer_maps(energy=1.0, start=shared, stop=marker)
+
+
 def test_magnetic_lattice_insert_markers_by_predicate():
     d1 = Drift(l=0.1)
     sb = SBend(l=0.2, angle=3)
@@ -107,4 +136,3 @@ def test_magnetic_lattice_periodic_twiss():
     ref = np.array([beta_x, beta_y, alpha_x, alpha_y, gamma_x, gamma_y, E, s])
     res = np.array([tw_p.beta_x, tw_p.beta_y, tw_p.alpha_x, tw_p.alpha_y, tw_p.gamma_x, tw_p.gamma_y, tw_p.E, tw_p.s])
     np.testing.assert_allclose(res, ref, rtol=1.e-12, atol=1.e-14)
-

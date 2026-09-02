@@ -164,8 +164,10 @@ class MatchState:
         - If ``periodic=True``, this is the periodic Twiss found from the
           current lattice/variables.
     twiss_by_element:
-        Dictionary mapping element object -> Twiss at that element (after
-        applying its first-order transfer maps).
+        Dictionary mapping uniquely placed element objects -> Twiss at that
+        element (after applying its first-order transfer maps). Repeated
+        element instances are omitted because one object cannot identify one
+        lattice position; use :meth:`twiss_at` with ``occurrence`` instead.
     twiss_sequence:
         Ordered list of Twiss objects along ``lat.sequence``.
         Item ``i`` corresponds to ``lat.sequence[i]``.
@@ -189,12 +191,32 @@ class MatchState:
     failure_reason: str = ""
     _r_cache: Dict[Tuple[OpticElement, OpticElement], np.ndarray] = field(default_factory=dict)
 
-    def twiss_at(self, element: OpticElement) -> Twiss:
-        """Return Twiss at a given element for this evaluation state."""
+    def twiss_at(self, element: OpticElement, occurrence: int | None = None) -> Twiss:
+        """Return exit Twiss at one lattice occurrence of ``element``.
 
-        if element not in self.twiss_by_element:
-            raise ValueError(f"Element '{getattr(element, 'id', element)}' not found in twiss map")
-        return self.twiss_by_element[element]
+        ``occurrence`` is zero-based among repeated appearances of the same
+        object. If it is omitted, the element must occur exactly once.
+        """
+
+        index = self.lat.resolve_element_index(element, occurrence=occurrence)
+        if index >= len(self.twiss_sequence):
+            raise ValueError(
+                f"Twiss at lattice index {index} is unavailable because propagation "
+                "did not reach that element."
+            )
+        return self.twiss_sequence[index]
+
+    def twisses_at(self, element: OpticElement) -> List[Twiss]:
+        """Return exit Twiss values for every occurrence of ``element``."""
+
+        indices = self.lat.find_element_indices(element)
+        if not indices:
+            raise ValueError(
+                f"Element '{getattr(element, 'id', element)}' is not present in lattice.sequence."
+            )
+        if indices[-1] >= len(self.twiss_sequence):
+            raise ValueError("Twiss values are unavailable for one or more element occurrences.")
+        return [self.twiss_sequence[index] for index in indices]
 
     def r_matrix(self, start: OpticElement, end: OpticElement) -> np.ndarray:
         """Return cached (or lazily computed) transfer matrix between elements.
@@ -1526,12 +1548,17 @@ class MatchProblem:
         tw.s = 0.0
         twiss_by_element: Dict[OpticElement, Twiss] = {}
         twiss_sequence: List[Twiss] = []
+        element_counts: Dict[int, int] = {}
+        for elem in self.lat.sequence:
+            identity = id(elem)
+            element_counts[identity] = element_counts.get(identity, 0) + 1
 
         try:
             for elem in self.lat.sequence:
                 for tm in elem.first_order_tms:
                     tw = tm * tw
-                twiss_by_element[elem] = tw
+                if element_counts[id(elem)] == 1:
+                    twiss_by_element[elem] = tw
                 twiss_sequence.append(tw)
             return MatchState(
                 lat=self.lat,

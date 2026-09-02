@@ -319,9 +319,14 @@ def rf2beam_xfel_linac(v, phi, init_energy=0.13):
 
 def single_plane_dipole_wake(p=0.5e-3, t=0.25e-3, b=500e-6, l=5):
     """
-    Function calculates dipole (monopole) wake for single plane corrugated structure. Default parameters are taken
-    for EuXFEL diagnostic streaker https://www.slac.stanford.edu/pubs/slacpubs/16750/slac-pub-16881.pdf
-    Coefficient for s0yd is corrected by I.Zagorodnov 8/9 -> 1/2
+    Calculate the vertical monopole (streaking) wake for one corrugated plate.
+
+    This term was called the ``dipole`` wake in Bane, Stupakov, and
+    Zagorodnov, SLAC-PUB-16881 (2016), hence the legacy function name. Qin,
+    Dohlus, and Zagorodnov, Phys. Rev. Accel. Beams 26, 064402 (2023),
+    Eqs. (60) and (64), identify it as the vertical monopole and give its
+    characteristic distance with the 8/9 coefficient. The 1/2 correction in
+    their Eq. (61) applies to the dipole/quadrupole scale, not this monopole.
 
     :param l: 5, corrugated plane length in m
     :param p: 0.5e-3  # period in m
@@ -331,9 +336,9 @@ def single_plane_dipole_wake(p=0.5e-3, t=0.25e-3, b=500e-6, l=5):
     """
 
     alpha = 1 - 0.465 * np.sqrt(t / p) - 0.070 * (t / p)
-    s0yd = b ** 2 * t / (2 * np.pi * alpha ** 2 * p ** 2)
-    wyd = lambda s: l * 2. / b ** 3 * s0yd * (
-            1 - (1 + np.sqrt(s / s0yd)) * np.exp(-np.sqrt(s / s0yd))) * Z0 * speed_of_light / (4 * np.pi)
+    s0ym = 8 * b ** 2 * t / (9 * np.pi * alpha ** 2 * p ** 2)
+    wyd = lambda s: l * 2. / b ** 3 * s0ym * (
+            1 - (1 + np.sqrt(s / s0ym)) * np.exp(-np.sqrt(s / s0ym))) * Z0 * speed_of_light / (4 * np.pi)
 
     return wyd
 
@@ -342,7 +347,9 @@ def single_plate_quadrupole_wake(p=0.5e-3, t=0.25e-3, b=500e-6, l=5):
     """
     Function calculates quadrupole wake for single plane corrugated structure. Default parameters are taken for EuXFEL
     diagnostic streaker https://www.slac.stanford.edu/pubs/slacpubs/16750/slac-pub-16881.pdf
-    Coefficient for s0yq is corrected by I.Zagorodnov 8/9 -> 1/2
+    Qin, Dohlus, and Zagorodnov, Phys. Rev. Accel. Beams 26, 064402
+    (2023), Eqs. (61) and (66), correct the earlier single-plate quadrupole
+    characteristic distance from the 8/9 coefficient to 1/2.
 
     :param l: corrugated plane length in m
     :param p: 0.5e-3  # period
@@ -367,9 +374,9 @@ def convolve_beam(current, wake):
     :param wake: wake function in form: wake(s)
     :return: wake_kick[:, 0] - s in [m], wake_kick[:, 1] - V
     """
-    s_shift = current[0, 0]
-    current[:, 0] -= s_shift
-    s = current[:, 0]
+    # Work on a shifted copy of the coordinate. Earlier versions modified
+    # current[:, 0] in place, making repeated calculations depend on call order.
+    s = current[:, 0] - current[0, 0]
     step = (s[-1] - s[0]) / (len(s) - 1)
 
     q = current[:, 1] / speed_of_light
@@ -380,6 +387,116 @@ def convolve_beam(current, wake):
     s_new = (np.cumsum(np.ones(len(wake))) - 1.) * step
     wake_kick = np.vstack((s_new, wake))
     return wake_kick.T
+
+
+def passive_streaker_energy_effects(w_l, w_ld, w_lq, sigma_x, sigma_y, length=1.0):
+    """Calculate passive-streaker mean energy change and induced slice spread.
+
+    The supplied wake potentials are the convolutions of the bunch line-charge
+    density with the longitudinal wake, the longitudinal derivative of the
+    transverse dipole wake, and the longitudinal derivative of the transverse
+    quadrupole wake, respectively. They must not already include the structure
+    length.
+
+    Parameters
+    ----------
+    w_l : array-like
+        Ordinary longitudinal wake potential in energy per unit length.
+    w_ld : array-like
+        Dipole Panofsky-Wenzel wake potential in energy per length squared.
+    w_lq : array-like
+        Quadrupole Panofsky-Wenzel wake potential in energy per length cubed.
+    sigma_x, sigma_y : array-like
+        Rms transverse slice sizes at the passive streaker in length units.
+    length : float, optional
+        Passive-streaker length in the same length unit, by default 1.
+
+    Returns
+    -------
+    mean_energy_change, induced_energy_spread : numpy.ndarray
+        Mean slice energy change and rms slice energy spread in the energy unit
+        implied by the input wake potentials. The sign of
+        ``mean_energy_change`` follows the wake convention supplied by the
+        caller; ``induced_energy_spread`` is nonnegative.
+
+    Notes
+    -----
+    Implements Eqs. (A10) and (A11) of P. Dijkstal, W. Qin, and S. Tomin,
+    Phys. Rev. Accel. Beams 27, 050702 (2024),
+    https://doi.org/10.1103/PhysRevAccelBeams.27.050702.
+    """
+
+    w_l = np.asarray(w_l, dtype=float)
+    w_ld = np.asarray(w_ld, dtype=float)
+    w_lq = np.asarray(w_lq, dtype=float)
+    sigma_x = np.asarray(sigma_x, dtype=float)
+    sigma_y = np.asarray(sigma_y, dtype=float)
+
+    mean_energy_change = length * (
+        w_l + 0.5 * (sigma_x ** 2 - sigma_y ** 2) * w_lq
+    )
+    induced_energy_spread = abs(length) * np.sqrt(
+        (w_ld * sigma_y) ** 2
+        + 0.5 * w_lq ** 2 * (sigma_x ** 4 + sigma_y ** 4)
+    )
+    return mean_energy_change, induced_energy_spread
+
+
+def passive_streaker_energy_resolution(
+        spectrometer_resolution,
+        time_resolution,
+        incoming_energy_chirp,
+        induced_energy_spread=0.0,
+        passive_streaker_energy_chirp=0.0):
+    """Combine the terms of the updated passive-streaker energy resolution.
+
+    Parameters
+    ----------
+    spectrometer_resolution : array-like
+        Natural beam-size and optional screen-blur contribution in energy
+        units.
+    time_resolution : array-like
+        Local rms time resolution.
+    incoming_energy_chirp : array-like
+        Derivative of incoming mean slice energy with respect to time.
+    induced_energy_spread : array-like, optional
+        Additional rms slice energy spread generated inside the passive
+        streaker, by default 0.
+    passive_streaker_energy_chirp : array-like, optional
+        Derivative of the passive-streaker mean energy change with respect to
+        time, by default 0. It is added to ``incoming_energy_chirp`` before
+        calculating time-to-energy spillover.
+
+    Returns
+    -------
+    numpy.ndarray
+        Total rms energy resolution. Energy and time units may be chosen
+        freely provided all inputs are mutually consistent.
+
+    Notes
+    -----
+    Implements Eq. (5) of P. Dijkstal, W. Qin, and S. Tomin,
+    Phys. Rev. Accel. Beams 27, 050702 (2024),
+    https://doi.org/10.1103/PhysRevAccelBeams.27.050702. The chirp used in the
+    spillover term is the outgoing chirp,
+    ``incoming_energy_chirp + passive_streaker_energy_chirp``.
+    """
+
+    spectrometer_resolution = np.asarray(spectrometer_resolution, dtype=float)
+    time_resolution = np.asarray(time_resolution, dtype=float)
+    incoming_energy_chirp = np.asarray(incoming_energy_chirp, dtype=float)
+    induced_energy_spread = np.asarray(induced_energy_spread, dtype=float)
+    passive_streaker_energy_chirp = np.asarray(
+        passive_streaker_energy_chirp, dtype=float
+    )
+    outgoing_energy_chirp = (
+        incoming_energy_chirp + passive_streaker_energy_chirp
+    )
+    return np.sqrt(
+        spectrometer_resolution ** 2
+        + induced_energy_spread ** 2
+        + (time_resolution * outgoing_energy_chirp) ** 2
+    )
 
 
 def passive_streaker_resolutions(dipole_kick, quad_kick, R, tw, kick="vert", emittn_x=1e-6, emittn_y=1e-6, energy=14,
@@ -502,7 +619,7 @@ def passive_streaker_resolutions(dipole_kick, quad_kick, R, tw, kick="vert", emi
         sigma_x2 = emitt_x * ((R[0, 0] - R[0, 1] * wq) ** 2 * tw.beta_x -
                               2 * R[0, 1] * (R[0, 0] - R[0, 1] * wq) * tw.alpha_x + R[0, 1] ** 2 * tw.gamma_x)
 
-        r_energy = energy_eV / R[0, 5] * np.sqrt(sigma_R ** 2 + np.abs(sigma_x2))
+        r_energy = energy_eV / abs(R[0, 5]) * np.sqrt(sigma_R ** 2 + np.abs(sigma_x2))
     else:
         sigma_x2 = emitt_x * (R[0, 1] ** 2 * wq ** 2 * tw.beta_x + 2 * R[0, 1] * wq * (
                 R[0, 0] * tw.beta_x - R[0, 1] * tw.alpha_x) +
@@ -515,7 +632,7 @@ def passive_streaker_resolutions(dipole_kick, quad_kick, R, tw, kick="vert", emi
         sigma_y2 = emitt_y * ((R[2, 2] - R[2, 3] * wq) ** 2 * tw.beta_y -
                               2 * R[2, 3] * (R[2, 2] - R[2, 3] * wq) * tw.alpha_y + R[2, 3] ** 2 * tw.gamma_y)
 
-        r_energy = energy_eV / R[2, 5] * np.sqrt(sigma_R ** 2 + np.abs(sigma_y2))
+        r_energy = energy_eV / abs(R[2, 5]) * np.sqrt(sigma_R ** 2 + np.abs(sigma_y2))
 
     r_temp = np.vstack([quad_kick[:, 0], r_temp]).T
     r_energy = np.vstack([quad_kick[:, 0], r_energy]).T

@@ -72,21 +72,69 @@ def trace_z(lattice, obj0, z_array):
     return obj_list
 
 
+def _resolve_attachment_targets(lattice, attach2elem):
+    """Return unique ``(element, sequence_index)`` attachment targets."""
+
+    if attach2elem is None or attach2elem is False:
+        return []
+
+    if attach2elem is True:
+        requested = []
+        seen = set()
+        for element in lattice.sequence:
+            identity = id(element)
+            if identity not in seen:
+                requested.append(element)
+                seen.add(identity)
+    else:
+        if isinstance(attach2elem, (bool, np.bool_)):
+            if not attach2elem:
+                return []
+            requested = list(lattice.sequence)
+        else:
+            try:
+                requested = list(attach2elem)
+            except TypeError as exc:
+                raise TypeError(
+                    "attach2elem must be a bool or an iterable of element instances"
+                ) from exc
+
+    targets = []
+    seen = set()
+    for element in requested:
+        identity = id(element)
+        if identity in seen:
+            continue
+        index = lattice.resolve_element_index(element)
+        targets.append((element, index))
+        seen.add(identity)
+    return targets
+
+
 def trace_obj(lattice, obj, nPoints=None, attach2elem=False):
     """
     track object through the lattice
     obj must be Twiss or Particle
     """
 
+    attachment_targets = _resolve_attachment_targets(lattice, attach2elem)
+    if attachment_targets and nPoints is not None:
+        raise ValueError("attach2elem requires nPoints=None so element exits are available")
+
     if nPoints is None:
         obj_list = [obj]
+        element_exit_objects = []
         for e in lattice.sequence:
             for tm in e.first_order_tms:
                 obj = tm * obj
                 obj.id = e.id
                 obj_list.append(obj)
-            if attach2elem:
-                e.tws = obj
+            element_exit_objects.append(obj)
+
+        # Attach only after successful propagation so a failed calculation
+        # cannot leave a partially updated lattice.
+        for element, index in attachment_targets:
+            element.tws = element_exit_objects[index]
     else:
         z_array = np.linspace(0, lattice.totalLen, nPoints, endpoint=True)
         obj_list = trace_z(lattice, obj, z_array)
@@ -149,14 +197,22 @@ def twiss(lattice, tws0=None, nPoints=None, return_df=False, attach2elem=False):
     """
     twiss parameters calculation
 
-    :param attach2elem: if True and nPoints=None Twiss will be attached to 'elem.tws', Twiss corresponds to the end of the element,
-                        not recommended for standard use, but may be handy for small scripts
+    :param attach2elem: if True and nPoints=None, attach the exit Twiss to every
+                        element as ``elem.tws``. An iterable attaches only to
+                        the selected elements. Every selected element instance
+                        must identify exactly one lattice occurrence. This is
+                        not recommended for standard use, but may be handy for
+                        small scripts.
     :param return_df:
     :param lattice: lattice, MagneticLattice() object
     :param tws0: initial twiss parameters, Twiss() object. If None, function tries to find periodic solution.
     :param nPoints: number of points per cell. If None, then twiss parameters are calculated at the end of each element.
     :return: list of Twiss() objects
     """
+    attachment_targets = _resolve_attachment_targets(lattice, attach2elem)
+    if attachment_targets and nPoints is not None:
+        raise ValueError("attach2elem requires nPoints=None so element exits are available")
+
     if tws0 is None:
         tws0 = lattice.periodic_twiss(tws0)
 
@@ -167,7 +223,8 @@ def twiss(lattice, tws0=None, nPoints=None, return_df=False, attach2elem=False):
                 _logger.info(' twiss: Twiss: no periodic solution')
                 return None
 
-        twiss_list = trace_obj(lattice, tws0, nPoints, attach2elem)
+        attachment_elements = [element for element, _index in attachment_targets]
+        twiss_list = trace_obj(lattice, tws0, nPoints, attachment_elements)
 
         if return_df:
             twiss_list = twiss_iterable_to_df(twiss_list)

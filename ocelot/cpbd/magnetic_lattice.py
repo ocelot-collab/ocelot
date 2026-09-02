@@ -219,10 +219,66 @@ class MagneticLattice:
     def totalLen(self):
         return sum([e.l for e in self.sequence])
 
+    def find_element_indices(self, element: E) -> List[int]:
+        """Return all sequence indices containing ``element`` by identity.
+
+        The same element instance may intentionally occur more than once in a
+        lattice.  Element IDs and physics parameters are not used here because
+        neither is required to be unique.
+        """
+
+        return [index for index, candidate in enumerate(self.sequence) if candidate is element]
+
+    def resolve_element_index(self, element: E, occurrence: int | None = None) -> int:
+        """Resolve an element instance to one unambiguous sequence index.
+
+        Parameters
+        ----------
+        element
+            Element instance to locate by identity.
+        occurrence
+            Zero-based occurrence among identity matches.  If omitted, the
+            element must occur exactly once.
+
+        Raises
+        ------
+        ValueError
+            If the element is absent, is ambiguous without ``occurrence``, or
+            the requested occurrence does not exist.
+        TypeError
+            If ``occurrence`` is not an integer or ``None``.
+        """
+
+        indices = self.find_element_indices(element)
+        element_id = getattr(element, "id", repr(element))
+
+        if not indices:
+            raise ValueError(f"Element '{element_id}' is not present in lattice.sequence.")
+
+        if occurrence is None:
+            if len(indices) > 1:
+                raise ValueError(
+                    f"Element '{element_id}' appears {len(indices)} times in lattice.sequence "
+                    f"at indices {indices}. The element instance does not identify a unique "
+                    "lattice occurrence; pass an occurrence where supported or use distinct "
+                    "element instances."
+                )
+            return indices[0]
+
+        if isinstance(occurrence, bool) or not isinstance(occurrence, (int, np.integer)):
+            raise TypeError("occurrence must be a zero-based integer or None")
+        if occurrence < 0 or occurrence >= len(indices):
+            raise ValueError(
+                f"Element '{element_id}' has {len(indices)} occurrence(s) in lattice.sequence; "
+                f"occurrence {occurrence} is out of range."
+            )
+        return indices[int(occurrence)]
+
     def get_sequence_part(self, start: E | None, stop: E | None):
         """
         Return a sub-sequence of elements from `start` to `stop` (inclusive).
-        Raises a ValueError if either element is not found, or if `stop` precedes `start`.
+        Raises a ValueError if either element is absent or repeated, or if
+        `stop` precedes `start`.
 
         Parameters
         ----------
@@ -240,15 +296,8 @@ class MagneticLattice:
         if len(seq) == 0:
             raise ValueError("No elements in sequence.")
 
-        try:
-            id1 = seq.index(start) if start is not None else 0
-        except ValueError:
-            raise ValueError(f"Start element {getattr(start, 'id', start)} not found in lattice.")
-
-        try:
-            id2 = seq.index(stop) if stop is not None else len(seq) - 1
-        except ValueError:
-            raise ValueError(f"Stop element {getattr(stop, 'id', stop)} not found in lattice.")
+        id1 = self.resolve_element_index(start) if start is not None else 0
+        id2 = self.resolve_element_index(stop) if stop is not None else len(seq) - 1
 
         # --- new check: ensure stop is after start ---
         if id2 < id1:

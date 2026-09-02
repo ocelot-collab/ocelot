@@ -1,7 +1,11 @@
 import numpy as np
+import pytest
 from unittest.mock import patch
 from ocelot.cpbd.beam import Twiss
 from ocelot.cpbd.beam import core as beam_core
+from ocelot.cpbd.elements import Drift, Quadrupole
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.optics import twiss
 from ocelot.common.globals import m_e_GeV
 
 gamma = 14 / m_e_GeV
@@ -140,3 +144,60 @@ def test_tws_emit_xn_without_energy_warns_and_is_applied_after_energy_is_set():
 
     assert np.isclose(tw.emit_xn, 0.6e-6, rtol=1e-10)
     assert np.isclose(tw.emit_x, 0.6e-6 / gamma, rtol=1e-10)
+
+
+def _optics_seed():
+    return Twiss(beta_x=10.0, beta_y=12.0, alpha_x=0.2, alpha_y=-0.3, E=1.0)
+
+
+def test_attach2elem_raises_before_attaching_when_an_element_instance_is_repeated():
+    drift = Drift(l=1.0, eid="D")
+    quad = Quadrupole(l=0.2, k1=1.0, eid="Q")
+    lattice = MagneticLattice((drift, quad, drift))
+
+    with pytest.raises(ValueError, match=r"Element 'D'.*indices \[0, 2\]"):
+        twiss(lattice, _optics_seed(), attach2elem=True)
+
+    assert not hasattr(drift, "tws")
+    assert not hasattr(quad, "tws")
+
+
+def test_attach2elem_iterable_attaches_only_selected_unique_elements():
+    shared_drift = Drift(l=1.0, eid="D")
+    quad = Quadrupole(l=0.2, k1=1.0, eid="Q")
+    lattice = MagneticLattice((shared_drift, quad, shared_drift))
+
+    result = twiss(lattice, _optics_seed(), attach2elem=[quad])
+
+    assert quad.tws is result[2]
+    assert np.isclose(quad.tws.s, 1.2)
+    assert not hasattr(shared_drift, "tws")
+
+
+def test_attach2elem_iterable_rejects_a_selected_repeated_element():
+    shared_drift = Drift(l=1.0, eid="D")
+    quad = Quadrupole(l=0.2, k1=1.0, eid="Q")
+    lattice = MagneticLattice((shared_drift, quad, shared_drift))
+
+    with pytest.raises(ValueError, match=r"Element 'D'.*indices \[0, 2\]"):
+        twiss(lattice, _optics_seed(), attach2elem=[shared_drift])
+
+
+def test_attach2elem_distinguishes_instances_even_when_ids_match():
+    first = Drift(l=1.0, eid="D")
+    second = Drift(l=2.0, eid="D")
+    lattice = MagneticLattice((first, second))
+
+    twiss(lattice, _optics_seed(), attach2elem=True)
+
+    assert np.isclose(first.tws.s, 1.0)
+    assert np.isclose(second.tws.s, 3.0)
+    assert first.tws is not second.tws
+
+
+def test_attach2elem_rejects_sampled_twiss_output():
+    drift = Drift(l=1.0, eid="D")
+    lattice = MagneticLattice((drift,))
+
+    with pytest.raises(ValueError, match="requires nPoints=None"):
+        twiss(lattice, _optics_seed(), nPoints=10, attach2elem=True)

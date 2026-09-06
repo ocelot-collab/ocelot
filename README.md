@@ -163,10 +163,32 @@ Ocelot's core functionality is organized into key modules:
 
 ## We welcome feedback, contributions, and new ideas
 
-
-
 - [How to create a pull request](https://www.ocelot-collab.com/docs/docu/how-to/pull_request)
 - [How to add unit tests](https://www.ocelot-collab.com/docs/docu/how-to/unit_test)
 - [How to create your own Physics Process class](https://www.ocelot-collab.com/docs/docu/how-to/phys_proc)
 
-**Disclaimer:** The OCELOT code comes with absolutely NO warranty. The authors of the OCELOT do not take any responsibility for any damage to equipments or personnel injury that may result from the use of the code.
+## Note to Developers
+### Installation
+For development it is recommended to use a virtual environment and install the development dependencies via the following commands:
+```bash
+#!/usr/bin/env bash
+
+python3 -m venv .venv
+
+. .venv/bin/activate # or for Windows: .venv\Scripts\activate
+pip install --upgrade pip
+pip install -e ".[dev]"
+```
+This automatically installs all dependencies locally into the folder `.venv` whithout changing your system Python installation.
+This package is then added to the environment as is (editable mode) so that changes to the source code are immediately reflected in this environment.
+
+### Tools
+Useful tools for development can be found in the `tasks.py` script for automating common development tasks. Use `inv --list` to see available commands (requires `invoke` package automatically installed by the previous step).
+
+For example if you want to run the unit tests and demos, you can use the command:
+```bash
+inv run-tests run-demos
+```
+
+## **Disclaimer**
+The OCELOT code comes with absolutely NO warranty. The authors of the OCELOT do not take any responsibility for any damage to equipments or personnel injury that may result from the use of the code.

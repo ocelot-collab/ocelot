@@ -48,7 +48,7 @@ def generate_example_beam():
 
 
 @only_if_openpmd_installed
-def test_write_parray_to_openpmd():
+def test_write_parray_to_openpmd(tmp_path):
     """
     Writes an ocelot parray to disk in openpmd format.
     Then it reads the array from disk and compares with the original.
@@ -58,7 +58,7 @@ def test_write_parray_to_openpmd():
     p_array = generate_example_beam()
 
     # Beam diagnostics data
-    beam_outdir = os.path.join('diags_0', 'hdf5')
+    beam_outdir = tmp_path / "diags_0" / "hdf5"
     os.makedirs(beam_outdir, exist_ok=True)
 
     # writes p_array in openpmd format
@@ -73,7 +73,7 @@ def test_write_parray_to_openpmd():
 
 
 @only_if_openpmd_installed
-def test_write_parray_to_openpmd_with_beamline():
+def test_write_parray_to_openpmd_with_beamline(tmp_path):
     """
     Tests openPMD writting capabilities in a beamline simulation.
     Then it reads the array from disk and compares with the original.
@@ -117,7 +117,7 @@ def test_write_parray_to_openpmd_with_beamline():
     navi = Navigator(lat)
 
     # Beam diagnostics data
-    beam_outdir = os.path.join('diags_1', 'hdf5')
+    beam_outdir = tmp_path / "diags_1" / "hdf5"
     os.makedirs(beam_outdir, exist_ok=True)
     markers = [mchic_start, mchic_dip1, mchic_mid, mchic_dip3, mchic_end, mend]
     for i, mark in enumerate(markers):

@@ -240,6 +240,7 @@ class TargetReport:
     met: bool
     weight: float
     details: Dict[str, Any] = field(default_factory=dict)
+    tol: float = 0.0 # default required, since new fields must be added at the end to preserve backwards compatibility
 
 
 @dataclass
@@ -414,6 +415,9 @@ class Target:
         active: bool = True,
         tag: str = "",
     ):
+        if not tol >=0:
+            raise ValueError(f"tol must be positive not {tol}")
+
         self.name = name or self.__class__.__name__
         self.weight = float(weight)
         self.tol = float(tol)
@@ -421,6 +425,7 @@ class Target:
         self.tag = tag
 
     def residuals(self, state: MatchState) -> np.ndarray:
+        """Returns array of residuals. Residuals are set to zero to indicate that they meet the tolerance."""
         raise NotImplementedError
 
     def report(self, state: MatchState) -> TargetReport:
@@ -431,10 +436,12 @@ class Target:
             residual_norm=rnorm,
             met=bool(np.all(np.abs(residuals) < 1.0e-12)),
             weight=self.weight,
+            tol=self.tol,
             details={},
         )
 
     def weighted_residuals(self, state: MatchState) -> np.ndarray:
+        """Returns array of weighted residuals. Residuals are set to zero to indicate that they meet the tolerance."""
         return np.sqrt(self.weight) * np.atleast_1d(self.residuals(state)).astype(float)
 
 
@@ -470,6 +477,7 @@ class TwissTarget(Target):
             residual_norm=abs(r),
             met=abs(r) < 1.0e-12,
             weight=self.weight,
+            tol=self.tol,
             details={
                 "type": "twiss",
                 "element": getattr(self.element, "id", None),
@@ -530,6 +538,7 @@ class TwissDifferenceTarget(Target):
             residual_norm=abs(r),
             met=abs(r) < 1.0e-12,
             weight=self.weight,
+            tol=self.tol,
             details={
                 "type": "twiss_delta",
                 "start": getattr(self.start, "id", None),
@@ -603,6 +612,7 @@ class TwissPeriodicityTarget(Target):
             residual_norm=abs(r),
             met=abs(r) < 1.0e-12,
             weight=self.weight,
+            tol=self.tol,
             details={
                 "type": "twiss_periodic",
                 "start": getattr(self.start, "id", "twiss_start"),
@@ -648,6 +658,7 @@ class GlobalTwissTarget(Target):
             residual_norm=float(np.linalg.norm(residuals)),
             met=bool(np.all(np.abs(residuals) < 1.0e-12)),
             weight=self.weight,
+            tol=self.tol,
             details={
                 "type": "global_twiss",
                 "quantity": self.quantity,
@@ -697,6 +708,7 @@ class RMatrixElementTarget(Target):
             residual_norm=abs(r),
             met=abs(r) < 1.0e-12,
             weight=self.weight,
+            tol=self.tol,
             details={
                 "type": "r_matrix",
                 "start": getattr(self.start, "id", None),
@@ -753,7 +765,10 @@ class RMatrixBlockTarget(Target):
         r_mat = state.r_matrix(self.start, self.end)
         actual = r_mat[np.ix_(self.rows, self.cols)]
         diff = actual - self.target_matrix
-        return diff.ravel().astype(float)
+        return np.asarray(
+            [_residual_scalar(float(v), 0.0, "==", self.tol) for v in diff.ravel()],
+            dtype=float,
+        )
 
     def report(self, state: MatchState) -> TargetReport:
         residuals = self.residuals(state)
@@ -762,6 +777,7 @@ class RMatrixBlockTarget(Target):
             residual_norm=float(np.linalg.norm(residuals)),
             met=bool(np.all(np.abs(residuals) < 1.0e-12)),
             weight=self.weight,
+            tol=self.tol,
             details={
                 "type": "r_matrix_block",
                 "start": getattr(self.start, "id", None),
@@ -915,6 +931,7 @@ class FloquetPhaseTarget(Target):
             residual_norm=float(np.linalg.norm(residuals)),
             met=bool(np.all(np.abs(residuals) < 1.0e-12)),
             weight=self.weight,
+            tol=self.tol,
             details={
                 "type": "floquet_phase",
                 "start": getattr(self.start, "id", None),
@@ -951,6 +968,7 @@ class TotalLengthTarget(Target):
             residual_norm=abs(r),
             met=abs(r) < 1.0e-12,
             weight=self.weight,
+            tol=self.tol,
             details={
                 "type": "total_length",
                 "actual": actual,
@@ -1617,6 +1635,7 @@ class MatchProblem:
                         residual_norm=np.inf,
                         met=False,
                         weight=target.weight,
+                        tol=target.tol,
                         details={"error": str(exc)},
                     )
                 )

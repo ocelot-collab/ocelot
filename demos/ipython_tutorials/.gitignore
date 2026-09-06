@@ -1,10 +1,11 @@
-data/filed_map.txt
-data/outputfile.hdf5
-images/frames/
-images/quad_scan_beam.gif
-images/quad_scan_frames/
-images/sbend.gif
 beams/test.ast
 beams/test.fmt1
 beams/test.npz
+data/filed_map.txt
+data/outputfile.hdf5
+frames/
+images/
 tmp_*
+tmp/
+quad_scan_frames/
+quads_strengths.csv

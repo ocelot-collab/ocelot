@@ -31,7 +31,6 @@ PARTICLE_GROUP_DATA = {
 }
 
 
-@only_if_pmd_installed
 @pytest.fixture
 def tmp_pmdh5(tmp_path):
     """tmp path to written pmd h5 file defined from above PARTICLE_GROUP_DATA"""
@@ -41,15 +40,12 @@ def tmp_pmdh5(tmp_path):
     yield pmd_path
 
 
-@only_if_pmd_installed
 @pytest.fixture
 def pmd_parray(tmp_pmdh5):
     """Ocelot ParticleArray fixture from the above PARTICLE_GROUP_DATA."""
     pgroup = pmd.ParticleGroup(h5=str(tmp_pmdh5))
     yield pmd_adaptor.particle_group_to_parray(pgroup)
 
-
-@only_if_pmd_installed
 def compare_particle_group_with_array(pgroup, parray):
     # Use the values from the pgroup for consistency as these are what
     # particle_group_to_parray uses internally.

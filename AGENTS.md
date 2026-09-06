@@ -12,6 +12,12 @@ FELs, storage rings, and transport lines. Public user documentation lives at:
 - Website: https://www.ocelot-collab.com
 - Documentation: https://www.ocelot-collab.com/docs/docu/intro/
 - Tutorials: https://www.ocelot-collab.com/docs/tutorial/intro/
+- Local documentation checkout:
+  `/Users/tomins/Nextcloud/DESY/repository/ocelot-collab.github.io`
+
+Use that local checkout whenever a source change requires public documentation
+or generated tutorial Markdown updates; the user does not need to provide its
+path again.
 
 The online documentation is useful for workflow orientation, but source code,
 docstrings, demos, and tests are the most reliable implementation references.
@@ -49,7 +55,8 @@ For a simple lattice or optics task, start with:
 
 - Elements: `ocelot.cpbd.elements`
 - Lattice container: `ocelot.cpbd.magnetic_lattice.MagneticLattice`
-- Linear optics: `ocelot.cpbd.optics.twiss`
+- Linear optics: `ocelot.cpbd.optics.twiss` and
+  `ocelot.cpbd.optics.periodic_twiss`
 - Tracking: `ocelot.cpbd.track.track`
 - Beam objects: `ocelot.cpbd.beam.Twiss`, `ParticleArray`, `generate_parray`
 - Navigation and physics process scheduling:
@@ -58,17 +65,16 @@ For a simple lattice or optics task, start with:
 Minimal example shape:
 
 ```python
-from ocelot.cpbd.elements import Drift, Quadrupole, Bend, Marker
+from ocelot.cpbd.elements import Drift, Quadrupole
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
-from ocelot.cpbd.optics import twiss
+from ocelot.cpbd.optics import periodic_twiss
 
-d = Drift(l=1.0)
-qf = Quadrupole(l=0.3, k1=1.0)
-qd = Quadrupole(l=0.3, k1=-1.0)
-b = Bend(l=0.5, angle=0.1)
-cell = (Marker(eid="start"), d, qf, d, qd, d, b, Marker(eid="stop"))
+d = Drift(l=0.5)
+qf = Quadrupole(l=0.2, k1=0.3)
+qdh = Quadrupole(l=0.1, k1=-0.3)
+cell = (qdh, d, d, qf, d, d, qdh)
 lat = MagneticLattice(cell)
-tws = twiss(lat)
+tws = periodic_twiss(lat)
 ```
 
 For workflow examples, prefer these before inventing new patterns:
@@ -124,10 +130,26 @@ For location-sensitive code:
 - Keep repeated instances legal at lattice construction. Validate ambiguity at
   the API boundary that needs a unique position.
 
-`twiss(..., attach2elem=True)` therefore requires every attached element to be
-unique. To attach only selected unique elements when other lattice objects are
-reused, pass an iterable such as `attach2elem=[q1, b1]`. Matcher state uses
+`twiss(..., attach2elem=True)` and `periodic_twiss(..., attach2elem=True)`
+therefore require every attached element to be unique. To attach only selected
+unique elements when other lattice objects are reused, pass an iterable such as
+`attach2elem=[q1, b1]`. Matcher state uses
 `state.twiss_at(element, occurrence=n)` for deliberate repeated occurrences.
+
+## Twiss API
+
+Keep propagation and periodic-solution calculation explicit:
+
+- `twiss(lattice, tws0, ...)` propagates supplied initial Twiss parameters and
+  requires positive `beta_x` and `beta_y`.
+- `periodic_twiss(lattice, tws0=None, ...)` calculates the initial periodic
+  solution and propagates it through the lattice. The optional seed supplies
+  values such as energy and emittance.
+- An unavailable periodic solution raises `UnstableLatticeError`; it does not
+  log a warning or return `None`. Optimization code that deliberately explores
+  unstable lattices should catch this exception and convert it to a penalty.
+- `MagneticLattice.periodic_twiss(tws=None)` remains the lower-level API when
+  only the periodic initial `Twiss` object is required.
 
 ## Import Guidance
 
@@ -141,10 +163,11 @@ namespace alias:
 ```python
 import ocelot as ocl
 
-d = ocl.Drift(l=1.0)
-q = ocl.Quadrupole(l=0.3, k1=1.0)
-lat = ocl.MagneticLattice((d, q))
-tws = ocl.twiss(lat)
+d = ocl.Drift(l=0.5)
+qf = ocl.Quadrupole(l=0.2, k1=0.3)
+qdh = ocl.Quadrupole(l=0.1, k1=-0.3)
+lat = ocl.MagneticLattice((qdh, d, d, qf, d, d, qdh))
+tws = ocl.periodic_twiss(lat)
 ```
 
 This gives users one namespace to remember without polluting the global
@@ -156,7 +179,7 @@ imports so ownership and dependencies are clear:
 ```python
 from ocelot.cpbd.elements import Drift, Quadrupole
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
-from ocelot.cpbd.optics import twiss
+from ocelot.cpbd.optics import UnstableLatticeError, periodic_twiss, twiss
 from ocelot.cpbd.beam import Twiss, ParticleArray, generate_parray
 ```
 

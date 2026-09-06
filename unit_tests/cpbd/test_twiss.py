@@ -5,7 +5,7 @@ from ocelot.cpbd.beam import Twiss
 from ocelot.cpbd.beam import core as beam_core
 from ocelot.cpbd.elements import Drift, Quadrupole
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
-from ocelot.cpbd.optics import twiss
+from ocelot.cpbd.optics import UnstableLatticeError, periodic_twiss, twiss
 from ocelot.common.globals import m_e_GeV
 
 gamma = 14 / m_e_GeV
@@ -148,6 +148,61 @@ def test_tws_emit_xn_without_energy_warns_and_is_applied_after_energy_is_set():
 
 def _optics_seed():
     return Twiss(beta_x=10.0, beta_y=12.0, alpha_x=0.2, alpha_y=-0.3, E=1.0)
+
+
+def _stable_periodic_lattice():
+    d = Drift(l=0.5)
+    qf = Quadrupole(l=0.2, k1=0.3)
+    qdh = Quadrupole(l=0.1, k1=-0.3)
+    return MagneticLattice((qdh, d, d, qf, d, d, qdh))
+
+
+def test_twiss_requires_explicit_initial_parameters():
+    lattice = MagneticLattice((Drift(l=1.0),))
+
+    with pytest.raises(TypeError, match="required positional argument: 'tws0'"):
+        twiss(lattice)
+
+
+def test_explicit_twiss_api_is_available_from_root_facade():
+    import ocelot as ocl
+
+    assert ocl.twiss is twiss
+    assert ocl.periodic_twiss is periodic_twiss
+    assert ocl.UnstableLatticeError is UnstableLatticeError
+
+
+def test_twiss_does_not_treat_blank_twiss_as_periodic_request():
+    lattice = _stable_periodic_lattice()
+
+    with pytest.raises(ValueError, match=r"use periodic_twiss\(lattice"):
+        twiss(lattice, Twiss())
+
+
+def test_periodic_twiss_returns_propagated_periodic_optics():
+    lattice = _stable_periodic_lattice()
+
+    result = periodic_twiss(lattice, Twiss(E=0.005))
+
+    assert len(result) == len(lattice.sequence) + 1
+    assert result[0].beta_x > 0
+    assert result[0].beta_y > 0
+    np.testing.assert_allclose(result[-1].beta_x, result[0].beta_x)
+    np.testing.assert_allclose(result[-1].beta_y, result[0].beta_y)
+    np.testing.assert_allclose(result[-1].alpha_x, result[0].alpha_x, atol=1e-14)
+    np.testing.assert_allclose(result[-1].alpha_y, result[0].alpha_y, atol=1e-14)
+
+
+def test_unstable_periodic_twiss_raises_without_logging(caplog):
+    lattice = MagneticLattice((Drift(l=1.0),))
+
+    with caplog.at_level("WARNING", logger="ocelot.cpbd.optics"):
+        with pytest.raises(UnstableLatticeError, match=r"x: \|Tr\(R\)/2\|=1") as exc_info:
+            periodic_twiss(lattice)
+
+    assert exc_info.value.cos_mu_x == pytest.approx(1.0)
+    assert exc_info.value.cos_mu_y == pytest.approx(1.0)
+    assert not caplog.records
 
 
 def test_attach2elem_raises_before_attaching_when_an_element_instance_is_repeated():

@@ -31,10 +31,10 @@ beam.E = 2.5 #GeV
 beam.I = 0.1 #A
 tw0 = Twiss(beam)
 
-tws = twiss(lat,tw0, nPoints=1000)
+tws = periodic_twiss(lat, tw0, nPoints=1000)
 print("Qx = ", tws[-1].mux/2/pi, "  Qy = ", tws[-1].muy/2/pi)
 match_tunes(lat, tws[-1], [Q1, Q2, Q3, Q4],  1.2, 0.91, ncells=1, print_proc=0, max_iter=2000, tol=1e-7)
-tws = twiss(lat,tw0, nPoints=1000)
+tws = periodic_twiss(lat, tw0, nPoints=1000)
 print("Qx = ", tws[-1].mux/2/pi, "  Qy = ", tws[-1].muy/2/pi)
 
 

@@ -2,7 +2,7 @@ __author__ = 'Sergey'
 
 from scipy.integrate import simpson
 
-from ocelot.cpbd.optics import trace_z, twiss
+from ocelot.cpbd.optics import periodic_twiss, trace_z
 from ocelot.cpbd.beam import *
 from ocelot.cpbd.elements import *
 from ocelot.rad.undulator_params import *
@@ -87,7 +87,7 @@ class EbeamParams:
         self.E = tws0.E
 
         if tws0.beta_x == 0 and tws0.beta_y == 0:
-            tws = twiss(lattice, tws0)
+            tws = periodic_twiss(lattice, tws0)
             self.tws0 = tws[0]
 
         if self.E == 0.0:

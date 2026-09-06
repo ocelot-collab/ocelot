@@ -151,8 +151,7 @@ def compensate_chromaticity(lattice,  ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=
     '''
     old chromaticity compensation with 2 sextupole families
     '''
-    tws0 = Twiss()
-    tws = twiss(lattice, tws0)
+    tws = periodic_twiss(lattice)
     tws_0 = tws[0]
     ksi_comp = (ksi_x_comp, ksi_y_comp)
     ksi = natural_chromaticity(lattice, tws_0, nsuperperiod)
@@ -183,8 +182,7 @@ def compensate_chromaticity(lattice,  ksi_x_comp=0, ksi_y_comp=0,  nsuperperiod=
 
 
 def DZ(lattice, energy):
-    tws0 = Twiss()
-    tws = twiss(lattice, tws0)
+    tws = periodic_twiss(lattice)
     R = lattice_transfer_map(lattice, energy)
     # print np.array(R[:4, :4])- np.eye(4),R[:4, 5]
 

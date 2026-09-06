@@ -6,7 +6,7 @@ import hashlib
 import json
 import pickle
 import numpy as np
-from ocelot import MagneticLattice, Quadrupole, Monitor, Twiss, twiss
+from ocelot import MagneticLattice, Monitor, Quadrupole, Twiss, periodic_twiss, twiss
 from ocelot.gui import plot_opt_func
 from ocelot.cpbd.tm_utils import transfer_maps_mult
 from scipy.stats import truncnorm
@@ -436,7 +436,7 @@ def generate_response_matrices_for_energies(
             q.k1 = k1_ref[i] * coeff
 
         if plot:
-            tws = twiss(lat, tws0)
+            tws = periodic_twiss(lat) if tws0 is None else twiss(lat, tws0)
             plot_opt_func(lat, tws, title=f"Energy {energy} GeV")
 
         px, py = quad_response_matrix(lat, quads, bpms, energy=energy)

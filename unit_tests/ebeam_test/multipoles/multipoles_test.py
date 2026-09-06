@@ -29,7 +29,7 @@ def test_lattice_transfer_map(lattice, update_ref_values=False):
 def test_natural_chromaticity(lattice, update_ref_values=False):
     """Natural chromaticity calculation function test"""
 
-    tws = twiss(lattice)
+    tws = periodic_twiss(lattice)
     natural_ksi = natural_chromaticity(lattice, tws[0])
     
     if update_ref_values:

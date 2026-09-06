@@ -101,20 +101,19 @@ def fit_func(x0, iter_data, args):
     beam.E = 2.5
 
     # additional restriction for a periodic solution existence
-    tw = Twiss()
-    tw = periodic_twiss(tw, lattice_transfer_map(lattice, beam.E))
-    if tw == None:
+    try:
+        tws = periodic_twiss(lattice, Twiss(beam))
+    except UnstableLatticeError:
         return (INF, INF)
 
     # beam emittance calculation (fitness function parameter 1)
-    eb = EbeamParams(lattice, Twiss(beam), nsuperperiod=6)
+    eb = EbeamParams(lattice, tws[0], nsuperperiod=6)
     
     # additional restriction for the beam emittance
     if eb.emittance < 0.0 or eb.emittance > 100.0e-9:
         return (INF, INF)
 
     # cromaticity compensation
-    tws = twiss(lattice)
     ksi = natural_chromaticity(lattice, tws[0], nsuperperiod=6)
     compensate_chromaticity(lattice, ksi_x_comp=0, ksi_y_comp=0, nsuperperiod=6)
 

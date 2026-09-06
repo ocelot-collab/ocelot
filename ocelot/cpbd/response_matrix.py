@@ -1,5 +1,5 @@
 from ocelot.cpbd.navi import Navigator
-from ocelot.cpbd.optics import twiss
+from ocelot.cpbd.optics import periodic_twiss, twiss
 from ocelot.cpbd.beam import Twiss
 from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.track import tracking_step
@@ -85,9 +85,9 @@ class MeasureResponseMatrix:
         :return:
         """
         if tw_init == None:
-            tw_init = Twiss()
-
-        tws = twiss(self.lat, tw_init, nPoints=int(self.lat.totalLen / 0.05))
+            tws = periodic_twiss(self.lat, nPoints=int(self.lat.totalLen / 0.05))
+        else:
+            tws = twiss(self.lat, tw_init, nPoints=int(self.lat.totalLen / 0.05))
         s = np.array([tw.s for tw in tws])
         tck_mux = splrep(s, np.array([tw.mux for tw in tws]))
         tck_muy = splrep(s, np.array([tw.muy for tw in tws]))

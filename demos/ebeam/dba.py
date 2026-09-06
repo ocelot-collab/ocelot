@@ -29,7 +29,7 @@ lat = MagneticLattice(cell, method=method)
 
 tw0 = Twiss()
 
-tws=twiss(lat, tw0, nPoints=1000)
+tws = periodic_twiss(lat, tw0, nPoints=1000)
 plot_opt_func(lat, tws)
 
 plt.show()
@@ -45,6 +45,6 @@ for element in lat.sequence:
     if element.id == "Q4":
         print( "new quadrupole strength: Q4.k1 = ", Q4.k1)
 
-tws=twiss(lat, tw0, nPoints = 1000)
+tws = periodic_twiss(lat, tw0, nPoints=1000)
 plot_opt_func(lat, tws)
 plt.show()

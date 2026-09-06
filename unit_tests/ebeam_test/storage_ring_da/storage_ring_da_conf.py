@@ -46,5 +46,4 @@ def lattice(cell, method):
 
 @pytest.fixture(scope='module')
 def tws(lattice):
-    return twiss(lattice)
-    
+    return periodic_twiss(lattice)

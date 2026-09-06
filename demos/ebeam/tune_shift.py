@@ -51,7 +51,7 @@ beam = Beam()
 beam.E = 0. #GeV
 beam.I = 0.1 #A
 tw0 = Twiss(beam)
-tws = twiss(lat,tw0, nPoints=1000)
+tws = periodic_twiss(lat, tw0, nPoints=1000)
 plot_opt_func(lat, tws)
 plt.show()
 mu_y_no_u = 1 - tws[-1].muy%(2*np.pi)/(2*np.pi)

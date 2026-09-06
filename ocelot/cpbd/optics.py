@@ -12,7 +12,22 @@ from ocelot.cpbd.tm_utils import SecondOrderMult
 from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.beam import Twiss, twiss_iterable_to_df
 
-_logger = logging.getLogger(__name__)
+
+class UnstableLatticeError(RuntimeError):
+    """Raised when a lattice has no strictly stable periodic Twiss solution."""
+
+    def __init__(self, cos_mu_x, cos_mu_y):
+        self.cos_mu_x = cos_mu_x
+        self.cos_mu_y = cos_mu_y
+        unstable_planes = []
+        for plane, cos_mu in (("x", cos_mu_x), ("y", cos_mu_y)):
+            if not np.isfinite(cos_mu) or abs(cos_mu) >= 1:
+                unstable_planes.append(f"{plane}: |Tr(R)/2|={abs(cos_mu):.6g}")
+        details = ", ".join(unstable_planes)
+        super().__init__(
+            "No strictly stable periodic Twiss solution exists"
+            f" ({details}; each value must be finite and less than 1)."
+        )
 
 
 def lattice_transfer_map(lattice, energy):
@@ -141,10 +156,8 @@ def trace_obj(lattice, obj, nPoints=None, attach2elem=False):
     return obj_list
 
 
-def periodic_twiss(tws, R):
-    """
-    initial conditions for a periodic Twiss solution
-    """
+def _periodic_twiss_from_matrix(tws, R):
+    """Return periodic initial Twiss parameters for a one-turn matrix."""
     tws = Twiss(tws)
 
     if R[5, 5] != 1:
@@ -166,9 +179,13 @@ def periodic_twiss(tws, R):
     cosmx = (R[0, 0] + R[1, 1]) / 2.
     cosmy = (R[2, 2] + R[3, 3]) / 2.
 
-    if abs(cosmx) >= 1 or abs(cosmy) >= 1:
-        _logger.warning(" ************ periodic solution does not exist. return None ***********")
-        return None
+    if (
+        not np.isfinite(cosmx)
+        or not np.isfinite(cosmy)
+        or abs(cosmx) >= 1
+        or abs(cosmy) >= 1
+    ):
+        raise UnstableLatticeError(cosmx, cosmy)
     sinmx = np.sign(R[0, 1]) * np.sqrt(1. - cosmx * cosmx)
     sinmy = np.sign(R[2, 3]) * np.sqrt(1. - cosmy * cosmy)
 
@@ -193,7 +210,17 @@ def periodic_twiss(tws, R):
     return tws
 
 
-def twiss(lattice, tws0=None, nPoints=None, return_df=False, attach2elem=False):
+def _validate_twiss_seed(tws0):
+    if not isinstance(tws0, Twiss):
+        raise TypeError(f"tws0 must be a Twiss instance, got {type(tws0).__name__}")
+    if tws0.beta_x <= 0 or tws0.beta_y <= 0:
+        raise ValueError(
+            "tws0.beta_x and tws0.beta_y must be positive; "
+            "use periodic_twiss(lattice, ...) to calculate periodic optics"
+        )
+
+
+def twiss(lattice, tws0, nPoints=None, return_df=False, attach2elem=False):
     """
     twiss parameters calculation
 
@@ -205,7 +232,9 @@ def twiss(lattice, tws0=None, nPoints=None, return_df=False, attach2elem=False):
                         small scripts.
     :param return_df:
     :param lattice: lattice, MagneticLattice() object
-    :param tws0: initial twiss parameters, Twiss() object. If None, function tries to find periodic solution.
+    :param tws0: explicit initial Twiss parameters to propagate. ``beta_x``
+                 and ``beta_y`` must be positive. Use :func:`periodic_twiss`
+                 when the initial optics should be calculated from the lattice.
     :param nPoints: number of points per cell. If None, then twiss parameters are calculated at the end of each element.
     :return: list of Twiss() objects
     """
@@ -213,56 +242,57 @@ def twiss(lattice, tws0=None, nPoints=None, return_df=False, attach2elem=False):
     if attachment_targets and nPoints is not None:
         raise ValueError("attach2elem requires nPoints=None so element exits are available")
 
-    if tws0 is None:
-        tws0 = lattice.periodic_twiss(tws0)
+    _validate_twiss_seed(tws0)
 
-    if tws0.__class__ == Twiss:
-        if tws0.beta_x == 0 or tws0.beta_y == 0:
-            tws0 = lattice.periodic_twiss(tws0)
-            if tws0 is None:
-                _logger.info(' twiss: Twiss: no periodic solution')
-                return None
+    attachment_elements = [element for element, _index in attachment_targets]
+    twiss_list = trace_obj(lattice, tws0, nPoints, attachment_elements)
 
-        attachment_elements = [element for element, _index in attachment_targets]
-        twiss_list = trace_obj(lattice, tws0, nPoints, attachment_elements)
+    if return_df:
+        twiss_list = twiss_iterable_to_df(twiss_list)
 
-        if return_df:
-            twiss_list = twiss_iterable_to_df(twiss_list)
-
-        return twiss_list
-    else:
-        _logger.warning(' Twiss: no periodic solution. return None')
-        return None
+    return twiss_list
 
 
-def twiss_fast(lattice, tws0=None):
+def periodic_twiss(lattice, tws0=None, nPoints=None, return_df=False, attach2elem=False):
+    """Calculate and propagate periodic Twiss parameters through a lattice.
+
+    ``tws0`` may provide beam energy, emittance, and other seed values. Its
+    transverse Twiss parameters are replaced by the periodic solution.
+
+    Raises
+    ------
+    UnstableLatticeError
+        If either transverse plane has no strictly stable periodic solution.
+    """
+
+    periodic_seed = lattice.periodic_twiss(tws=tws0)
+    return twiss(
+        lattice,
+        periodic_seed,
+        nPoints=nPoints,
+        return_df=return_df,
+        attach2elem=attach2elem,
+    )
+
+
+def twiss_fast(lattice, tws0):
     """
     twiss parameters calculation
 
     :param lattice: lattice, MagneticLattice() object
-    :param tws0: initial twiss parameters, Twiss() object. If None, try to find periodic solution.
+    :param tws0: explicit initial Twiss parameters.
     :param nPoints: number of points per cell. If None, then twiss parameters are calculated at the end of each element.
     :return: list of Twiss() objects
     """
-    if tws0 is None:
-        tws0 = lattice.periodic_twiss(tws0)
-    if tws0.__class__ == Twiss:
-        if tws0.beta_x == 0 or tws0.beta_y == 0:
-            tws0 = lattice.periodic_twiss(tws0)
-            if tws0 is None:
-                _logger.warning(' twiss_fast: Twiss: no periodic solution')
-                return None
+    _validate_twiss_seed(tws0)
 
-        obj_list = [tws0]
-        for e in lattice.fast_seq:
-            e.transfer_map.R = lambda x: e.transfer_map._r
-            tws0 = e.transfer_map * tws0
-            tws0.id = e.id
-            obj_list.append(tws0)
-        return obj_list
-    else:
-        _logger.warning(' twiss_fast: Twiss: no periodic solution')
-        return None
+    obj_list = [tws0]
+    for e in lattice.fast_seq:
+        e.transfer_map.R = lambda x: e.transfer_map._r
+        tws0 = e.transfer_map * tws0
+        tws0.id = e.id
+        obj_list.append(tws0)
+    return obj_list
 
 
 

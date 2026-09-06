@@ -127,6 +127,17 @@ def test_match_state_resolves_repeated_element_occurrences_explicitly():
     assert state.twiss_by_element[end] is state.twiss_at(end)
 
 
+def test_periodic_match_state_converts_unstable_lattice_to_failed_state():
+    lat, _start, _drift, _end = _simple_drift_lattice()
+    problem = MatchProblem(lat, _twiss_seed(), periodic=True)
+
+    merit, _targets, _objectives, state = problem.evaluate()
+
+    assert state.failed
+    assert state.failure_reason == "No periodic Twiss solution"
+    assert merit == pytest.approx(1.0e18)
+
+
 def test_vary_drift_length_with_finite_limits():
     lat, _start, dvar, end = _simple_drift_lattice(3.0)
     problem = MatchProblem(lat, _twiss_seed())

@@ -28,7 +28,7 @@ def test_lattice_transfer_map(lattice, update_ref_values=False):
 def test_twiss(lattice, update_ref_values=False):
     """Twiss parameters calculation function test"""
 
-    tws = twiss(lattice, Twiss(), nPoints=1000)
+    tws = periodic_twiss(lattice, nPoints=1000)
     
     tws = obj2dict(tws)
     
@@ -50,7 +50,7 @@ def test_lattice_transfer_map_after_matching(lattice, update_ref_values=False):
     
     match(lattice, constr, vars, Twiss(), verbose=False)
 
-    tws = twiss(lattice, Twiss())
+    tws = periodic_twiss(lattice)
 
     r_matrix = lattice_transfer_map(lattice, 0.0)
 
@@ -68,7 +68,7 @@ def test_lattice_transfer_map_after_matching(lattice, update_ref_values=False):
 def test_twiss_after_matching(lattice, update_ref_values=False):
     """After matching Twiss parameters calculation function test"""
     
-    tws = twiss(lattice, Twiss(), nPoints=1000)
+    tws = periodic_twiss(lattice, nPoints=1000)
     
     tws = obj2dict(tws)
     

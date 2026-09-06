@@ -28,7 +28,7 @@ def test_lattice_transfer_map(lattice, beam=None, update_ref_values=False):
 def test_twiss(lattice, beam, update_ref_values=False):
     """Twiss parameters calculation function test"""
 
-    tws = twiss(lattice, Twiss(beam), nPoints=1000)
+    tws = periodic_twiss(lattice, Twiss(beam), nPoints=1000)
 
     tws = obj2dict(tws)
     
@@ -47,7 +47,7 @@ def test_match_tunes(lattice, beam, update_ref_values=False):
     match_tolerance = 1.0e-5
 
     nu_x, nu_y, ncells = match_tunes_wrapper(lattice, beam)
-    tws = twiss(lattice, Twiss(beam), nPoints=1000)
+    tws = periodic_twiss(lattice, Twiss(beam), nPoints=1000)
 
     new_nu_x = tws[-1].mux / 2.0 / pi * ncells
     new_nu_y = tws[-1].muy / 2.0 / pi * ncells
@@ -78,7 +78,7 @@ def test_twiss_after_matching(lattice, beam, update_ref_values=False):
 
     nu_x, nu_y, ncells = match_tunes_wrapper(lattice, beam)
 
-    tws = twiss(lattice, Twiss(beam), nPoints=1000)
+    tws = periodic_twiss(lattice, Twiss(beam), nPoints=1000)
 
     tws = obj2dict(tws)
     
@@ -117,7 +117,7 @@ def match_tunes_wrapper(lattice, beam):
 
     if not hasattr(pytest, 'sr_match_tunes'):
         quads = [Q1, Q2, Q3, Q4]
-        tws = twiss(lattice, Twiss(beam), nPoints=1000)
+        tws = periodic_twiss(lattice, Twiss(beam), nPoints=1000)
         match_tunes(lattice, tws[-1], quads, nu_x, nu_y, ncells=ncells, print_proc=0, tol=1e-7, max_iter=2000)
         pytest.sr_match_tunes = True
     

@@ -10,7 +10,7 @@ from ocelot.cpbd.beam import Particle, Twiss
 from ocelot.cpbd.elements import *
 from ocelot.cpbd.beam import get_envelope
 from ocelot.cpbd.track import track
-from ocelot.cpbd.optics import lattice_transfer_map, twiss
+from ocelot.cpbd.optics import UnstableLatticeError, lattice_transfer_map, twiss
 from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.tm_utils import SecondOrderMult
 
@@ -138,11 +138,11 @@ def match(lat, constr, vars, tw, verbose=True, max_iter=1000, method='simplex', 
         err = 0.0
         if "periodic" in constr.keys():
             if constr["periodic"]:
-                tw_loc = lat.periodic_twiss(tw_loc)
-                tw0 = deepcopy(tw_loc)
-                if tw_loc is None:
-                    print("########")
+                try:
+                    tw_loc = lat.periodic_twiss(tw_loc)
+                except UnstableLatticeError:
                     return weights('periodic')
+                tw0 = deepcopy(tw_loc)
 
         # save reference points where equality is asked
 
@@ -399,11 +399,11 @@ def match_beam(lat, constr, vars, p_array, navi, verbose=True, max_iter=1000, me
         err = 0.0
         if "periodic" in constr.keys():
             if constr["periodic"] is True:
-                tw_loc = lat.periodic_twiss(tw_loc)
-                tw0 = deepcopy(tw_loc)
-                if tw_loc is None:
-                    print("########")
+                try:
+                    tw_loc = lat.periodic_twiss(tw_loc)
+                except UnstableLatticeError:
                     return weights('periodic')
+                tw0 = deepcopy(tw_loc)
 
         # save reference points where equality is asked
 

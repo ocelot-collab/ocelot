@@ -59,7 +59,7 @@ def test_twiss(lattice, parameter=None, update_ref_values=False):
     beam.I = 0.1
 
     tw0 = Twiss(beam)
-    tws = twiss(lattice[0], tw0, nPoints=100)
+    tws = periodic_twiss(lattice[0], tw0, nPoints=100)
     
     tws = obj2dict(tws)
     

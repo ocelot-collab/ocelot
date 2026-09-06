@@ -602,11 +602,11 @@ class MagneticLattice:
 
     def periodic_twiss(self, tws=None):
         from ocelot.cpbd.beam.core import Twiss
-        from ocelot.cpbd.optics import periodic_twiss
+        from ocelot.cpbd.optics import _periodic_twiss_from_matrix
 
         tws = Twiss(tws)
         R = self.transfer_maps(energy=tws.E)[1]
-        tw_periodic = periodic_twiss(tws, R)
+        tw_periodic = _periodic_twiss_from_matrix(tws, R)
         return tw_periodic
 
 

@@ -48,7 +48,7 @@ if is_an_mpi_process():
         RANK = COMM.Get_rank()
 
 def aperture_limit(lat, xlim = 1, ylim = 1):
-    tws=twiss(lat, Twiss(), nPoints=1000)
+    tws = periodic_twiss(lat, nPoints=1000)
     bxmax = max([tw.beta_x for tw in tws])
     bymax = max([tw.beta_y for tw in tws])
     bx0 = tws[0].beta_x
@@ -156,7 +156,7 @@ def freq_analysis(track_list, lat, nturns, harm=True, diap=0.10, nearest=False, 
 
     def beta_freq(lat):
 
-        tws = twiss(lat, Twiss())
+        tws = periodic_twiss(lat)
         nux = tws[-1].mux/2./np.pi*nsuperperiods
         nuy = tws[-1].muy/2./np.pi*nsuperperiods
         print ("freq. analysis: Qx = ", nux, " Qy = ", nuy)

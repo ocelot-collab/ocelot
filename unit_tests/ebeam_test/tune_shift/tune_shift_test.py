@@ -35,7 +35,7 @@ def test_twiss(lattice, update_ref_values=False):
     beam.I = 0.1 #A
 
     tw0 = Twiss(beam)
-    tws = twiss(lattice, tw0, nPoints=1000)
+    tws = periodic_twiss(lattice, tw0, nPoints=1000)
     
     mu_y_no_u = 1.0 - tws[-1].muy % (2.0*np.pi) / (2.0*np.pi)
     

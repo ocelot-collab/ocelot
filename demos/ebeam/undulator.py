@@ -22,7 +22,7 @@ tw0 = Twiss(beam)
 method = {'global': TransferMap, 'Undulator': UndulatorTestTM}
 lat = MagneticLattice(line, method=method)
 
-tws = twiss(lat, tw0, nPoints=100)
+tws = periodic_twiss(lat, tw0, nPoints=100)
 
 plot_opt_func(lat, tws)
 

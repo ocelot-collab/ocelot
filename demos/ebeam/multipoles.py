@@ -18,7 +18,7 @@ F = Multipole(kn=[0., 0., 0., 0.3, 0.5])
 cell = (Qf,Sf, D,F,B, D, Qd, Sd, D, B, D, Sf, Qf)
 
 lat = MagneticLattice(Ncells*cell)
-tws = twiss(lat)
+tws = periodic_twiss(lat)
 plot_opt_func(lat, tws)
 plt.show()
 

@@ -109,7 +109,7 @@ method = {'global': TransferMap}
 lat = MagneticLattice(cell, method=method)
 
 tw0 = Twiss(beam)
-tws=twiss(lat, tw0, nPoints=1000)
+tws = periodic_twiss(lat, tw0, nPoints=1000)
 
 plot_opt_func(lat, tws, top_plot=["Dx"])
 plt.show()

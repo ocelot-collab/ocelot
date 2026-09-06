@@ -51,7 +51,8 @@ __all__ = [
     "save_particle_array", "load_particle_array",
 
     # === Optics & Navigation ===
-    'fodo_parameters', 'lattice_transfer_map', "Navigator", 'twiss', "MethodTM",
+    'fodo_parameters', 'lattice_transfer_map', "Navigator", 'twiss',
+    'periodic_twiss', 'UnstableLatticeError', "MethodTM",
 
     # === Lattice Elements ===
     'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",
@@ -129,6 +130,8 @@ _LAZY_EXPORTS = {
     "fodo_parameters": ("ocelot.cpbd.optics", "fodo_parameters"),
     "lattice_transfer_map": ("ocelot.cpbd.optics", "lattice_transfer_map"),
     "twiss": ("ocelot.cpbd.optics", "twiss"),
+    "periodic_twiss": ("ocelot.cpbd.optics", "periodic_twiss"),
+    "UnstableLatticeError": ("ocelot.cpbd.optics", "UnstableLatticeError"),
     "MethodTM": ("ocelot.cpbd.optics", "MethodTM"),
     "match": ("ocelot.cpbd.match", "match"),
     "match_tunes": ("ocelot.cpbd.match", "match_tunes"),

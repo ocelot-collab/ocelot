@@ -30,7 +30,7 @@ lat = MagneticLattice(cell)
 tw0 = Twiss()
 tw0.x = 0.1
 tw0.y = 0.2
-tws=twiss(lat, tw0, nPoints=1000)
+tws = periodic_twiss(lat, tw0, nPoints=1000)
 print( "start: Dx = ", tws[0].Dx, " Dxp = ", tws[0].Dxp)
 print("end:   Dx = ", tws[-1].Dx, " Dxp = ", tws[-1].Dxp)
 plot_opt_func(lat, tws,top_plot = ["x", "y"])

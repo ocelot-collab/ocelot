@@ -30,6 +30,7 @@ from scipy.optimize import OptimizeResult, least_squares, minimize
 from ocelot.cpbd.beam import Twiss
 from ocelot.cpbd.beam_params import radiation_integrals
 from ocelot.cpbd.elements.optic_element import OpticElement
+from ocelot.cpbd.optics import UnstableLatticeError
 
 
 def _as_float(value: Any, name: str) -> float:
@@ -1531,8 +1532,9 @@ class MatchProblem:
 
         tw_seed = Twiss(self.twiss0)
         if self.periodic:
-            tw_periodic = self.lat.periodic_twiss(tw_seed)
-            if tw_periodic is None:
+            try:
+                tw_periodic = self.lat.periodic_twiss(tw_seed)
+            except UnstableLatticeError:
                 return MatchState(
                     lat=self.lat,
                     twiss_start=tw_seed,

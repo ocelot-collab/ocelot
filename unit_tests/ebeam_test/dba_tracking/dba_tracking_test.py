@@ -33,7 +33,7 @@ def test_twiss(lattice, parametr=None, update_ref_values=False):
     tw0.x = 0.1
     tw0.y = 0.2
     
-    tws = twiss(lattice, tw0, nPoints=1000)
+    tws = periodic_twiss(lattice, tw0, nPoints=1000)
 
     tws = obj2dict(tws)
     

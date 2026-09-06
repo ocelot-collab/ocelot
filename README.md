@@ -50,10 +50,11 @@ For user scripts and tutorials, prefer:
 ```python
 import ocelot as ocl
 
-d = ocl.Drift(l=1.0)
-q = ocl.Quadrupole(l=0.3, k1=1.0)
-lat = ocl.MagneticLattice((d, q))
-tws = ocl.twiss(lat)
+d = ocl.Drift(l=0.5)
+qf = ocl.Quadrupole(l=0.2, k1=0.3)
+qdh = ocl.Quadrupole(l=0.1, k1=-0.3)
+lat = ocl.MagneticLattice((qdh, d, d, qf, d, d, qdh))
+tws = ocl.periodic_twiss(lat)
 ```
 
 This keeps one memorable namespace while avoiding star-import side effects. For
@@ -63,13 +64,27 @@ the submodule that owns the API:
 ```python
 from ocelot.cpbd.elements import Drift, Quadrupole
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
-from ocelot.cpbd.optics import twiss
+from ocelot.cpbd.optics import periodic_twiss, twiss
 from ocelot.cpbd.beam import Twiss, ParticleArray, generate_parray
 ```
 
 The root facade is curated and lazy-loaded, so short-lived scripts can start
 quickly without importing plotting, radiation, pandas, SciPy, or optional
 acceleration modules until those features are actually used.
+
+`twiss(lat, tws0)` propagates explicitly supplied initial Twiss parameters.
+Use `periodic_twiss(lat, tws0=None)` when the lattice should determine the
+initial periodic optics. An unstable lattice raises `UnstableLatticeError`
+instead of logging a warning and returning `None`:
+
+```python
+from ocelot.cpbd.optics import UnstableLatticeError, periodic_twiss
+
+try:
+    tws = periodic_twiss(lat)
+except UnstableLatticeError as exc:
+    print(f"Periodic optics are unavailable: {exc}")
+```
 
 ## Repeated Elements and Position Lookups
 

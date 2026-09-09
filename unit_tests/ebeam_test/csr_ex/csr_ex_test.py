@@ -37,7 +37,6 @@ def test_lattice_transfer_map_RT(lattice, p_array, parameter, update_ref_values=
             if elem.__class__ == Bend:
                 elem.tilt = np.pi / 2
 
-        lattice.update_transfer_maps()
 
     r_matrix = lattice_transfer_map(lattice, 0.0)
     result1 = check_value(r_matrix[4, 5], r56, tolerance=1.0e-14, assert_info=" R56 ")
@@ -97,7 +96,6 @@ def test_track_without_csr_tilted(lattice, p_array, parameter=None, update_ref_v
         if elem.__class__ == Bend:
             elem.tilt = np.pi / 2
 
-    lattice.update_transfer_maps()
     navi = Navigator(lattice)
     navi.unit_step = 0.05
     tws_track_wo, p_array_wo = track(lattice, p_array, navi)
@@ -128,7 +126,6 @@ def test_track_without_csr_rotated(lattice, p_array, parameter=None, update_ref_
         if elem.__class__ == Bend:
             elem.tilt = tilt
 
-    lattice_copy.update_transfer_maps()
 
     tws_track_tilted, p_array_wo_tilted = track(lattice_copy, p_array_copy, navi)
 
@@ -136,8 +133,6 @@ def test_track_without_csr_rotated(lattice, p_array, parameter=None, update_ref_
     for elem in lattice.sequence:
         if elem.__class__ == Bend:
             elem.tilt = 0
-
-    lattice.update_transfer_maps()
 
     navi = Navigator(lattice)
     navi.unit_step = 0.05
@@ -169,8 +164,6 @@ def test_track_with_csr(lattice, p_array, parameter, update_ref_values=False):
     for elem in lattice.sequence:
         if elem.__class__ == Bend:
             elem.tilt = tilt
-
-    lattice.update_transfer_maps()
 
     csr = CSR()
     csr.traj_step = 0.0002

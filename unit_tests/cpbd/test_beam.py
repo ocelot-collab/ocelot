@@ -194,6 +194,8 @@ def test_parray_I():
 
 def test_ParticleArray_slicing():
     parray = ParticleArray(n=5)
+    parray.E = 0.130
+    parray.s = 2.0
 
     rparts = np.random.rand(*parray.rparticles.shape)
     charges = np.random.rand(*parray.q_array.shape)
@@ -208,6 +210,50 @@ def test_ParticleArray_slicing():
 
     assert (sliced_parray.rparticles == rparts[..., start:stop]).all()
     assert (sliced_parray.q_array == charges[..., start:stop]).all()
+    assert sliced_parray.E == parray.E
+    assert sliced_parray.s == parray.s
+
+
+def test_particle_array_slice_records_losses_independently():
+    parray = ParticleArray(n=5)
+    parray.rparticles[:] = np.arange(30).reshape(6, 5)
+    parray.q_array[:] = np.arange(1, 6) * 1e-12
+    parray.s = 2.0
+    parray.delete_particles([0])
+    original_coordinates = parray.rparticles.copy()
+    original_charges = parray.q_array.copy()
+
+    subset = parray[1::2]
+    subset.delete_particles([0])
+    subset.delete_particles([0])
+
+    assert subset.n == 0
+    assert subset.q_array.size == 0
+    assert subset.lost_particle_recorder.lost_particles == [0, 1]
+    assert subset.lost_particle_recorder.lp_to_pos_hist == [(2.0, 1), (2.0, 1)]
+    assert parray.lost_particle_recorder.lost_particles == [0]
+    assert parray.lost_particle_recorder.lp_to_pos_hist == [(2.0, 1)]
+    np.testing.assert_array_equal(parray.rparticles, original_coordinates)
+    np.testing.assert_array_equal(parray.q_array, original_charges)
+
+
+@pytest.mark.parametrize("idx", [0, -1])
+def test_particle_array_index_preserves_coordinates_and_beam_state(idx):
+    parray = ParticleArray(n=3)
+    parray.rparticles[:] = np.arange(18).reshape(6, 3)
+    parray.q_array[:] = [1e-12, 2e-12, 3e-12]
+    parray.E = 0.130
+    parray.s = 2.0
+
+    particle = parray[idx]
+
+    np.testing.assert_array_equal(
+        [particle.x, particle.px, particle.y, particle.py, particle.tau, particle.p],
+        parray.rparticles[:, idx],
+    )
+    assert particle.E == parray.E
+    assert particle.s == parray.s
+    assert particle.q == parray.q_array[idx]
 
 def test_Twiss_from_series(a_twiss_dictionary):
     series = pd.Series(data=a_twiss_dictionary)

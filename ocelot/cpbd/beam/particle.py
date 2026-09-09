@@ -97,16 +97,24 @@ class ParticleArray:
         return p_idxs
 
     def __getitem__(self, idx):
+        """Extract a particle or a subset with the same reference energy and position.
+
+        Slices share coordinate and charge arrays with the original beam and
+        start fresh loss records with particle indices local to the subset.
+        """
         if isinstance(idx, slice):
             result = ParticleArray()
             result.rparticles = self.rparticles[..., idx]
             result.q_array = self.q_array[idx]
+            result.s = self.s
+            result.E = self.E
+            result.lost_particle_recorder = result.LostParticleRecorder(result.n)
             return result
 
         return Particle(x=self.rparticles[0, idx], px=self.rparticles[1, idx],
                         y=self.rparticles[2, idx], py=self.rparticles[3, idx],
                         tau=self.rparticles[4, idx], p=self.rparticles[5, idx],
-                        s=self.s)
+                        s=self.s, E=self.E, q=self.q_array[idx])
 
     def __setitem__(self, idx, p):
         self.rparticles[0, idx] = p.x

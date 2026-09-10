@@ -1,6 +1,7 @@
 __author__ = 'Sergey'
 
 
+from copy import deepcopy
 from numpy.linalg import inv
 import pandas as pd
 from typing import Iterable
@@ -57,13 +58,17 @@ def trace_z(lattice, obj0, z_array):
     Z-dependent tracer (twiss(z) and particle(z))
     usage: twiss = trace_z(lattice, twiss_0, [1.23, 2.56, ...]) ,
     to calculate Twiss params at 1.23m, 2.56m etc.
+
+    Positions are measured from the lattice entrance. Each sample is
+    propagated independently from its element's entrance state, without
+    modifying obj0.
     """
     eps = 1e-12
     obj_list = []
     i = 0
     elem = lattice.sequence[i]
     L = elem.l
-    obj_elem = obj0
+    obj_elem = deepcopy(obj0)
     for z in z_array:
         while z > L + eps and i + 1 < len(lattice.sequence):
             for tm in lattice.sequence[i].first_order_tms:
@@ -79,7 +84,9 @@ def trace_z(lattice, obj0, z_array):
             delta_l = elem.l
         first_order_tms = elem.get_section_tms(start_l=0.0, delta_l=delta_l, first_order_only=True)
 
-        obj_z = obj_elem
+        # Particle transfer-map multiplication modifies its input before
+        # returning a copy. Preserve the entrance state for later samples.
+        obj_z = deepcopy(obj_elem)
         for tm in first_order_tms:
             obj_z = tm * obj_z
 

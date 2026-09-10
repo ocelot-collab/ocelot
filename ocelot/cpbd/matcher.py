@@ -223,12 +223,21 @@ class MatchState:
         """Return cached (or lazily computed) transfer matrix between elements.
 
         This avoids repeated ``lat.transfer_maps`` calls when several targets
-        or objectives request the same ``R`` block in one evaluation.
+        or objectives request the same ``R`` block in one evaluation. Both
+        boundary elements are included, and the reference energy is taken at
+        the entrance of ``start``, including any upstream energy gain.
         """
 
         key = (start, end)
         if key not in self._r_cache:
-            _b, r_mat, _t = self.lat.transfer_maps(energy=self.twiss_start.E, start=start, stop=end)
+            start_index = 0 if start is None else self.lat.resolve_element_index(start)
+            if start_index > len(self.twiss_sequence):
+                raise ValueError(
+                    f"Entrance energy at lattice index {start_index} is unavailable "
+                    "because propagation did not reach the preceding element."
+                )
+            energy = self.twiss_start.E if start_index == 0 else self.twiss_sequence[start_index - 1].E
+            _b, r_mat, _t = self.lat.transfer_maps(energy=energy, start=start, stop=end)
             self._r_cache[key] = r_mat
         return self._r_cache[key]
 

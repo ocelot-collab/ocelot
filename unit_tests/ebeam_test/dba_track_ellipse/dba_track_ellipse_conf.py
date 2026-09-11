@@ -1,10 +1,18 @@
 """Test parameters description"""
 
+from ocelot.common.globals import pi
+from ocelot.cpbd.elements.bend import Bend
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.sextupole import Sextupole
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.transformations.second_order import SecondTM
+
+
 import pytest
 import numpy as np
 import copy
 
-from ocelot import *
 
 """lattice elements description"""
 

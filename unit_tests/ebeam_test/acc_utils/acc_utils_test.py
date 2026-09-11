@@ -1,5 +1,16 @@
 """Test of the demo file demos/ebeam/csr_ex.py"""
 
+import numpy as np
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.beam.generator import generate_parray
+from ocelot.cpbd.elements.bend import Bend
+from ocelot.cpbd.optics import lattice_transfer_map
+from ocelot.utils.acc_utils import (
+    beam2rf, chicane_RTU, convolve_beam, passive_streaker_resolutions, rf2beam,
+    single_plane_dipole_wake, single_plate_quadrupole_wake,
+)
+
+
 import os
 import sys
 import copy

@@ -1,5 +1,14 @@
 """Test of the demo file demos/ebeam/csr_ex.py"""
 
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.beam.particle import Particle
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.optics import lattice_transfer_map, twiss
+from ocelot.cpbd.track import lattice_track
+from ocelot.cpbd.transformations.second_order import SecondTM
+from ocelot.utils.bump_utils import bump_4cors, convert_cors2dipoles
+
+
 import os
 import sys
 import copy

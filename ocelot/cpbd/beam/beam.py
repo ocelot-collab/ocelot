@@ -2,6 +2,7 @@
 definition of particles, beams and trajectories
 """
 import os
+import logging
 from copy import deepcopy
 import pandas as pd
 import numpy as np
@@ -9,7 +10,6 @@ from typing import Iterable
 
 import ocelot.common.globals as glb
 from ocelot.common.math_op import find_nearest_idx, invert_cdf
-from ocelot.common.ocelog import *
 from . import analysis
 from . import particle
 from . import core

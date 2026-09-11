@@ -1,4 +1,15 @@
-from ocelot import * 
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.elements.cavity import Cavity
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.hcor import Hcor
+from ocelot.cpbd.elements.marker import Marker
+from ocelot.cpbd.elements.monitor import Monitor
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.sbend import SBend
+from ocelot.cpbd.elements.sextupole import Sextupole
+from ocelot.cpbd.elements.tdcavity import TDCavity
+from ocelot.cpbd.elements.vcor import Vcor
+
 tws = Twiss()
 tws.beta_x  = 3.203506642234328
 tws.beta_y  = 4.580189307026297

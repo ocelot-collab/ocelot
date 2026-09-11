@@ -1,5 +1,11 @@
 """Test of the demo file demos/ebeam/dba.py"""
 
+from ocelot.cpbd.beam.particle import Particle
+from ocelot.cpbd.elements.monitor import Monitor
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.optics import lattice_transfer_map, twiss
+
+
 import os
 import sys
 import time

@@ -1,5 +1,12 @@
 """Test of the demo file demos/ebeam/rf_twiss.py"""
 
+from ocelot.cpbd.beam.core import Beam, Twiss
+from ocelot.cpbd.elements.cavity import Cavity
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.optics import lattice_transfer_map, twiss
+from ocelot.cpbd.track import track
+
+
 from rf_twiss_conf import *
 from unit_tests.params import *
 import os

@@ -25,7 +25,6 @@ It is sufficient to configure handlers for a top-level logger and create child l
 import logging
 
 import ocelot
-from ocelot.common.ocelog import *
 
 print(__name__)
 
@@ -86,7 +85,7 @@ print('Logger2 file handler will write to {}'.format(fh2.baseFilename))
 # logging levels: [DEBUG, INFO, WARNING, ERROR, CRITICAL, or a number, e.g. debug is 10, info is 12 etc..]
 _logger1.setLevel(logging.INFO) 
 _logger2.setLevel(logging.DEBUG)
-ocelog.setLevel(logging.DEBUG) #ocelog is a global logger
+ocelot.ocelog.setLevel(logging.DEBUG) #ocelog is a global logger
 
 
 #----------------------
@@ -107,11 +106,11 @@ _logger2.info('logger_2_INFO')
 _logger2.debug('logger_2_DEBUG')
 
 
-ocelog.critical('ocelog_CRITICAL')
-ocelog.error('ocelog_ERROR')
-ocelog.warning('ocelog_WARNING')
-ocelog.info('ocelog_INFO')
-ocelog.debug('ocelog_DEBUG')
-ocelog.log(5, 'log level 5')
-ocelog.log(15, 'log level 15')
-ocelog.log(25, 'log level 25')
+ocelot.ocelog.critical('ocelog_CRITICAL')
+ocelot.ocelog.error('ocelog_ERROR')
+ocelot.ocelog.warning('ocelog_WARNING')
+ocelot.ocelog.info('ocelog_INFO')
+ocelot.ocelog.debug('ocelog_DEBUG')
+ocelot.ocelog.log(5, 'log level 5')
+ocelot.ocelog.log(15, 'log level 15')
+ocelot.ocelog.log(25, 'log level 25')

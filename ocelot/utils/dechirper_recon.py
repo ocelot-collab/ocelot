@@ -9,13 +9,12 @@ from scipy import ndimage, interpolate
 from scipy.integrate import solve_ivp
 from scipy.optimize import fmin
 from ocelot.common.math_op import invert_cdf
-from ocelot.common.globals import *
+from ocelot.common.globals import m_e_GeV, speed_of_light
 from ocelot.cpbd.beam import s_to_cur, generate_parray
 from ocelot.cpbd.wake3D import Wake, WakeTableDechirperOffAxis
 import ocelot.utils.image_analysis as oim
 from ocelot.cpbd.beam import interp1, slice_analysis, simple_filter
 import matplotlib.pyplot as plt
-from ocelot.gui import *
 
 
 def image2distrib(image, n_particles=200000):

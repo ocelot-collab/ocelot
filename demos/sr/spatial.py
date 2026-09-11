@@ -1,10 +1,10 @@
 __author__ = 'Sergey Tomin'
 
+import matplotlib
 
-
-from ocelot.rad import *
-from ocelot import *
-from ocelot.gui import *
+from ocelot import Undulator, MagneticLattice, Beam
+from ocelot.rad import Screen, calculate_radiation
+from ocelot.gui import show_flux
 
 font = {'size'   : 14}
 matplotlib.rc('font', **font)

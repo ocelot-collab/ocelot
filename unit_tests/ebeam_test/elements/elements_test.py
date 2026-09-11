@@ -1,5 +1,22 @@
 """Test of the demo file demos/ebeam/multipoles.py"""
 
+from ocelot.cpbd.beam.particle import Particle, ParticleArray
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.matrix import Matrix
+from ocelot.cpbd.elements.multipole import Multipole
+from ocelot.cpbd.elements.octupole import Octupole
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.xyquadruple import XYQuadrupole
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.optics import lattice_transfer_map
+from ocelot.cpbd.physics_proc import EmptyProc
+from ocelot.cpbd.track import track, tracking_step
+from ocelot.cpbd.transformations.kick import KickTM
+from ocelot.cpbd.transformations.second_order import SecondTM
+from ocelot.cpbd.transformations.transfer_map import TransferMap
+
+
 import os
 import sys
 import time

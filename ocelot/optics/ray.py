@@ -3,7 +3,10 @@ ray optics
 '''
 
 from numpy import pi
-from ocelot.optics.elements import *
+from ocelot.optics.elements import (
+    Aperture, Crystal, Detector, EllipticMirror, Grating, Lense, Mirror, OptDrift, debug, info,
+    warn,
+)
 
 import numpy as np
 
@@ -58,8 +61,8 @@ def find_intersections(ray, geo):
                 
                 
                 phi = np.arccos(o.no[2]/ np.linalg.norm(o.no))
-                r_loc[1] = r_loc[1] * cos(phi) + r_loc[2] * sin(phi) 
-                r_loc[2] = r_loc[2] * cos(phi) - r_loc[1] * sin(phi)
+                r_loc[1] = r_loc[1] * np.cos(phi) + r_loc[2] * np.sin(phi)
+                r_loc[2] = r_loc[2] * np.cos(phi) - r_loc[1] * np.sin(phi)
                                 
                 debug('r_loc=', r_loc, 'size=',o.size)
                 
@@ -110,13 +113,13 @@ def find_intersections(ray, geo):
                     #r_loc[2] = r_loc[2] * sin(phi)
                     debug('r_loc_new=', r_int, r_loc)
      
-                    ang = arctan2(1./az*r_loc[2], 1./ay*(-r_loc[1] + ay))
+                    ang = np.arctan2(1./az*r_loc[2], 1./ay*(-r_loc[1] + ay))
                     
                     #debug(r_loc[2], r_loc[1] - ay)
                     debug('ellipse angle=', ang)                    
-                    debug('local coord:', az*sin(ang), -ay*cos(ang) + ay)
+                    debug('local coord:', az*np.sin(ang), -ay*np.cos(ang) + ay)
                     
-                    no = np.array([0, cos(ang),-ay/az*sin(ang)]) / np.sqrt(ay**2/az**2*sin(ang)**2 + cos(ang)**2 ) 
+                    no = np.array([0, np.cos(ang),-ay/az*np.sin(ang)]) / np.sqrt(ay**2/az**2*np.sin(ang)**2 + np.cos(ang)**2 )
             
                     debug('no=',no)
                     debug(o.no)
@@ -253,8 +256,8 @@ def trace(ray, geo):
             
         
             M = np.matrix([[1, 0, 0],
-                           [0, cos(phi), sin(phi)],
-                           [0, -sin(phi), cos(phi)]])
+                           [0, np.cos(phi), np.sin(phi)],
+                           [0, -np.sin(phi), np.cos(phi)]])
 
             k_new = np.asarray(np.dot(M, ray.k[-1]))[0]
             

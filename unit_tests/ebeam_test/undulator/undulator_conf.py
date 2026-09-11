@@ -1,10 +1,17 @@
 """Test parameters description"""
 
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.undulator import Undulator
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.transformations.transfer_map import TransferMap
+from ocelot.cpbd.transformations.undulator_test import UndulatorTestTM
+
+
 import pytest
 import numpy as np
 import copy
 
-from ocelot import *
 
 """lattice elements description"""
 

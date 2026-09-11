@@ -1,8 +1,18 @@
 """Test parameters description"""
 
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.hcor import Hcor
+from ocelot.cpbd.elements.monitor import Monitor
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.sbend import SBend
+from ocelot.cpbd.elements.sextupole import Sextupole
+from ocelot.cpbd.elements.vcor import Vcor
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.transformations.transfer_map import TransferMap
+
+
 import pytest
 
-from ocelot import *
 
 """lattice elements description"""
 

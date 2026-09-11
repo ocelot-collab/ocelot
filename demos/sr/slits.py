@@ -2,7 +2,11 @@
 Bending magnet radiation
 '''
 
-from ocelot.rad.bmrad import *
+import sys
+import numpy as np
+import matplotlib.pyplot as plt
+
+from ocelot.rad.bmrad import bm_e0, bm_e_a
 
 
 def slit_func(xc,yc):
@@ -63,7 +67,7 @@ for i in range(len(yo)):
     #E2[i] = bm_e_a(xc,0,xpc, 0,  -x0, yo[i], 10.0, p_en = 2.0)
 
 
-ax1 = figure().add_subplot(111)
+ax1 = plt.figure().add_subplot(111)
 p1, = ax1.plot(yo, np.abs(E))
 
 sigx = 1.e-5

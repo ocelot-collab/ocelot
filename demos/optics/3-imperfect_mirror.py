@@ -7,13 +7,16 @@ the mirror surface considering effects of mirror surface height errors
 """
 __author__ = "Svitozar Serkez, Mykola Veremchuk"
 
-import matplotlib.pyplot as plt
+import logging
 import numpy as np
-from ocelot.optics.wave import *
-from ocelot.gui.dfl_plot import plot_dfl, plot_1d_hprofile
 import matplotlib
 matplotlib.use('qtagg')
-ocelog.setLevel(logging.DEBUG)
+
+import ocelot
+from ocelot.optics.wave import generate_1d_profile, generate_gaussian_dfl, dfl_reflect_surface
+from ocelot.gui.dfl_plot import plot_dfl, plot_1d_hprofile
+
+ocelot.ocelog.setLevel(logging.DEBUG)
 # from copy import deepcopy
 
 

@@ -6,18 +6,29 @@ functions common to fel decks
 # import scipy.integrate as integrate
 # from numpy.polynomial.chebyshev import *
 
-# from ocelot.optics.utils import *
-# from ocelot.rad.undulator_params import *
-# from ocelot.rad.fel import *
-from ocelot.adaptors.genesis import *
-# from ocelot.adaptors.genesis4 import *
+import os
+import scipy
+import socket
+import time
+from ocelot.adaptors.genesis import get_beam_peak, read_out_file, transform_beam_twiss
+from ocelot.common.globals import I_Alfven, h_eV_s, m_e_kg, pi, q_e
+from ocelot.common.math_op import fwhm3, n_moment, peaks
+from ocelot.common.ocelog import ind_str
+from ocelot.optics.wave import dfl_pad_z, dfl_shift_s, dfl_trf
+from ocelot.rad.fel import beam2fel
 
 import multiprocessing
 nthread = multiprocessing.cpu_count()
 
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
-from ocelot.cpbd.elements import *
-from ocelot.cpbd.optics import *
+from ocelot.cpbd.elements import Drift, Hcor, Quadrupole, Undulator, UnknownElement, Vcor
+import logging
+import numpy as np
+from copy import deepcopy
+from ocelot.common.globals import m_e_GeV, speed_of_light
+from ocelot.cpbd.beam import Twiss
+from ocelot.cpbd.optics import fodo_parameters, lattice_transfer_map, twiss
+from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 _logger = logging.getLogger(__name__)
 
@@ -695,6 +706,8 @@ class FelSimulator(object):
         self.engine = 'genesis'
 
     def run(self):
+        from ocelot.optics.utils import Signal3D, read_signal
+
         if self.engine == 'test_1d':
             w1 = read_signal(file_name=self.input, npad=self.npad, E_ref=self.E_ev)
             return w1, None

@@ -1,11 +1,16 @@
 from copy import deepcopy
+import logging
 import numpy as np
 
-from ocelot.common.globals import *
-from ocelot.rad.transfer_function import *
-from ocelot.rad.optics_elements import *
+from ocelot.rad.transfer_function import (
+    ApertureEllipsMask, ApertureRectMask, LensMask, Mask, MirrorMask, PhaseDelayMask, PropMask,
+    Prop_mMask,
+)
+from ocelot.rad.optics_elements import (
+    ApertureEllips, ApertureRect, DispersiveSection, FreeSpace, ImperfectMirrorSurface, ThinLens,
+)
 
-from ocelot.common.ocelog import *
+from ocelot.common.ocelog import ind_str
 _logger = logging.getLogger(__name__)
 
 flatten = lambda *n: (e for a in n

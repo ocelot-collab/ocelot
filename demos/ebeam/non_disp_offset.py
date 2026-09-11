@@ -1,7 +1,19 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot import *
-from ocelot.gui import *
+import matplotlib.pyplot as plt
+from ocelot.common.globals import pi
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.beam.particle import Particle
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.sbend import SBend
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.optics import twiss
+from ocelot.cpbd.track import tracking_step
+from ocelot.cpbd.transformations.second_order import SecondTM
+from ocelot.cpbd.transformations.transfer_map import TransferMap
+from ocelot.gui.accelerator import plot_opt_func
 import copy as cp
 import numpy as np
 """

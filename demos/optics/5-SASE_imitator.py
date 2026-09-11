@@ -5,9 +5,15 @@ Created on Fri May 28 2021
 """
 
 import numpy as np
-from ocelot.utils.xfel_utils import *
-from ocelot.gui.genesis_plot import *
 from copy import deepcopy
+import matplotlib.pyplot as plt
+from matplotlib import rcParams
+
+from ocelot.optics.new_wave import imitate_1d_sase_like
+from ocelot.common.globals import h_eV_s, speed_of_light
+from ocelot.gui.dfl_plot import plot_wigner
+from ocelot.gui.settings_plot import def_cmap
+from ocelot.optics.wave import WignerDistribution
 
 fntsz = 6
 params = {'image.cmap': def_cmap, 'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}

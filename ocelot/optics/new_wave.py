@@ -16,15 +16,14 @@ from copy import deepcopy
 import time
 import os
 
-# from ocelot.optics.elements import *
-from ocelot.common.globals import *
+from ocelot.common.globals import h_eV_s, hr_eV_s, pi, q_e, speed_of_light
 from ocelot.common.math_op import find_nearest_idx, fwhm, std_moment, bin_scale, bin_array, mut_coh_func
 from ocelot.common.py_func import filename_from_path
 # from ocelot.optics.utils import calc_ph_sp_dens
-# from ocelot.adaptors.genesis import *
 # import ocelot.adaptors.genesis as genesis_ad
 # GenesisOutput = genesis_ad.GenesisOutput
-from ocelot.common.ocelog import *
+import logging
+from ocelot.common.ocelog import ind_str
 _logger = logging.getLogger(__name__)
 
 import multiprocessing

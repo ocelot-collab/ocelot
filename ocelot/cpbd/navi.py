@@ -1,5 +1,5 @@
 from ocelot.cpbd.physics_proc import RectAperture, EllipticalAperture
-from ocelot.common.ocelog import *
+import logging
 from ocelot.cpbd.elements.aperture import Aperture
 import numpy as np
 from copy import deepcopy

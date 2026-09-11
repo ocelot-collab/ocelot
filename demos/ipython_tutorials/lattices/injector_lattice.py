@@ -1,4 +1,7 @@
-from ocelot.cpbd.elements import *
+from ocelot.cpbd.elements import (
+    Cavity, Drift, Hcor, Marker, Monitor, Quadrupole, SBend, Sextupole, Solenoid, Undulator, Vcor,
+)
+
 # drifts 
 D_1 = Drift(l = 0.276, eid = 'D_1')
 D_2 = Drift(l = 0.474, eid = 'D_2')

@@ -9,7 +9,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import numpy as np
 
-from ocelot import *
+from ocelot.cpbd.beam.particle import ParticleArray
+from ocelot.cpbd.elements.bend import Bend
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.sextupole import Sextupole
+from ocelot.cpbd.transformations.runge_kutta import RungeKuttaTM
+from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.transformations.runge_kutta import RungeKuttaGlobalTM, RungeKuttaOcelotTM
 
 

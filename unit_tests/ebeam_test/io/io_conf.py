@@ -3,7 +3,6 @@
 import pytest
 import numpy as np
 
-from ocelot import *
 from ocelot.cpbd.beam import generate_parray
 
 

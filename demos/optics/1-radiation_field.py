@@ -5,8 +5,8 @@ Created on Mon Oct 8 2018
 """
 
 import logging
-import ocelot
-from ocelot.common.globals import *
+import numpy as np
+from ocelot.common.globals import h_eV_s, speed_of_light
 from ocelot.optics.wave import imitate_sase_dfl, wigner_dfl, dfl_waistscan, generate_gaussian_dfl
 from ocelot.gui.dfl_plot import plot_dfl, plot_wigner, plot_dfl_waistscan
 from copy import deepcopy

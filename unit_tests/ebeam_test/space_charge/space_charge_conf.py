@@ -1,9 +1,19 @@
 """Test parameters description file"""
 
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.beam.particle import ParticleArray
+from ocelot.cpbd.elements.cavity import Cavity
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.marker import Marker
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.physics_proc import BeamTransform
+from ocelot.cpbd.transformations.second_order import SecondTM
+
+
 import pytest
 import numpy as np
 
-from ocelot import *
 
 """Lattice elements defenition"""
 

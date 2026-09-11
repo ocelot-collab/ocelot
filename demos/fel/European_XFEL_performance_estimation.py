@@ -6,16 +6,17 @@ Created on Fri Jul 6 15:00:00 2018
 """
 
 import ocelot
-from ocelot.rad.fel import *
+from ocelot.common.globals import m_e_GeV, q_e
+from ocelot.common.ocelog import logging
+from ocelot.rad.fel import calculateFelParameters
+from ocelot.rad.undulator_params import eV2lambda
 from ocelot import ocelog
-from ocelot.common.globals import *
 import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy
 import matplotlib.colors as colors
 from ocelot.common.math_op import find_nearest_idx
 from ocelot.common.ocelog import ocelog
-from ocelot.rad.undulator_params import *
 
 ocelog.setLevel(logging.ERROR)
 

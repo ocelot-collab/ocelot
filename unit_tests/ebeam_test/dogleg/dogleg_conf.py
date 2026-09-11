@@ -1,11 +1,22 @@
 """Test parameters description file"""
 
+from ocelot.cpbd.beam import Twiss
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.hcor import Hcor
+from ocelot.cpbd.elements.marker import Marker
+from ocelot.cpbd.elements.monitor import Monitor
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.sbend import SBend
+from ocelot.cpbd.elements.sextupole import Sextupole
+from ocelot.cpbd.elements.vcor import Vcor
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.transformations.second_order import SecondTM
+
+
 import pytest
 import numpy as np
 
-from ocelot import *
 from ocelot.cpbd.r_matrix import rot_mtx
-from ocelot.cpbd.beam import *
 
 """Lattice elements definition"""
 

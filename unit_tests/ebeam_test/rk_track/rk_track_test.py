@@ -1,5 +1,9 @@
 """Test of the demo file demos/ebeam/csr_ex.py"""
 
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.track import track
+
+
 import os
 import sys
 import copy

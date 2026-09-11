@@ -1,8 +1,25 @@
 """Test parameters description file"""
 
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.elements.aperture import Aperture
+from ocelot.cpbd.elements.cavity import Cavity
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.hcor import Hcor
+from ocelot.cpbd.elements.marker import Marker
+from ocelot.cpbd.elements.monitor import Monitor
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.sbend import SBend
+from ocelot.cpbd.elements.sextupole import Sextupole
+from ocelot.cpbd.elements.solenoid import Solenoid
+from ocelot.cpbd.elements.tdcavity import TDCavity
+from ocelot.cpbd.elements.undulator import Undulator
+from ocelot.cpbd.elements.vcor import Vcor
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.transformations.second_order import SecondTM
+
+
 import pytest
 
-from ocelot import *
 
 """Lattice definition"""
 # drifts 

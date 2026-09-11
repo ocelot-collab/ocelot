@@ -1,6 +1,9 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot import *
+from ocelot.cpbd.elements import (
+    Bend, Cavity, Drift, Marker, Matrix, Monitor, Quadrupole, Sextupole,
+    UnknownElement,
+)
 
 def RFcavity(l, volt, lag, harmon):
     rf = Cavity(l = l, volt=volt, id = id)

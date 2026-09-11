@@ -1,8 +1,11 @@
 """Test parameters description file"""
 
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.transformations.second_order import SecondTM
+
+
 import pytest
 
-from ocelot import *
 
 
 """pytest fixtures definition"""

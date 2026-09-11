@@ -4,9 +4,11 @@ authors: Ye. Fomin (NRC KI); S. Tomin (XFEL, NRC KI), 2016.
 """
 
 import xlrd
-from ocelot.cpbd.magnetic_lattice import *
-from ocelot.cpbd.elements import *
-from ocelot.cpbd.io import *
+from ocelot.cpbd.magnetic_lattice import MagneticLattice, lattice_format_converter
+from ocelot.cpbd.elements import (
+    Cavity, Hcor, Marker, Monitor, Octupole, Quadrupole, RBend, SBend, Sextupole, Solenoid,
+    Undulator, Vcor,
+)
 from numpy import sin
 import re
 

@@ -1,5 +1,10 @@
 """Test of the demo file demos/ebeam/csr_ex.py"""
 
+import numpy as np
+from ocelot.cpbd.beam.particle import ParticleArray
+from ocelot.cpbd.wake3D import LinLongWake, LongWake, Wake, WakeTable
+
+
 from pathlib import Path
 import os
 import sys

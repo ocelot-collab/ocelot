@@ -1,4 +1,4 @@
-from ocelot import *
+from ocelot import Twiss, Drift, Marker, Quadrupole, Undulator
 
 tws = Twiss()
 tws.beta_x  = 10.506745988156398

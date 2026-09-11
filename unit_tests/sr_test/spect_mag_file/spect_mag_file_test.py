@@ -1,5 +1,13 @@
 """Test of the demo file demos/sr/spect_mag_file.py"""
 
+import numpy as np
+from ocelot.cpbd.beam.core import Beam
+from ocelot.cpbd.elements.undulator import Undulator
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.rad.radiation_py import calculate_radiation
+from ocelot.rad.screen import Screen
+
+
 import os
 import sys
 import time

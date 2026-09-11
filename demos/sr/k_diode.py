@@ -1,10 +1,13 @@
 __author__ = 'Sergey Tomin'
-
-from ocelot.rad import *
-from ocelot import *
-from ocelot.gui import *
-import numpy as np
 import time
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+
+from ocelot import Beam, Undulator, MagneticLattice
+from ocelot.rad import calculate_radiation, Screen
+from ocelot.gui import show_flux
+
 font = {'size'   : 14}
 matplotlib.rc('font', **font)
 #from scipy.optimize import curve_fit

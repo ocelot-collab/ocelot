@@ -1,5 +1,14 @@
 """Test of the demo file demos/ebeam/multipoles.py"""
 
+from copy import copy
+import numpy as np
+from ocelot.cpbd.beam import Particle
+from ocelot.cpbd.chromaticity import compensate_chromaticity, natural_chromaticity
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.optics import lattice_transfer_map, periodic_twiss
+from ocelot.cpbd.track import create_track_list, stable_particles, track_nturns, tracking_step
+
+
 import os
 import sys
 import time
@@ -9,7 +18,6 @@ REF_RES_DIR = FILE_DIR + '/ref_results/'
 
 from unit_tests.params import *
 from multipoles_conf import *
-from ocelot.cpbd.chromaticity import *
 
 
 def test_lattice_transfer_map(lattice, update_ref_values=False):

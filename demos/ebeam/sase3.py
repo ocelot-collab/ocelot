@@ -1,7 +1,15 @@
 '''
 input deck for XFEL SASE3 beamline
 '''
-from ocelot import *
+
+from ocelot.common.globals import pi
+from ocelot.cpbd.beam.core import Beam
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.hcor import Hcor
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.rbend import RBend
+from ocelot.cpbd.elements.undulator import Undulator
+
 import numpy as np
 
 und = Undulator(nperiods=73, lperiod=0.068, Kx=0.0, eid= "und"); voodoo = 1.5

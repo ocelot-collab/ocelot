@@ -1,9 +1,14 @@
 """Test parameters description file"""
 
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.undulator import Undulator
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.transformations.second_order import SecondTM
+
+
 import pytest
 import numpy as np
 
-from ocelot import *
 from ocelot.cpbd.elements.undulator_atom import und_field
 from ocelot.cpbd.beam import generate_parray
 from ocelot import RungeKuttaTM

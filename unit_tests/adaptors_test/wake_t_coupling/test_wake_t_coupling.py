@@ -1,3 +1,10 @@
+from ocelot.cpbd.elements import Drift
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.optics import MethodTM
+from ocelot.cpbd.track import track
+from ocelot.cpbd.transformations.second_order import SecondTM
+
 from time import time
 from copy import deepcopy
 
@@ -12,8 +19,6 @@ try:
 except ImportError:
     wake_t_installed = False
 
-from ocelot import *
-from ocelot.gui.accelerator import *
 from ocelot.adaptors.wake_t import wake_t_beam_to_parray, parray_to_wake_t_beam
 
 

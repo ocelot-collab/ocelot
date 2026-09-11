@@ -1,4 +1,4 @@
-from ocelot import *
+from ocelot.common.globals import pi
 from scipy.special import kn
 import numpy as np
 

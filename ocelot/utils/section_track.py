@@ -2,16 +2,22 @@
 Section class for s2e tracking.
 S.Tomin. XFEL/DESY. 2017
 """
+
 import os
 import numpy as np
 
-from ocelot.cpbd.csr import *
-from ocelot.cpbd.physics_proc import *
-from ocelot.cpbd.sc import *
-from ocelot.cpbd.track import *
+from ocelot.cpbd.csr import CSR
+from ocelot.cpbd.physics_proc import BeamTransform, IBS, SmoothBeam
+from ocelot.cpbd.sc import LSC, SpaceCharge
+from ocelot.cpbd.elements import Cavity, TDCavity
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.optics import twiss
+from ocelot.cpbd.track import track
 from ocelot.cpbd.transformations.second_order import SecondTM
-from ocelot.cpbd.wake3D import *
-from ocelot.cpbd.io import *
+from ocelot.cpbd.wake3D import Wake, WakeKick
+from ocelot.cpbd.beam import Twiss
+from ocelot.cpbd.io import load_particle_array, save_particle_array
 
 import copy
 

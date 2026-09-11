@@ -1,4 +1,5 @@
-from ocelot import * 
+from ocelot import Twiss, Cavity, Drift, Hcor, Marker, Monitor, Quadrupole, SBend, Sextupole, Vcor
+
 tws_l1 = Twiss()
 tws_l1.beta_x  = 3.09986112826
 tws_l1.beta_y  = 4.58926819905

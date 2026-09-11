@@ -9,7 +9,8 @@ profile from a formfactor measurement
 
 Example:
 ---
-from ocelot import *
+from ocelot import generate_parray, get_current
+import numpy as np
 import ocelot.utils.crisp as srisp
 import matplotlib.pyplot as plt
 
@@ -56,7 +57,7 @@ plt.show()
 """
 
 import numpy as np
-import matplotlib.pylab as plt
+import matplotlib.pyplot as plt
 from scipy.io import loadmat
 from scipy.optimize import curve_fit
 from scipy import interpolate

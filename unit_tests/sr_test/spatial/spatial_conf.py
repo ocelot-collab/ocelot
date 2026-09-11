@@ -1,9 +1,13 @@
 """Test parameters description file"""
 
+from ocelot.cpbd.beam.core import Beam
+from ocelot.cpbd.elements.undulator import Undulator
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.rad.screen import Screen
+
+
 import pytest
 
-from ocelot import *
-from ocelot.rad import *
 
 
 """Lattice elements definition"""

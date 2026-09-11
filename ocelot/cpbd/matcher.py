@@ -1865,10 +1865,9 @@ class MatchProblem:
             unmet = [report for report in target_reports if not report.met]
             if success and unmet:
                 success = False
+                unmet_str = "\n - ".join(f"{t.name}: {t!r}" for t in unmet)
                 message = (
-                    f"Matching failed because some targets were not met:\n - "
-                    f"{'\n - '.join(map(lambda t: f"{t.name}: {repr(t)}", unmet))}"
-                    f"\n"
+                    f"Matching failed because some targets were not met:\n - {unmet_str}\n"
                     f"This is a consequence of the strict success requirement. The solver reports:\n{message}"
                 )
 

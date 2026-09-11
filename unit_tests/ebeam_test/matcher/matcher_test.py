@@ -161,6 +161,7 @@ def test_solve_with_strict_success_requires_all_targets_to_be_met():
     assert result.optimize_result.success
     assert not result.success
     assert not result.target_reports[0].met
+    assert "END.s" in result.message
 
 
 def test_solve_with_non_strict_success_forwards_optimizer_status():

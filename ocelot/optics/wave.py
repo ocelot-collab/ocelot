@@ -2,28 +2,23 @@
 wave optics
 """
 
-from numpy import random
-from numpy.linalg import norm
+import logging
 import numpy as np
 from math import factorial
-from numpy import inf, complex128, complex64
 import scipy
 import scipy.special as sc
-import numpy.fft as fft
 from copy import deepcopy
 import time
 import os
 
-# from ocelot.optics.elements import *
-from ocelot.common.globals import *
-from ocelot.common.math_op import find_nearest_idx, fwhm, std_moment, bin_scale, bin_array, mut_coh_func, mprefix
+from ocelot.common.globals import alpha, h_eV_s, hr_eV_s, pi, q_e, speed_of_light
+from ocelot.common.math_op import find_nearest_idx, fwhm, std_moment, bin_scale, bin_array, mut_coh_func, mprefix, n_moment
 from ocelot.rad.undulator_params import lambda2eV, eV2lambda, k2lambda, lambda2k, k2angle, angle2k
 from ocelot.common.py_func import filename_from_path
 # from ocelot.optics.utils import calc_ph_sp_dens
-# from ocelot.adaptors.genesis import *
 # import ocelot.adaptors.genesis as genesis_ad
 # GenesisOutput = genesis_ad.GenesisOutput
-from ocelot.common.ocelog import *
+from ocelot.common.ocelog import ind_str
 _logger = logging.getLogger(__name__)
 
 import multiprocessing
@@ -45,7 +40,7 @@ class RadiationField:
     """
 
     def __init__(self, shape=(0, 0, 0)):
-        self.fld = np.zeros(shape, dtype=complex128) # (z,y,x)
+        self.fld = np.zeros(shape, dtype=np.complex128) # (z,y,x)
         self.fld_stat = []
         self.dx = []
         self.dy = []
@@ -2018,7 +2013,7 @@ def dfl_gen_undulator_sp(dfl, z, L_w, E_ph, N_e=1, sig_x=0, sig_y=0, sig_xp=0, s
         raise AttributeError('"approximation" must be whether "near_field" of "far_field"')
 
     if seed != None:
-        random.seed(seed)
+        np.random.seed(seed)
         _logger.debug(ind_str + 'seed is {}'.format(seed))
     
     l_x   = np.random.normal(0, sig_x, (N_e))
@@ -2122,7 +2117,7 @@ def dfl_gen_undulator_mp(dfl, z, L_w, E_ph, N_b=1, N_e=1, sig_x=0, sig_y=0, sig_
         raise AttributeError('"approximation" must be whether "near_field" of "far_field"')
   
     if seed != None:
-        random.seed(seed)
+        np.random.seed(seed)
         _logger.info('seed is {}'.format(seed))
     
     if C != 0:
@@ -2196,6 +2191,7 @@ def dfl_gen_undulator_serval(E_ph=1042, L_w=1, shape=(51, 51, 100), dgrid=(1e-3,
     np.random.seed(None)
 
     if showfig:
+        from ocelot.gui.dfl_plot import plot_dfl
         plot_dfl(dfl, line_off_xy = False, fig_name = '1-X_noise')
     
     dfl.to_domain('sf')    
@@ -3740,7 +3736,7 @@ def wigner_pad(wig, pad):
     return wig_out
 
 
-def wigner_out(out, z=inf, method='mp', pad=1, debug=1, on_axis=1):
+def wigner_out(out, z=np.inf, method='mp', pad=1, debug=1, on_axis=1):
     """
     returns WignerDistribution from GenesisOutput at z
     """
@@ -3853,11 +3849,13 @@ def dfl2wig(dfl, method='mp', pad=1, domain='t', **kwargs):
     return wig
 
 
-def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, on_axis=1, **kwargs):
+def wigner_stat(out_stat, stage=None, z=np.inf, method='mp', debug=1, pad=1, on_axis=1, **kwargs):
     """
     returns averaged WignerDistribution from GenStatOutput at stage at z
     """
     if isinstance(out_stat, str):
+        from ocelot.adaptors.genesis import read_out_file_stat
+
         if stage == None:
             raise ValueError('specify stage, since path to folder is provided')
         out_stat = read_out_file_stat(out_stat, stage, debug=debug)
@@ -3869,7 +3867,7 @@ def wigner_stat(out_stat, stage=None, z=inf, method='mp', debug=1, pad=1, on_axi
     _logger.info('calculating Wigner distribution from out_stat at z = {}'.format(str(z)))
     start_time = time.time()
     
-    if z == inf:
+    if z == np.inf:
         z = np.amax(out_stat.z)
     elif z > np.amax(out_stat.z):
         z = np.amax(out_stat.z)

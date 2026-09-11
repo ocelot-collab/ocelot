@@ -1,13 +1,17 @@
 import os
+import logging
 import functools
 
 import ocelot
-from ocelot.gui.beam_plot import *
-from ocelot.adaptors.genesis4 import *
-from ocelot.gui.genesis4_plot import *
+from ocelot.adaptors.genesis4 import Genesis4Input, Genesis4Simulation
+from ocelot.cpbd.beam import generate_beam
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.gui.genesis4_plot import plot_gen4_out_all
+from ocelot.rad.undulator_params import eV2lambda
+from ocelot.utils.xfel_utils import create_fel_beamline, prepare_el_optics
 
 _logger = logging.getLogger(__name__)
-ocelog.setLevel(logging.INFO)
+ocelot.ocelog.setLevel(logging.INFO)
 
 sim_directory = r'/gpfs/exfel/data/scratch/svitozar/projects/ocelot_test/genesis4/Ocelot/preprocessor_local/'
 

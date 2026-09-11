@@ -9,9 +9,10 @@ python3 moga_accelerator_optimization.py                     - for MOGA single t
 mpiexec -n 10 python3 moga_accelerator_optimization.py       - for MOGA MPI with 10 threads
 """
 
-from ocelot import *
-from ocelot.cpbd.moga import *
-from ocelot.cpbd.chromaticity import *
+from ocelot import Drift, Sextupole, Quadrupole, SBend, Monitor, MagneticLattice, TransferMap, KickTM, Beam, Twiss, periodic_twiss, UnstableLatticeError, EbeamParams, create_track_list, track_nturns
+import numpy as np
+from ocelot.cpbd.chromaticity import compensate_chromaticity, natural_chromaticity
+from ocelot.cpbd.moga import Moga
 
 
 #  Lattice of Kurchatov Light Sourse "Siberia - 2"

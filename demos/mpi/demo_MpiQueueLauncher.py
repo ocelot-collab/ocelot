@@ -1,14 +1,15 @@
 #!/usr/bin/env python3.6
 
-import sys, os
-import matplotlib.pyplot as plt
-from ocelot.utils.xfel_utils import *
-from ocelot.cpbd.magnetic_lattice import MagneticLattice
-from ocelot.gui.genesis_plot import *
+import sys
+import os
+import logging
 import time
-from ocelot.common.globals import *  #import of constants like "h_eV_s" and "speed_of_light"
-from ocelot.common.py_func import *
-# import logging
+import matplotlib.pyplot as plt
+
+from ocelot.utils.launcher import MpiQueueLauncher
+from copy import deepcopy
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+
 from ocelot import ocelog
 
 ocelog.setLevel(logging.DEBUG)

@@ -1,8 +1,11 @@
 """Test parameters description file"""
 
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.transformations.transfer_map import TransferMap
+
+
 import pytest
 import sase1
-from ocelot import *
 
 
 @pytest.fixture(scope='module')

@@ -1,6 +1,16 @@
-from ocelot import *
-from ocelot.utils.bump_utils import *
-from ocelot.gui import *
+import matplotlib.pyplot as plt
+import numpy as np
+from ocelot.cpbd.beam import Particle
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.elements import Marker, Vcor
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.optics import twiss
+from ocelot.cpbd.track import lattice_track
+from ocelot.gui.accelerator import plot_API, plot_opt_func
+from ocelot.utils.bump_utils import bump_4cors, convert_cors2dipoles
+
 
 d = Drift(l=0.35)
 d1 = Drift(l=0.6)

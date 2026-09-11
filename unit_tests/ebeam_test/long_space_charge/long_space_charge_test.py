@@ -1,3 +1,6 @@
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.sc import LSC
+
 import os
 import numpy as np
 import pytest

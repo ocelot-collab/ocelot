@@ -3,7 +3,7 @@ Bending magnet radiation
 for arc motion
 '''
 
-from pylab import *
+import numpy as np
 
 c = 3.e8
 hc = 1.97e-7 # ev m 
@@ -45,7 +45,7 @@ def bm_e_a(x,y,xp,yp,x0,y0,z,p_en, R):
     for i in range(len(x)):
         for j in range(len(xp)):
             phi_0 = -p_en / (2.*hc) * R * (th_x - xp[j]) * (  1./gam**2 + (th_y - yp)**2 + (th_x - xp[j])**2 / 3.) - p_en / hc * (x[i]*xp[j] + y*yp)
-            Ex += np.exp(1j*phi_s) * np.exp(1j*phi_0) * Ex0 * exp(-0.5*(x[i]/sigx)**2 - 0.5*(xp[j]/sigxp)**2) / (sigx * sigxp) 
+            Ex += np.exp(1j*phi_s) * np.exp(1j*phi_0) * Ex0 * np.exp(-0.5*(x[i]/sigx)**2 - 0.5*(xp[j]/sigxp)**2) / (sigx * sigxp) 
             
     return Ex / (len(x) * len(xp)) 
     
@@ -66,8 +66,8 @@ def bm_e0(x0,y0,z,p_en, R):
         z = zmin + (i+0.5)*dz
         phi = (p_en/hc)*(0.5*z* th_y**2 + z**3 / (6*R**2))
         #print phi / (2*pi)
-        Exr += z*cos(phi)
-        Exi += z*sin(phi)
+        Exr += z*np.cos(phi)
+        Exi += z*np.sin(phi)
         z = zmin + i*dz
     
          

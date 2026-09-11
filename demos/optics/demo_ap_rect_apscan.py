@@ -5,7 +5,10 @@
 
 import math
 import matplotlib.pyplot as plt
-from ocelot.optics.wave import *
+import logging
+import numpy as np
+from copy import deepcopy
+from ocelot.optics.wave import dfl_ap_rect, dfl_ap_rect_apscan, generate_gaussian_dfl
 from ocelot import ocelog
 plt.ion()
 ocelog.setLevel(logging.DEBUG)

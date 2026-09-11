@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import ocelot.common.globals as glb
 from ocelot.common.math_op import invert_cdf
@@ -5,7 +6,6 @@ from . import particle
 from . import core
 from . import beam
 
-from ocelot.common.ocelog import *
 
 _logger = logging.getLogger(__name__)
 

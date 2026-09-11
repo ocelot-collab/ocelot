@@ -1,7 +1,18 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot import *
-from ocelot.gui import *
+import matplotlib.pyplot as plt
+from ocelot.cpbd.beam.core import Beam, Twiss
+from ocelot.cpbd.beam.particle import Particle
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.undulator import Undulator
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.optics import periodic_twiss
+from ocelot.cpbd.track import tracking_step
+from ocelot.cpbd.transformations.transfer_map import TransferMap
+from ocelot.cpbd.transformations.undulator_test import UndulatorTestTM
+from ocelot.gui.accelerator import plot_opt_func
 import copy
 
 und = Undulator(Kx=2, nperiods=100, lperiod=0.01, eid="und")

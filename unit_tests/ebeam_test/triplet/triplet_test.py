@@ -1,5 +1,13 @@
 """Test of the demo file demos/ebeam/triplet.py"""
 
+import numpy as np
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.beam.particle import Particle
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.optics import lattice_transfer_map, twiss
+from ocelot.cpbd.track import tracking_step
+
+
 import os
 import sys
 from copy import copy

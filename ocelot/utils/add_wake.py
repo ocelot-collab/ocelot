@@ -11,8 +11,9 @@ from ocelot.utils.add_wake import add_wake_to_beamf
 add_wake_to_beamf(beamf, new_beamf)
 '''
 #sys.path.append("../../")
-from ocelot.adaptors.genesis import *
-import cpbd.reswake as w
+import sys
+from ocelot.adaptors.genesis import beam_file_str, read_beam_file, write_beam_file
+from ocelot.cpbd import reswake
 from copy import deepcopy
 #try:
 #    import matplotlib.animation as anim
@@ -40,8 +41,8 @@ def get_wake_from_file(wakefile):
 
 def add_wake_to_beam(beam):
     # beam = read_beam_file(beamf)
-    # s, bunch, wake = w.xfel_pipe_wake(s=beam.z, current=beam.I[::-1])
-    s, bunch, wake = w.xfel_pipe_wake(s=beam.z, current=beam.I)
+    # s, bunch, wake = reswake.xfel_pipe_wake(s=beam.z, current=beam.I[::-1])
+    s, bunch, wake = reswake.xfel_pipe_wake(s=beam.z, current=beam.I)
     print ('read ', len(wake), ' slice values')
     beam1 = deepcopy(beam)
     beam1.eloss = wake[::-1]

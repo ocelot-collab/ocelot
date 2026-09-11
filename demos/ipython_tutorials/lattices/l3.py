@@ -1,7 +1,6 @@
 # Converted from component_list_2026.01.21.xls
 
-from ocelot.cpbd.beam import Twiss
-from ocelot.cpbd.elements import Cavity, Drift, Hcor, Marker, Monitor, Quadrupole, Vcor
+from ocelot import Twiss, Cavity, Drift, Hcor, Marker, Monitor, Quadrupole, Vcor
 
 twiss0 = Twiss()
 twiss0.E = 2.4000000004506834

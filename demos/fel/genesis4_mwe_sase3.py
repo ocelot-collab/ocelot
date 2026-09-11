@@ -1,14 +1,19 @@
 import os
+import logging
 import functools
 
 import ocelot
-from ocelot.gui.beam_plot import *
-from ocelot.adaptors.genesis4 import *
-from ocelot.gui.genesis4_plot import *
+from ocelot.cpbd.beam import generate_beam
+import numpy as np
+from ocelot.adaptors.genesis4 import Genesis4Input, Genesis4Simulation
+from ocelot.gui.genesis4_plot import plot_gen4_out_all
+from ocelot.rad.undulator_params import eV2lambda
+from ocelot.utils.xfel_utils import create_fel_lattice
+from ocelot.utils.xfel_utils import create_fel_beamline, prepare_el_optics
 from copy import deepcopy
 
 _logger = logging.getLogger(__name__)
-ocelog.setLevel(logging.INFO)
+ocelot.ocelog.setLevel(logging.INFO)
 
 sim_directory = r'/gpfs/exfel/data/group/wp72/sserkez/projects/XFEL/2021_02_Genesis4_test/2023_02_Genesis4_MWE/'
 sim_subdirectory = 'with_harmonic3'

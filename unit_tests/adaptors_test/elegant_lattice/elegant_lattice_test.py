@@ -1,10 +1,14 @@
 """Test of lattice save function in adaptors/elegant_lattice_converter.py file"""
 
+from ocelot.adaptors.elegant_lattice_converter import ElegantLatticeConverter
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.optics import lattice_transfer_map
+
+
 import os
 import sys
 import time
 
-from ocelot.adaptors.elegant_lattice_converter import *
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 REF_RES_DIR = FILE_DIR + '/ref_results/'

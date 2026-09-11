@@ -1,8 +1,17 @@
 __author__ = 'Sergey Tomin'
 import sys
 sys.path.append("../../")
-from ocelot import *
-from ocelot.gui.accelerator import *
+import matplotlib.pyplot as plt
+import numpy as np
+from ocelot.cpbd.beam.analysis import get_current
+from ocelot.cpbd.beam.particle import ParticleArray
+from ocelot.cpbd.csr import CSR
+from ocelot.cpbd.elements import Bend, Drift, Marker
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.track import track
+from ocelot.cpbd.transformations.second_order import SecondTM
+from ocelot.gui.accelerator import plot_opt_func, show_e_beam
 import time
 
 

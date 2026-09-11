@@ -1,9 +1,9 @@
 import sys
+import matplotlib.pyplot as plt
 
-from ocelot.adaptors.genesis import *
 
 from ocelot import MagneticLattice
-from ocelot.cpbd.optics import *
+import numpy as np
 
 import numpy.fft as fft
 
@@ -89,7 +89,7 @@ for run_id in runs:
         spec = fft.fft(slices[:,int( g('ncar')/2),int( g('ncar')/2)])
 
         y = np.abs(spec)**2
-        x = h * fftfreq(len(spec), d=g('zsep') * g('xlamds') / c) + w_l_ev
+        x = h * fft.fftfreq(len(spec), d=g('zsep') * g('xlamds') / c) + w_l_ev
     
 
     if power_av == None:
@@ -120,4 +120,3 @@ ax1.plot(t, power_av, 'b')
 ax2.plot(x, spec_av, 'b')
 
 plt.show()
-

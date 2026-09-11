@@ -1,11 +1,18 @@
 __author__ = 'Sergey Tomin'
 import sys
 sys.path.append("../..")
-from ocelot.gui import *
-from ocelot.cpbd.track import *
+
+from ocelot import Sextupole, Drift, SBend, Undulator, Quadrupole, KickTM, RungeKuttaTrTM, Beam
+import matplotlib.pyplot as plt
+import numpy as np
+from ocelot.cpbd.beam import Particle, Twiss
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.optics import periodic_twiss
+from ocelot.cpbd.track import Track_info, freq_analysis, track_nturns
+from ocelot.cpbd.transformations import TransferMap
+from ocelot.gui.accelerator import plot_opt_func
+from time import time
 from ocelot.cpbd.elements.undulator_atom import und_field
-from ocelot.cpbd.optics import *
-from ocelot.cpbd.transformations import *
 
 
 D0 = Drift(l=0., eid= "D0")

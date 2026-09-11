@@ -2,11 +2,14 @@
 single crystal Bragg reflection
 '''
 
-from ocelot.optics.elements import *
 # from ocelot.optics.wave import TransferFunction
-from ocelot.optics.bragg import *
+from ocelot.optics.bragg import c, hbar
 from ocelot.optics.ray import Ray, trace as trace_ray
-from ocelot.gui.optics import *
+import matplotlib.pyplot as plt
+import numpy as np
+import numpy.fft as fft
+from ocelot.common.globals import pi
+from ocelot.optics.wave import calc_ph_sp_dens
 
 
 class Signal(object):
@@ -50,7 +53,7 @@ def read_signal(file_name, E_ref, npad = 10):
     spec = fft.fft(s.f)
     dt = (s.t[1] - s.t[0]) * 1.e-15
     k0 = E_ref / (hbar * c)  
-    s.freq_k = 2*pi*(fftfreq(len(spec), d=dt) / c )
+    s.freq_k = 2*pi*(fft.fftfreq(len(spec), d=dt) / c )
     s.freq_k = -np.roll(s.freq_k, len(spec)/2) + k0 # take into account s/t
     s.freq_ev = s.freq_k * hbar * c
     s.sp = np.roll(spec, len(spec)/2)

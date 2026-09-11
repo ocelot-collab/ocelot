@@ -9,8 +9,9 @@ import matplotlib.pyplot as plt
 import scipy.integrate as integrate
 #import matplotlib.animation as animation
 
-from ocelot.optics.elements import *
-from ocelot.optics.wave import *
+from ocelot.optics.elements import (
+    Aperture, Crystal, Detector, EllipticMirror, Grating, Lense, Mirror, ParabolicMirror, debug,
+)
 
 def init_plots(views, geo):
     scene = Scene()

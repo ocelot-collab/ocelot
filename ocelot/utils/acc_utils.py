@@ -532,9 +532,12 @@ def passive_streaker_resolutions(dipole_kick, quad_kick, R, tw, kick="vert", emi
 
     Examples
     --------
-    from ocelot import *
-    from ocelot.gui import *
-    from ocelot.utils.acc_utils import *
+    from ocelot import MagneticLattice, generate_parray, speed_of_light, twiss
+    import matplotlib.pyplot as plt
+    from ocelot.utils.acc_utils import (
+        calculate_resolutions, convolve_beam, single_plane_dipole_wake,
+        single_plate_quadrupole_wake,
+    )
     from lattice import sase2
     from lattice import t3_bump_fin as t3
 

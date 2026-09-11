@@ -1,8 +1,11 @@
+from ocelot.cpbd.beam import Twiss
+from ocelot.cpbd.beam.generator import generate_parray
+from ocelot.cpbd.optics import lattice_transfer_map
+from ocelot.utils.section_track import SectionLattice
+
 import sys
 sys.path.append("/Users/tomins/Nextcloud/DESY/repository/ocelot/")
-from ocelot import *
 from accelerator.s2e_sections.sections import *
-from ocelot.utils.section_track import *
 
 data_dir = "unit_tests/ebeam_test/section_track/data"
 tws0 = Twiss()

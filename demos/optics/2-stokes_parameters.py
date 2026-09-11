@@ -1,12 +1,16 @@
 '''
 user interface for viewing Stokes parameters
 '''
-import matplotlib.pyplot as plt
-import numpy as np
-from ocelot.optics.wave import *
-from ocelot.gui.dfl_plot import plot_stokes_3d, plot_dfl, plot_stokes_angles, plot_stokes_values
-ocelog.setLevel(logging.DEBUG)
 from copy import deepcopy
+import numpy as np
+import matplotlib.pyplot as plt
+
+import ocelot
+import logging
+from ocelot.common.globals import h_eV_s, speed_of_light
+from ocelot.optics.wave import calc_stokes_dfl, generate_gaussian_dfl
+from ocelot.gui.dfl_plot import plot_stokes_3d, plot_dfl, plot_stokes_angles, plot_stokes_values
+ocelot.ocelog.setLevel(logging.DEBUG)
 
 import matplotlib
 matplotlib.use('qtagg')

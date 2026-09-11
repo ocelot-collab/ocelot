@@ -1,8 +1,16 @@
 __author__ = 'Sergey Tomin'
 
 import matplotlib.pyplot as plt
-from ocelot import *
-from ocelot.cpbd.optics import *
+import numpy as np
+from ocelot.common.globals import pi
+from ocelot.cpbd.beam.particle import Particle
+from ocelot.cpbd.elements.bend import Bend
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.sextupole import Sextupole
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.track import tracking_step
 from ocelot.cpbd.transformations.second_order import SecondTM
 
 Q1 = Quadrupole(l= 0.4, k1=-1.3, eid= "Q1")

@@ -1,7 +1,7 @@
 
 import os.path
-from ocelot.gui.genesis_plot import *
-from ocelot.utils.xfel_utils import *
+from ocelot.common.py_func import background
+from ocelot.gui.genesis_plot import plot_gen_stat
 
 # dirrectory with results (with run_XXX folders)
 results_dir = '/data/netapp/xfel/yevgeniy/moga_test/moga_fit_new_results/iter_0/'

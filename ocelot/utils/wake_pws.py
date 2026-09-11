@@ -6,9 +6,8 @@ added function which generates wake tables
 S.Tomin and I.Zagorodnov, 11.2019
 """
 import numpy as np
-from ocelot.cpbd.beam import *
-from ocelot.cpbd.physics_proc import *
-from ocelot.gui import *
+from ocelot.common.globals import speed_of_light
+from ocelot.cpbd.beam import s_to_cur
 import os
 
 def wake_tables(b=500*1e-6, a=0.01, width=0.02, t=0.25*1e-3, p=0.5*1e-3, length=1, sigma=30e-6, filename=None):
@@ -207,7 +206,8 @@ def wake_kick(p_array, b=500*1e-6, t=0.25*1e-3, p=0.5*1e-3):
 
 if __name__ == "__main__":
     from matplotlib import pyplot as plt
-    from ocelot import *
+    from ocelot.gui.accelerator import show_density
+    from ocelot.cpbd.io import load_particle_array
 
     data_dir = "/Users/tomins/ownCloud/DESY/repository/ocelot/projects/dechirper/dataxxl/ocelot"
     p_array = load_particle_array(data_dir + "/particles/section_SASE1.npz")
@@ -235,4 +235,3 @@ if __name__ == "__main__":
     #show_e_beam(p_array)
     show_density(p_array.tau(), p_array.py())
     plt.show()
-

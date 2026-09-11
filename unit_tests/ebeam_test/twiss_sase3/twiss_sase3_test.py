@@ -1,5 +1,14 @@
 """Test of the demo file demos/ebeam/twiss_sase3.py"""
 
+import numpy as np
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.optics import fodo_parameters, lattice_transfer_map, twiss
+from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
+from ocelot.cpbd.transformations.transfer_map import TransferMap
+from ocelot.cpbd.transformations.transformation import TMTypes
+
+
 import os
 import sys
 import time

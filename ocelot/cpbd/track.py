@@ -8,17 +8,18 @@ import copy
 import logging
 from time import time
 import multiprocessing as mp
-from typing import Union, List, Tuple, Optional, Any, Iterable
+from typing import Union, List, Tuple, Optional, Any, Iterable, Mapping
 
 from scipy.stats import truncnorm
 import pandas as pd
 import numpy as np
 
 from ocelot.cpbd.transformations.transformation import TMTypes
-from ocelot.cpbd.optics import *
-from ocelot.cpbd.beam import *
-from ocelot.cpbd.errors import *
-from ocelot.cpbd.elements import *
+from ocelot.cpbd.optics import periodic_twiss, twiss
+from ocelot.cpbd.beam import Particle, ParticleArray, Twiss, get_envelope, twiss_iterable_to_df
+from ocelot.cpbd.errors import create_copy, errors_seed
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.elements import Drift, Marker
 from ocelot.cpbd.io import is_an_mpi_process, ParameterScanFile
 from ocelot.cpbd.physics_proc import CopyBeam
 from ocelot.cpbd.navi import Navigator

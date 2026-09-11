@@ -8,16 +8,19 @@ Created on Thu Feb 11 16:09:20 2021
 
 __author__ = "Andrei Trebushinin"
 
-from ocelot.optics.new_wave import *
-from ocelot.gui.dfl_plot import *
-from ocelot.rad.optics_elements import *
-from ocelot.rad.optics_line import *
-from ocelot.rad.transfer_function import *
-from ocelot.rad.propagation import *
+import logging
+import numpy as np
+from copy import deepcopy
+from ocelot.common.globals import h_eV_s, speed_of_light
+from ocelot.common.ocelog import ocelog
+from ocelot.gui.dfl_plot import plot_dfl
+from ocelot.optics.new_wave import generate_gaussian_dfl
+from ocelot.rad.optics_elements import ApertureRect, FreeSpace, ImperfectMirrorSurface, ThinLens
+from ocelot.rad.optics_line import OpticsLine
+from ocelot.rad.propagation import propagate
 
 ocelog.setLevel(logging.DEBUG)
 
-from ocelot.common.ocelog import *
 _logger = logging.getLogger(__name__)
 
 ### defining parameters for gaussian beam 

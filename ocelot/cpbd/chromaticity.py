@@ -1,12 +1,16 @@
 
 __author__ = 'Sergey Tomin'
 
+# Explicit re-exports used by existing simulation scripts.
+from ocelot.cpbd.beam import Particle as Particle
+
 from scipy.integrate import simpson
 from numpy.linalg import eig
 
-from ocelot.cpbd.optics import *
-from ocelot.cpbd.beam import *
-from ocelot.cpbd.elements import *
+from copy import deepcopy
+from numpy.linalg import inv
+from ocelot.cpbd.optics import lattice_transfer_map, periodic_twiss
+from ocelot.cpbd.elements import Bend, Multipole, Quadrupole, RBend, SBend, Sextupole
 from ocelot.cpbd.transformations.transformation import TMTypes
 import numpy as np
 

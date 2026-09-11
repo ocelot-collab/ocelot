@@ -5,14 +5,17 @@ from copy import deepcopy
 from numpy.linalg import inv
 import pandas as pd
 from typing import Iterable
+import numpy as np
+import logging
 
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 
-from ocelot.cpbd.r_matrix import *
+from ocelot.common.globals import m_e_GeV
 from ocelot.cpbd.tm_utils import SecondOrderMult
 from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.beam import Twiss, twiss_iterable_to_df
 
+logger = logging.getLogger(__name__)
 
 class UnstableLatticeError(RuntimeError):
     """Raised when a lattice has no strictly stable periodic Twiss solution."""

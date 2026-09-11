@@ -7,8 +7,8 @@ Revision on 01.06.2017: coordinate transform to the velocity direction
 import numpy as np
 import scipy.ndimage as ndimage
 import time
-from ocelot.common.globals import *
-from ocelot.cpbd.coord_transform import *
+from ocelot.common.globals import Z0, epsilon_0, m_e_GeV, m_e_eV, pi, speed_of_light
+from ocelot.cpbd.coord_transform import xp_2_xxstg_mad, xxstg_2_xp_mad
 from scipy import interpolate
 import multiprocessing
 from scipy.special import exp1, k1

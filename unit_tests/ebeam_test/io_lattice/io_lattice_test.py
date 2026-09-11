@@ -1,10 +1,30 @@
 """Test of lattice save function in cpbd/io.py file"""
 
+import numpy as np
+from ocelot.cpbd.beam import Twiss
+from ocelot.cpbd.elements.aperture import Aperture
+from ocelot.cpbd.elements.bend import Bend
+from ocelot.cpbd.elements.cavity import Cavity
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.hcor import Hcor
+from ocelot.cpbd.elements.matrix import Matrix
+from ocelot.cpbd.elements.monitor import Monitor
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.rbend import RBend
+from ocelot.cpbd.elements.sbend import SBend
+from ocelot.cpbd.elements.sextupole import Sextupole
+from ocelot.cpbd.elements.solenoid import Solenoid
+from ocelot.cpbd.elements.tdcavity import TDCavity
+from ocelot.cpbd.elements.vcor import Vcor
+from ocelot.cpbd.magnetic_lattice import MagneticLattice, merger
+from ocelot.cpbd.optics import lattice_transfer_map, twiss
+from ocelot.cpbd.transformations.second_order import SecondTM
+
+
 import os
 import sys
 import time
 
-from ocelot.cpbd.io import *
 from ocelot.cpbd.latticeIO import LatticeIO
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))

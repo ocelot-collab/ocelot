@@ -3,10 +3,12 @@ __author__ = 'Sergey'
 from scipy.integrate import simpson
 
 from ocelot.cpbd.optics import periodic_twiss, trace_z
-from ocelot.cpbd.beam import *
-from ocelot.cpbd.elements import *
-from ocelot.rad.undulator_params import *
-from ocelot.common.ocelog import *
+from ocelot.cpbd.beam import Twiss
+from ocelot.cpbd.elements import Bend, RBend, SBend, Undulator
+import numpy as np
+from ocelot.common.globals import Cgamma, Cq, m_e_GeV, pi, speed_of_light
+from ocelot.rad.undulator_params import K2field
+import logging
 from ocelot.cpbd.transformations.transformation import TMTypes
 
 _logger = logging.getLogger(__name__)

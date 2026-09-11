@@ -62,6 +62,9 @@ def _residual_scalar(value: float, target: float, relation: str, tol: float) -> 
 def _wrap_to_pi(value: float) -> float:
     return (value + np.pi) % (2.0 * np.pi) - np.pi
 
+def _diff_mod(a:float, b:float, periodicity:float) -> float:
+    """Periodic difference function centered around zero such that the result lies in `[-periodicity/2, periodicity/2]`"""
+    return (a - b + periodicity/2) % periodicity - periodicity/2
 
 @dataclass
 class Vary:
@@ -501,8 +504,8 @@ class TwissTarget(Target):
 class TwissDifferenceTarget(Target):
     """Target difference of one Twiss quantity between two elements.
 
-    For phase quantities (``mux``, ``muy``), ``wrap_phase=True`` can be used
-    to treat differences modulo ``2*pi`` for equality constraints.
+    Deprecated: For phase quantities (``mux``, ``muy``), ``wrap_phase=True`` can be used
+    to treat differences modulo ``2*pi`` for equality constraints. Use `PhaseAdvanceTarget` instead.
     """
 
     def __init__(
@@ -678,6 +681,79 @@ class GlobalTwissTarget(Target):
             },
         )
 
+class PhaseAdvanceTarget(Target):
+    """Target phase advance of one transversal dimension."""
+
+    def __init__(
+        self,
+        start: OpticElement,
+        end: OpticElement,
+        plane: str,
+        value: float,
+        periodicity: float = 2 * np.pi,
+        **kwargs: Any,
+    ):
+        """
+        Target phase advance within a lattice section between start and end elements.
+
+        Parameters
+        ----------
+        start : OpticElement
+            The starting element of the lattice section.
+        end : OpticElement
+            The ending element of the lattice section.
+        plane : str
+            The transverse plane, either "x" or "y".
+        value : float
+            The target phase advance to match modulo the periodicity.
+        periodicity : float, optional
+            The periodicity of the distance function used to calculate the residual of the phase advance, by default 2 * np.pi. E.g. usefull in case one wants to phase advances modulo pi instead of 2pi.
+        
+        
+        """
+        super().__init__(**kwargs)
+        assert plane in {"x", "y"}, f"Invalid plane: {plane}"
+
+        self.start = start
+        self.end = end
+        self.plane = plane
+        self.value = value
+        self.periodicity = periodicity
+
+    def _actual(self, state: MatchState) -> float:
+        v0 = float(getattr(state.twiss_at(self.start), f"mu{self.plane}"))
+        v1 = float(getattr(state.twiss_at(self.end), f"mu{self.plane}"))
+        return v1 - v0
+
+    def residuals(self, state: MatchState) -> np.ndarray:
+        actual = self._actual(state)
+        diff = _diff_mod(actual, self.value, self.periodicity)
+        r = _residual_scalar(diff, 0.0, "==", self.tol)
+        return np.array([r], dtype=float)
+
+    def report(self, state: MatchState) -> TargetReport:
+        actual = self._actual(state)
+        r = float(self.residuals(state)[0])
+        return TargetReport(
+            name=self.name,
+            residual_norm=abs(r),
+            met=abs(r) < 1.0e-12,
+            weight=self.weight,
+            tol=self.tol,
+            details={
+                "type": "phase_advance",
+                "start": getattr(self.start, "id", None),
+                "end": getattr(self.end, "id", None),
+                "plane": self.plane,
+                "actual": actual,
+                "target": self.value,
+                "actual (mod 2pi)": np.mod(actual + np.pi, 2 * np.pi) - np.pi,
+                "target (mod 2pi)": np.mod(self.value + np.pi, 2 * np.pi) - np.pi,
+                "relation": "==",
+                "periodicity": self.periodicity,
+                "diff_mod_periodicity": _diff_mod(actual, self.value, self.periodicity)
+            },
+        )
 
 class RMatrixElementTarget(Target):
     """Target one R[i,j] entry between two elements."""
@@ -794,167 +870,6 @@ class RMatrixBlockTarget(Target):
                 "shape": self.target_matrix.shape,
             },
         )
-
-
-class FloquetPhaseTarget(Target):
-    """Target one-plane phase advance or Floquet exponent from an R matrix.
-
-    The target is computed from the selected 2x2 transverse block of
-    ``state.r_matrix(start, end)`` and is independent of the propagated initial
-    Twiss parameters. This is the appropriate target for matching a lattice or
-    cell phase advance when the entrance Twiss may be unmatched.
-
-    The phase is computed from ``trace(block) / (2 * sqrt(det(block)))`` rather
-    than plain ``trace(block) / 2``. This keeps the stability criterion valid
-    for positive-determinant scaled blocks, for example in accelerating linac
-    sections.
-
-    Stable maps return a real phase advance. Unstable maps with positive real
-    eigenvalues return a purely imaginary exponent. Unstable maps with negative
-    real eigenvalues return ``pi + 1j * exponent``.
-    """
-
-    @staticmethod
-    def _plane_indices(plane: str) -> Tuple[int, int]:
-        """Return the transverse R-matrix indices for an uncoupled plane."""
-
-        plane_norm = str(plane).strip().lower()
-        if plane_norm == "x":
-            return 0, 1
-        if plane_norm == "y":
-            return 2, 3
-        raise ValueError(f"Unsupported plane '{plane}'. Expected 'x' or 'y'.")
-
-    @staticmethod
-    def _validate_target(value: complex) -> complex:
-        """Normalize and validate the user-facing complex phase target.
-
-        Accepted targets are non-negative real stable phase advances, positive
-        purely imaginary hyperbolic exponents, and ``pi + 1j*exponent`` for
-        sign-flipping unstable maps.
-        """
-
-        target = complex(value)
-        eps = 1.0e-14
-
-        if abs(target.imag) <= eps:
-            if target.real < 0.0:
-                raise ValueError("Real phase-advance target must be non-negative")
-            return complex(float(target.real), 0.0)
-
-        if target.imag < 0.0:
-            raise ValueError("Floquet exponent target must have non-negative imaginary part")
-
-        real_part = float(target.real)
-        if abs(real_part) <= eps:
-            return complex(0.0, float(target.imag))
-        if abs(real_part - np.pi) <= eps:
-            return complex(float(np.pi), float(target.imag))
-
-        raise ValueError(
-            "Complex phase target must be purely imaginary, or pi plus a positive "
-            "imaginary exponent for sign-flipping unstable maps"
-        )
-
-    @staticmethod
-    def _phase_deadband(value: float, tol: float) -> float:
-        """Apply target tolerance to one residual component."""
-
-        if abs(value) <= tol:
-            return 0.0
-        return float(np.sign(value) * (abs(value) - tol))
-
-    @staticmethod
-    def _phase_from_block(block: np.ndarray) -> complex:
-        """Compute the Floquet phase/exponent from one 2x2 transverse block.
-
-        The trace is normalized by ``sqrt(det(block))`` so scaled symplectic
-        blocks, for example from acceleration, still use the same stability
-        criterion. Stable blocks return a real phase in ``[0, 2*pi)`` using
-        the sign of ``R12`` to choose the branch. Unstable blocks return a
-        positive imaginary exponent, optionally with real part ``pi`` for
-        negative-real eigenvalues.
-        """
-
-        det = float(np.linalg.det(block))
-        if det <= 0.0:
-            raise ValueError(f"Floquet phase requires a positive 2x2 determinant, got {det}")
-
-        sqrt_det = float(np.sqrt(det))
-        trace = float(np.trace(block))
-        half_trace = trace / (2.0 * sqrt_det)
-
-        eps = 1.0e-12
-        if half_trace > 1.0 and half_trace <= 1.0 + eps:
-            half_trace = 1.0
-        elif half_trace < -1.0 and half_trace >= -1.0 - eps:
-            half_trace = -1.0
-
-        if -1.0 <= half_trace <= 1.0:
-            mu = float(np.arccos(half_trace))
-            if block[0, 1] < 0.0 and mu > 0.0:
-                mu = 2.0 * np.pi - mu
-            return complex(mu, 0.0)
-
-        if half_trace > 1.0:
-            return complex(0.0, float(np.arccosh(half_trace)))
-
-        return complex(float(np.pi), float(np.arccosh(-half_trace)))
-
-    def __init__(
-        self,
-        start: OpticElement,
-        end: OpticElement,
-        plane: str,
-        value: complex,
-        **kwargs: Any,
-    ):
-        super().__init__(**kwargs)
-        self.start = start
-        self.end = end
-        self.plane = str(plane).strip().lower()
-        self.value = self._validate_target(value)
-        self.indices = self._plane_indices(self.plane)
-
-    def _block(self, state: MatchState) -> np.ndarray:
-        r_mat = state.r_matrix(self.start, self.end)
-        return r_mat[np.ix_(self.indices, self.indices)]
-
-    def actual(self, state: MatchState) -> complex:
-        """Return the current Floquet phase/exponent for this target."""
-
-        return self._phase_from_block(self._block(state))
-
-    def residuals(self, state: MatchState) -> np.ndarray:
-        actual = self.actual(state)
-        diff_re = self._phase_deadband(_wrap_to_pi(float((actual - self.value).real)), self.tol)
-        diff_im = self._phase_deadband(float((actual - self.value).imag), self.tol)
-        return np.array([2.0 * np.tan(diff_re / 2.0), diff_im], dtype=float)
-
-    def report(self, state: MatchState) -> TargetReport:
-        block = self._block(state)
-        actual = self.actual(state)
-        residuals = self.residuals(state)
-        return TargetReport(
-            name=self.name,
-            residual_norm=float(np.linalg.norm(residuals)),
-            met=bool(np.all(np.abs(residuals) < 1.0e-12)),
-            weight=self.weight,
-            tol=self.tol,
-            details={
-                "type": "floquet_phase",
-                "start": getattr(self.start, "id", None),
-                "end": getattr(self.end, "id", None),
-                "plane": self.plane,
-                "actual_re": float(actual.real),
-                "actual_im": float(actual.imag),
-                "target_re": float(self.value.real),
-                "target_im": float(self.value.imag),
-                "trace": float(np.trace(block)),
-                "det": float(np.linalg.det(block)),
-            },
-        )
-
 
 class TotalLengthTarget(Target):
     """Target total matched line length (end s)."""
@@ -1306,20 +1221,13 @@ class MatchProblem:
             ``relation == "=="``. If ``True``, residual is wrapped to
             ``[-pi, pi]`` so phase-equivalent targets differing by ``2*pi`` are
             treated as equal.
-
-            For matching a lattice or cell phase advance with possibly
-            unmatched entrance Twiss, use :meth:`target_phase_advance` instead.
-            ``mux``/``muy`` are tracked Twiss phases and depend on the chosen
-            entrance Twiss unless it is the matched periodic Twiss.
         """
 
         if wrap_phase and str(quantity).strip().lower() in {"mux", "muy"}:
             warnings.warn(
                 "target_twiss_delta(..., quantity='mux'/'muy', wrap_phase=True) "
-                "uses tracked Twiss phase, which depends on the entrance Twiss "
-                "unless it is matched. For lattice or cell phase matching, use "
-                "target_phase_advance() instead.",
-                UserWarning,
+                "is supersed by target_phase_advance(..., plane='x'/'y').",
+                DeprecationWarning,
                 stacklevel=2,
             )
 
@@ -1344,40 +1252,30 @@ class MatchProblem:
         start: OpticElement,
         end: OpticElement,
         plane: str,
-        value: complex,
+        value: float,
+        periodicity: float = 2.0 * np.pi,
         name: Optional[str] = None,
         weight: float = 1.0,
         tol: float = 0.0,
         active: bool = True,
         tag: str = "",
-    ) -> FloquetPhaseTarget:
-        """Constrain one-plane phase advance or Floquet exponent.
+    ) -> PhaseAdvanceTarget:
+        """Constrain transverse phase advance for end - start.
 
-        The target is computed from the selected 2x2 transverse block of
-        ``state.r_matrix(start, end)``. It does not use tracked Twiss ``mux`` or
-        ``muy``, so it is suitable for matching a lattice or cell phase advance
-        when the supplied initial Twiss is not matched.
-
-        Parameters
-        ----------
-        start, end:
-            Elements defining the inclusive lattice section used for the
-            transfer matrix.
         plane:
             ``"x"`` or ``"y"``.
         value:
-            Complex target phase. Use a non-negative real number for stable
-            rotation, e.g. ``np.pi / 2``. Use a positive purely imaginary value
-            for positive hyperbolic instability, e.g. ``2j``. Use
-            ``np.pi + 2j`` for sign-flipping unstable maps.
+            Target phase advance with respect to the Twiss paramters between start and end (values modulo periodicity as identified).
+            Note that during the optimization the twiss paramters at start might change as well.
         """
 
         return self.add_target(
-            FloquetPhaseTarget(
+            PhaseAdvanceTarget(
                 start=start,
                 end=end,
                 plane=plane,
                 value=value,
+                periodicity=periodicity,
                 name=name or f"phase_{plane}@{getattr(start, 'id', start)}->{getattr(end, 'id', end)}",
                 weight=weight,
                 tol=tol,
@@ -1898,10 +1796,10 @@ __all__ = [
     "TwissTarget",
     "TwissDifferenceTarget",
     "TwissPeriodicityTarget",
+    "PhaseAdvanceTarget",
     "GlobalTwissTarget",
     "RMatrixElementTarget",
     "RMatrixBlockTarget",
-    "FloquetPhaseTarget",
     "TotalLengthTarget",
     "TargetReport",
     "ObjectiveReport",

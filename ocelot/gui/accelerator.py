@@ -2,8 +2,9 @@
 user interface for viewing/editing electron optics layouts
 """
 from __future__ import annotations
+from copy import copy
 
-from ocelot.cpbd.physics_proc import *
+from ocelot.cpbd.physics_proc import PhysProc
 from scipy import stats
 from ocelot.cpbd.beam import global_slice_analysis
 import sys
@@ -19,9 +20,13 @@ import matplotlib.patches as mpatches
 import matplotlib.path as mpath
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-from ocelot.cpbd.optics import *
+from ocelot.common.globals import m_e_GeV, speed_of_light
 import numpy as np
-from ocelot.cpbd.elements import *
+from ocelot.cpbd.elements import (
+    Aperture, Bend, Cavity, Drift, Hcor, Marker, Matrix, Monitor, Multipole, Octupole,
+    Quadrupole, RBend, SBend, Sextupole, Solenoid, TDCavity, TWCavity, Undulator, UnknownElement,
+    Vcor, XYQuadrupole,
+)
 from copy import deepcopy
 
 

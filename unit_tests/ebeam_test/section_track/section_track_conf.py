@@ -1,11 +1,14 @@
 """Test parameters description file"""
 
+from ocelot.cpbd.beam import Twiss
+from ocelot.cpbd.beam.particle import ParticleArray
+from ocelot.utils.section_track import SectionLattice
+
+
 import pytest
 import numpy as np
 
-from ocelot import *
 from accelerator.s2e_sections.sections import *
-from ocelot.utils.section_track import *
 import time
 
 data_dir = "./unit_tests/ebeam_test/section_track/data"

@@ -1,10 +1,16 @@
 """Test parameters description"""
 
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.transformations.second_order import SecondTM
+from ocelot.cpbd.transformations.transfer_map import TransferMap
+
+
 import pytest
 import numpy as np
 import copy
 
-from ocelot import *
 
 """lattice elements descripteion"""
 

@@ -171,7 +171,10 @@ class MagneticLattice:
 
             Example:
                 ```python
-                from ocelot import *
+                from ocelot import (
+                    KickTM, MagneticLattice, Octupole, RungeKuttaTM, SecondTM,
+                    TransferMap, Undulator,
+                )
 
                 method = {"global": TransferMap} # default first order transfer map
                 lat = MagneticLattice(cell, method=method)

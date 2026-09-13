@@ -5,10 +5,10 @@ import numpy as np
 from copy import deepcopy
 from math import factorial
 
-from ocelot.optics.new_wave import *
-from ocelot.common.globals import *
+from ocelot.optics.new_wave import Grid, HeightProfile
+from ocelot.common.globals import h_eV_s, pi, speed_of_light
 from ocelot import ocelog
-from ocelot.common.ocelog import *
+from ocelot.common.ocelog import ind_str
 _logger = logging.getLogger(__name__) 
 
 class Mask(Grid):
@@ -26,7 +26,7 @@ class Mask(Grid):
     """
     def __init__(self, shape=(0, 0, 0)):
         Grid.__init__(self, shape=shape)
-        self.msk = None#np.zeros(shape, dtype=complex128)  # (z,y,x)
+        self.msk = None#np.zeros(shape, dtype=np.complex128)  # (z,y,x)
         # self.domain_z = 't'   # longitudinal domain (t - time, f - frequency)
         # self.domain_x = 's'   # transverse domain (s - space, k - inverse space)
         # self.domain_y = 's'   # transverse domain (s - space, k - inverse space)
@@ -131,14 +131,14 @@ class PropMask(Mask):
         
         if dfl.domain_z == 'f':
             k = dfl.grid_kz()
-            self.msk = np.ones(dfl.shape(), dtype=complex128)
+            self.msk = np.ones(dfl.shape(), dtype=np.complex128)
             # self.msk = [np.exp(1j * self.z0 * (np.sqrt(k[i] ** 2 - k_x ** 2 - k_y ** 2) - k[i])) for i in range(dfl.Nz())] 
             for i in range(dfl.Nz()):
                 self.msk[i,:,:] *= np.exp(1j * self.z0 * (np.sqrt(k[i] ** 2 - k_x ** 2 - k_y ** 2) - k[i]))
 
         elif dfl.domain_z == 't':
             k = 2 * np.pi / self.xlamds
-            self.msk = np.ones(dfl.shape()[1:3], dtype=complex128)
+            self.msk = np.ones(dfl.shape()[1:3], dtype=np.complex128)
             self.msk = np.exp(1j * self.z0 * (np.sqrt(k ** 2 - k_x ** 2 - k_y ** 2) - k))
         
         else: 
@@ -190,8 +190,8 @@ class Prop_mMask(Mask):
 
         _logger.debug(ind_str + 'calculating mask in "{}" domain'.format(dfl.domain_z))                 
         if dfl.domain_z == 'f':
-            # self.msk = np.array([])#np.zeros(dfl.shape(), dtype=complex128)#np.ones(dfl.shape(), dtype=complex128)
-            self.msk = np.ones(dfl.shape(), dtype=complex128)
+            # self.msk = np.array([])#np.zeros(dfl.shape(), dtype=np.complex128)#np.ones(dfl.shape(), dtype=np.complex128)
+            self.msk = np.ones(dfl.shape(), dtype=np.complex128)
             k = dfl.grid_kz()
             if self.mx != 0:
 #                self.mask[i,:,:] *= [np.exp(1j * self.z0/self.mx * (np.sqrt(k[i] ** 2 - k_x ** 2) - k[i])) for i in range(dfl.Nz())] #Hx = exp(iz0/mx(k^2 - kx^2)^(1/2) - k)
@@ -203,7 +203,7 @@ class Prop_mMask(Mask):
                     self.msk[i,:,:] *= np.exp(1j * self.z0 / self.my * (np.sqrt(k[i] ** 2 - k_y ** 2) - k[i]))
         
         elif dfl.domain_z == 't':
-            self.msk = np.ones(dfl.shape()[1:3], dtype=complex128)
+            self.msk = np.ones(dfl.shape()[1:3], dtype=np.complex128)
             k = 2 * np.pi / self.xlamds
             
             if self.mx != 0:
@@ -318,7 +318,7 @@ class QuadCurvMask(Mask):
             
         if self.domain_z == 'f':
             k = 2 * np.pi /dfl.grid_kz() 
-            self.msk = np.ones(dfl.shape(), dtype=complex128)
+            self.msk = np.ones(dfl.shape(), dtype=np.complex128)
     
             if np.size(self.r) == 1:
                 self.msk *= np.exp(-1j * k[:, np.newaxis, np.newaxis] / 2 * arg2[np.newaxis, :, :] / self.r) #H = exp(-i * k / 2 * (x^2 + y^2))
@@ -329,7 +329,7 @@ class QuadCurvMask(Mask):
 
         elif self.domain_z == 't':
             k = 2 * np.pi / dfl.xlamds
-            self.msk = np.ones(dfl.shape()[1:3], dtype=complex128)
+            self.msk = np.ones(dfl.shape()[1:3], dtype=np.complex128)
             if np.size(self.r) == 1:
                 self.msk = np.exp(-1j * k / 2 * arg2 / self.r)
             elif np.size(self.r) == dfl.Nz():

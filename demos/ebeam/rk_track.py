@@ -4,10 +4,15 @@ sys.path.append("../..")
 
 import numpy as np
 
-from ocelot import *
+import matplotlib.pyplot as plt
+from ocelot.cpbd.elements import Bend, Drift, Octupole, Quadrupole, Sextupole, Undulator
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.track import track
+from ocelot.cpbd.transformations.runge_kutta import RungeKuttaTM
+from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.beam import generate_parray
 from ocelot.cpbd.elements.undulator_atom import und_field
-from ocelot.gui.accelerator import *
 import copy
 
 

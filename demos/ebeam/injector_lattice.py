@@ -2,7 +2,18 @@
 Unofficial EuXFEL injector lattice
 """
 
-from ocelot import *
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.elements.cavity import Cavity
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.hcor import Hcor
+from ocelot.cpbd.elements.marker import Marker
+from ocelot.cpbd.elements.monitor import Monitor
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.sbend import SBend
+from ocelot.cpbd.elements.solenoid import Solenoid
+from ocelot.cpbd.elements.tdcavity import TDCavity
+from ocelot.cpbd.elements.undulator import Undulator
+from ocelot.cpbd.elements.vcor import Vcor
 tws = Twiss()
 tws.E = 0.005
 tws.beta_x  = 53.35971898

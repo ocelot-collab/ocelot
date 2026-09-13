@@ -1,9 +1,18 @@
 """Test parameters description"""
 
+from ocelot.cpbd.beam.generator import generate_parray
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.marker import Marker
+from ocelot.cpbd.elements.octupole import Octupole
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.transformations.kick import KickTM
+from ocelot.cpbd.transformations.second_order import SecondTM
+
+
 import pytest
 import numpy as np
 
-from ocelot import *
 from ocelot import XYQuadrupole
 
 """lattice elements description"""

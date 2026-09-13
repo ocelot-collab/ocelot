@@ -17,13 +17,18 @@ import time
 from shutil import copyfile
 
 #from ocelot.gui.accelerator import *
-from ocelot.utils.xfel_utils import *
+from ocelot.adaptors.genesis import (
+    cut_beam, generate_input, get_beam_peak, get_genesis_new_launcher, read_beam_file,
+    run_genesis, set_beam_energy, transform_beam_twiss,
+)
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.moga import MPI_RANK, Moga
+from ocelot.rad.fel import calculateFelParameters
+from ocelot.rad.undulator_params import Ephoton2K, UndulatorParameters
+from ocelot.utils.xfel_utils import rematch, taper
 #from ocelot.cpbd.magnetic_lattice import MagneticLattice
-from ocelot.gui.genesis_plot import *
 #from ocelot.common.globals import *  #import of constants like "h_eV_s" and "speed_of_light"
-from ocelot.rad.undulator_params import *
 
-from ocelot.cpbd.moga import *
 
 
 # Setting of path parameters

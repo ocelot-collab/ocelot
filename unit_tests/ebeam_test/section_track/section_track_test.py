@@ -1,5 +1,9 @@
 """Test of the demo file demos/ebeam/csr_ex.py"""
 
+import numpy as np
+from ocelot.cpbd.optics import lattice_transfer_map
+
+
 import os
 import sys
 import time

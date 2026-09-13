@@ -1,5 +1,12 @@
 """Test of the demo file demos/ebeam/tune_shift.py"""
 
+from ocelot.cpbd.beam.core import Beam, Twiss
+from ocelot.cpbd.beam.particle import Particle
+from ocelot.cpbd.optics import lattice_transfer_map, periodic_twiss
+from ocelot.cpbd.track import Track_info, freq_analysis, track_nturns
+from time import time
+
+
 import os
 import sys
 import numpy as np

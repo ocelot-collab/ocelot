@@ -1,9 +1,16 @@
 """Test parameters description file"""
 
+from ocelot.cpbd.beam.particle import ParticleArray
+from ocelot.cpbd.elements.bend import Bend
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.marker import Marker
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.transformations.second_order import SecondTM
+
+
 import pytest
 import numpy as np
 
-from ocelot import *
 from ocelot.cpbd.r_matrix import rot_mtx
 from ocelot.utils.acc_utils import chicane_RTU
 

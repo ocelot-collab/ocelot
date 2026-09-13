@@ -1,12 +1,14 @@
 __author__ = 'Sergey Tomin'
 
 from copy import deepcopy
-from ocelot.gui import *
-from ocelot import *
-from ocelot.rad import *
-from ocelot.rad.radiation_py import *
 from time import time
-from ocelot.rad.undulator_params import *
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+
+from ocelot import Beam, MagneticLattice, Undulator
+from ocelot.rad import Screen, energy_loss_und, calculate_radiation
+
 font = {'size'   : 20}
 matplotlib.rc('font', **font)
 

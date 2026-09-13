@@ -1,11 +1,16 @@
 """Test of the demo file demos/ebeam/ring_orb_correct.py"""
 
+from ocelot.cpbd.beam import Beam, Twiss
+from ocelot.cpbd.optics import lattice_transfer_map, periodic_twiss
+from ocelot.cpbd.orbit_correction import NewOrbit
+from ocelot.cpbd.response_matrix import ResponseMatrix, RingRM
+from ocelot.cpbd.track import lattice_track
+
+
 import os
 import sys
 import time
 
-from ocelot.cpbd.orbit_correction import *
-from ocelot.cpbd.response_matrix import *
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 REF_RES_DIR = FILE_DIR + '/ref_results/'

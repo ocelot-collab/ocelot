@@ -3,12 +3,11 @@ crystal optics
 '''
 
 from ocelot.optics.elements import Crystal
-from ocelot.optics.wave import *
+from ocelot.common.globals import h_eV_s, pi, speed_of_light
 from ocelot.optics.ray import Ray, trace as trace_ray
-from ocelot.common.ocelog import *
+from ocelot.common.ocelog import ind_str
 import logging
 _logger = logging.getLogger(__name__) 
-# from ocelot.gui.optics import *
 
 import numpy as np
 # from pylab import *

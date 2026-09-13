@@ -4,10 +4,18 @@ DogLeg. Second order achromat
 S.Tomin. 10.2018
 """
 
-from ocelot import *
-from ocelot.gui.accelerator import *
+import matplotlib.pyplot as plt
+from ocelot.common.globals import pi
+from ocelot.cpbd.beam import Twiss, generate_parray, m_from_twiss, np
+from ocelot.cpbd.elements import Quadrupole, SBend, Sextupole
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.optics import twiss
+from ocelot.cpbd.physics_proc import BeamTransform
+from ocelot.cpbd.track import track
+from ocelot.cpbd.transformations.second_order import SecondTM
+from ocelot.gui.accelerator import plot_opt_func
 import dogleg_lattice as dl
-from ocelot.cpbd.beam import *
 
 
 # create and plot dogleg lattice

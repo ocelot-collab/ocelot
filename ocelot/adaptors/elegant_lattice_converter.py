@@ -1,13 +1,17 @@
 """Elegant <--> Ocelot lattice converter"""
 
+# Explicit re-exports used by existing simulation scripts.
+from ocelot.cpbd.magnetic_lattice import MagneticLattice as MagneticLattice
+
 import re
 import sys
 import operator
 import numpy as np
 
-from ocelot.cpbd.magnetic_lattice import *
-from ocelot.cpbd.elements import *
-from ocelot.cpbd.io import *
+from ocelot.cpbd.elements import (
+    Cavity, Drift, Hcor, Marker, Matrix, Monitor, Quadrupole, RBend, SBend, Sextupole, Solenoid,
+    Undulator, Vcor,
+)
 
 
 class ElegantLatticeConverter:
@@ -444,7 +448,8 @@ if __name__ == '__main__':
     
     """
     # example of Elegant - Ocelot convertion
-    from ocelot.adaptors.elegant_lattice_converter import *
+    from ocelot.adaptors.elegant_lattice_converter import ElegantLatticeConverter
+    from ocelot.cpbd.magnetic_lattice import MagneticLattice
     SC = ElegantLatticeConverter()
     read_cell = SC.elegant2ocelot('elbe.lte')
     lattice = MagneticLattice(read_cell)

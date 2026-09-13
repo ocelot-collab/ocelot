@@ -1,6 +1,6 @@
+import logging
 import numpy as np
 
-from ocelot.common.ocelog import *
 _logger = logging.getLogger(__name__)
 
 

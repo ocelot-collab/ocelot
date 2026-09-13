@@ -7,16 +7,25 @@ import socket
 import errno
 import math
 
-from ocelot.rad.fel import *
-from ocelot.cpbd.beam import * # Twiss, Beam, gauss_from_twiss, ParticleArray
-from ocelot.cpbd.elements import *
-from ocelot.utils.launcher import *
-from ocelot.common.math_op import *
-from ocelot.optics.wave import *
+from ocelot.rad.fel import calculateFelParameters
+from ocelot.cpbd.beam import Beam, BeamArray, ParticleArray, Twiss
+from ocelot.cpbd.elements import Hcor, Quadrupole, Undulator, UnknownElement, Vcor
+from ocelot.utils.launcher import MpiLauncher, NewLauncher
+from ocelot.common.math_op import peaks
+import numpy as np
+import os
+import time
+from copy import deepcopy
+from ocelot.common.globals import h_eV_s, m_e_GeV, m_e_eV, pi, q_e, speed_of_light
+from ocelot.common.math_op import find_nearest_idx
+from ocelot.common.py_func import filename_from_path
+from ocelot.optics.wave import RadiationField, calc_ph_sp_dens, wigner_out
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.rad.undulator_params import UndulatorParameters
 # from ocelot.optics.utils import calc_ph_sp_dens
-from ocelot.common.ocelog import *
+import logging
+from copy import copy
+from ocelot.common.ocelog import ind_str
 
 _logger = logging.getLogger(__name__) 
 
@@ -868,13 +877,13 @@ class GenesisElectronDist:
         xp = self.xp
         yp = self.yp
 
-        mean_x2 = mean(x**2)
-        mean_y2 = mean(y**2)
-        mean_px2 = mean(xp**2)
-        mean_py2 = mean(yp**2)
-        mean_xpx = mean(x * xp)
-        mean_ypy = mean(y * yp)
-        mean_g = mean(self.g)
+        mean_x2 = np.mean(x**2)
+        mean_y2 = np.mean(y**2)
+        mean_px2 = np.mean(xp**2)
+        mean_py2 = np.mean(yp**2)
+        mean_xpx = np.mean(x * xp)
+        mean_ypy = np.mean(y * yp)
+        mean_g = np.mean(self.g)
 
         tws.emit_x = mean_g * (mean_x2 * mean_px2 - mean_xpx**2)**0.5 / mean_g
         tws.emit_y = mean_g * (mean_y2 * mean_py2 - mean_ypy**2)**0.5 / mean_g
@@ -1378,7 +1387,7 @@ def assemble(fileName, remove=1, overwrite=0, ram=1, debug=1):
     else:
         for i, n in enumerate(fins):
             if debug > 1:
-                tot = size(fins)
+                tot = np.size(fins)
                 _logger.log(5, ind_str + 'slice {} of {}'.format(i,tot))
             # if i/N>=index:
                 # sys.stdout.write(str(index)+'%.')
@@ -2403,7 +2412,7 @@ def dpa2edist(out, dpa, num_part=1e5, smear=1, debug=1):
 
 def read_edist_file_out(out, debug=1):
 
-    return read_dist_file(out.filePath + '.edist', debug=debug)
+    return read_edist_file(out.filePath + '.edist', debug=debug)
 
 
 def read_edist_file(filePath, **kwargs):
@@ -3708,6 +3717,8 @@ def transform_beam_file(beam_file=None, out_file='tmp.beam', s=None, transform=[
 
 
 def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
+    import matplotlib.pyplot as plt
+    from ocelot.cpbd.beam import gauss_from_twiss
 
     ex = 1.0
 
@@ -3735,7 +3746,7 @@ def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
     xp3 = []
 
     for i in range(5000):
-        x_, xp_ = gaussFromTwiss(ex, beta1, alpha1)
+        x_, xp_ = gauss_from_twiss(ex, beta1, alpha1)
         x.append(x_)
         xp.append(xp_)
 
@@ -3744,7 +3755,7 @@ def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
         x3.append(u[0, 0])
         xp3.append(u[1, 0])
 
-        x_, xp_ = gaussFromTwiss(ex, beta2, alpha2)
+        x_, xp_ = gauss_from_twiss(ex, beta2, alpha2)
         x2.append(x_)
         xp2.append(xp_)
 

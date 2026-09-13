@@ -10,12 +10,24 @@ from time import time
 # this python library provides generic shallow (copy) and deep copy (deepcopy) operations
 
 # import from Ocelot main modules and functions
-from ocelot import *
+import matplotlib.pyplot as plt
+import numpy as np
+from copy import deepcopy
+from ocelot.common.globals import pi
+from ocelot.cpbd.beam import ParticleArray, Twiss
+from ocelot.cpbd.beam.analysis import get_current
+from ocelot.cpbd.elements import Cavity, Drift, Marker, Quadrupole
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.optics import twiss
+from ocelot.cpbd.physics_proc import BeamTransform
+from ocelot.cpbd.sc import SpaceCharge
+from ocelot.cpbd.track import track
+from ocelot.cpbd.transformations.second_order import SecondTM
+from ocelot.gui.accelerator import plot_opt_func
 
 # import from Ocelot graphical modules
-from ocelot.gui.accelerator import *
 
-from ocelot.adaptors.astra2ocelot import *
 
 
 # *********************************** LATTICE: START ********************************

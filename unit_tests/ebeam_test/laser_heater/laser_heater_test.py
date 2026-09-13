@@ -1,5 +1,12 @@
 """Test of the demo file demos/ebeam/csr_ex.py"""
 
+from ocelot.cpbd.csr import CSR
+from ocelot.cpbd.elements.undulator import Undulator
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.physics_proc import LaserModulator
+from ocelot.cpbd.track import track
+
+
 from laser_heater_conf import *
 from unit_tests.params import *
 import os

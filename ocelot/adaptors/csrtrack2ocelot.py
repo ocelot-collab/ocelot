@@ -3,7 +3,8 @@ Adaptors to translate CSRtrack particle distribution .fmt1 to ParticleArray and 
 
 S.Tomin and I.Zagorodnov
 """
-from ocelot.common.globals import *
+import numpy as np
+from ocelot.common.globals import m_e_eV
 from ocelot.cpbd.beam import ParticleArray
 
 def csrtrackBeam2particleArray(filename, orient="H"):

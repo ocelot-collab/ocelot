@@ -5,13 +5,17 @@ Created on Mon Jul 12 17:33:00 2021
 
 @author: andrei
 """
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
-from ocelot.optics.wave import * # import OCELOT propagation module
-from ocelot.gui.dfl_plot import *  # import plotting routine
-from ocelot.common.globals import *  # import of constants like "h_eV_s" and
 
-ocelog.setLevel(logging.INFO)
+import ocelot
+from copy import deepcopy
+from ocelot.common.globals import hr_eV_s, speed_of_light
+from ocelot.gui.dfl_plot import plot_dfl
+from ocelot.optics.wave import RadiationField, dfl_ap_rect, dfl_gen_undulator_serval
+
+ocelot.ocelog.setLevel(logging.INFO)
 _logger = logging.getLogger(__name__)
 
 n_s = 200 # number of periods in an undulator

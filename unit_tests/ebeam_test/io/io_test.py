@@ -1,4 +1,9 @@
 """Test of the demo file demos/ebeam/csr_ex.py"""
+
+import numpy as np
+from ocelot.common.globals import m_e_GeV
+from ocelot.cpbd.io import load_particle_array, save_particle_array
+
 from ocelot.adaptors.astra2ocelot import exact_xxstg_2_xp_mad, exact_xp_2_xxstg_mad
 import os
 import sys

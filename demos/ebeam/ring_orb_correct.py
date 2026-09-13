@@ -1,8 +1,16 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot.gui.accelerator import *
-from ocelot.cpbd.orbit_correction import *
-from ocelot.cpbd.response_matrix import *
+import matplotlib.pyplot as plt
+import numpy as np
+from ocelot.cpbd.beam import Beam, Twiss
+from ocelot.cpbd.elements import Drift, Hcor, Monitor, Quadrupole, SBend, Sextupole, Vcor
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.optics import periodic_twiss
+from ocelot.cpbd.orbit_correction import NewOrbit
+from ocelot.cpbd.response_matrix import ResponseMatrix, RingRM
+from ocelot.cpbd.track import lattice_track
+from ocelot.cpbd.transformations.transfer_map import TransferMap
+from ocelot.gui.accelerator import plot_API, plot_opt_func
 import seaborn as sns
 import logging
 logging.basicConfig(level=logging.INFO)

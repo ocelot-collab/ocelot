@@ -5,7 +5,8 @@ sys.path.append("../../")
 import time 
 import matplotlib
 import ocelot as ocl
-from ocelot.gui import *
+import matplotlib.pyplot as plt
+from ocelot.gui.accelerator import show_e_beam
 from ocelot.cpbd.beam import generate_parray
 
 from copy import copy

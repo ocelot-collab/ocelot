@@ -1,7 +1,7 @@
 # Converted from component_list_2026.01.21.xls
 
-from ocelot.cpbd.beam import Twiss
-from ocelot.cpbd.elements import (
+from ocelot import (
+    Twiss,
     Cavity,
     Drift,
     Hcor,

@@ -1,5 +1,20 @@
 """Test of the demo file demos/ebeam/csr_ex.py"""
 
+import numpy as np
+from ocelot.common.globals import m_e_GeV, speed_of_light
+from ocelot.cpbd.beam.analysis import get_envelope
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.beam.generator import generate_parray
+from ocelot.cpbd.csr import CSR
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.physics_proc import (
+    BeamTransform, IBS, LaserModulator, PhaseSpaceAperture, SmoothBeam, SpontanRadEffects,
+)
+from ocelot.cpbd.sc import LSC, SpaceCharge
+from ocelot.cpbd.track import track
+from ocelot.cpbd.wake3D import Wake, WakeTableDechirperOffAxis
+
+
 from phys_proc_conf import *
 from unit_tests.params import *
 import os

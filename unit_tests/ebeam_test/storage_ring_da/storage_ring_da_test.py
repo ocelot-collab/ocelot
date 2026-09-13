@@ -1,5 +1,11 @@
 """Test of the demo file demos/ebeam/storage_ring_da.py"""
 
+import numpy as np
+from ocelot.cpbd.chromaticity import chromaticity, compensate_chromaticity, natural_chromaticity
+from ocelot.cpbd.optics import lattice_transfer_map
+from ocelot.cpbd.track import create_track_list, freq_analysis, track_nturns
+
+
 import os
 import sys
 import time
@@ -9,7 +15,6 @@ REF_RES_DIR = FILE_DIR + '/ref_results/'
 
 from unit_tests.params import *
 from storage_ring_da_conf import *
-from ocelot.cpbd.chromaticity import *
 
 DA_GRID_SHAPE = (80, 100)
 DA_TOTAL_TURNS_RTOL = 5.e-3

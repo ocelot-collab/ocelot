@@ -1,6 +1,13 @@
+import numpy as np
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.beam.generator import generate_parray
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.marker import Marker
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.undulator import Undulator
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+
 import pytest
-from ocelot import *
-from ocelot.gui import *
 import matplotlib.pyplot as plt
 
 tws0 = Twiss(beta_x=6.6, beta_y=16.4, emit_xn=0.5e-6, emit_yn=0.5e-6, E=1)

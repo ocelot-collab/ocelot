@@ -6,10 +6,11 @@ Created on Mon Jun 26 15:15:01 2023
 @author: trebushi
 """
 
-from ocelot.optics.wave import *
-from ocelot.gui.dfl_plot import *
+import numpy as np
+from ocelot.common.globals import speed_of_light
+from ocelot.gui.dfl_plot import plot_dfl
+from ocelot.optics.wave import dfl_prop_iris, generate_gaussian_dfl
 from ocelot import ocelog
-from ocelot.common.globals import *  # import of constants like "h_eV_s" and
 
 import math
 import logging

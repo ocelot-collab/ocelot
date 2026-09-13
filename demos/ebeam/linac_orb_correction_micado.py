@@ -4,10 +4,17 @@ Linac Orbit Correction.
 S.Tomin. 09.2019
 """
 
-from ocelot.gui.accelerator import *
+import matplotlib.pyplot as plt
+import numpy as np
+from ocelot.cpbd.beam import Particle
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.optics import twiss
+from ocelot.cpbd.orbit_correction import MICADO, Orbit
+from ocelot.cpbd.response_matrix import LinacRmatrixRM, ResponseMatrix
+from ocelot.cpbd.track import lattice_track
+from ocelot.cpbd.transformations.second_order import SecondTM
+from ocelot.gui.accelerator import plot_API
 import dogleg_lattice as dl
-from ocelot.cpbd.orbit_correction import *
-from ocelot.cpbd.response_matrix import *
 import seaborn as sns
 
 #logging.basicConfig(level=logging.INFO)

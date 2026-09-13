@@ -1,12 +1,18 @@
 __author__ = 'Sergey Tomin'
+
 import sys
-sys.path.append("../..")
-from pylab import *
-from ocelot.rad import *
-from ocelot import *
-from copy import deepcopy
 from time import time
+from copy import deepcopy
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
 import scipy.stats as stats
+
+sys.path.append("../..")
+
+from ocelot import Undulator, MagneticLattice, Beam
+from ocelot.rad import calculate_radiation, Screen, sigma_gamma_quat
+
 font = {'size': 20}
 matplotlib.rc('font', **font)
 
@@ -57,7 +63,7 @@ num_bins = 50
 n, bins, patches = plt.hist((np.array(Uq) - beam.E)/beam.E, num_bins, density=True, facecolor='green', alpha=0.5)
 
 print("sigma = ", sigma)
-print(sigma/sqrt(nund*nperiods))
+print(sigma/np.sqrt(nund*nperiods))
 y = stats.norm.pdf(bins, 0, sigma)
 plt.plot(bins, y, 'r--', lw=2)
 plt.xlabel(r'$\delta E/ E $')
@@ -79,8 +85,8 @@ print("time = ", time() - start)
 plt.plot(E_no, t_no/max_I, lw=2, label="no quantum fluct.")
 plt.plot(screen.Eph, total/max_I, lw=2, label="quantum fluct.")
 plt.grid(True)
-legend()
-xlabel(r"$E_{ph}$")
-#ylabel("Flux, ph/s/mm^2/(0.1%BW)")
-ylabel("Normalized intens")
-show()
+plt.legend()
+plt.xlabel(r"$E_{ph}$")
+#plt.ylabel("Flux, ph/s/mm^2/(0.1%BW)")
+plt.ylabel("Normalized intens")
+plt.show()

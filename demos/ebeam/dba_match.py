@@ -1,8 +1,15 @@
 import matplotlib.pyplot as plt
 
-from ocelot.gui import *
-from ocelot import *
-from pylab import *
+import numpy as np
+from ocelot.cpbd.beam.core import Beam, Twiss
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.monitor import Monitor
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.rbend import RBend
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.match import match
+from ocelot.cpbd.optics import twiss
+from ocelot.gui.accelerator import plot_lattice
 
 
 d0 = Drift(l=1.0)

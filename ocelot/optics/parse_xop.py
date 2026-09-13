@@ -1,4 +1,8 @@
-from ocelot.optics.bragg import *
+import numpy as np
+import matplotlib.pyplot as plt
+from ocelot.optics.bragg import (
+    CrystalStructureFactors, load_stucture_factors, save_stucture_factors,
+)
 import os
 
 f_name = 'C444'

@@ -1,5 +1,10 @@
 """Test of the demo file demos/ebeam/dba.py"""
 
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.match import match
+from ocelot.cpbd.optics import lattice_transfer_map, periodic_twiss
+
+
 import os
 import sys
 import time

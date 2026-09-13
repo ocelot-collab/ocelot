@@ -1,15 +1,13 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot.rad.screen import *
 #from codes.genera.src.python.trajectory.tr_solver import trajectory_body
 from ocelot.lib.genera.src.python.trajectory.lat_trajectory import trace4radiation
 from ocelot.lib.genera.src.python.radiation.emitt_spread import  change_sizes_screen, convolution_all
-from ocelot.cpbd.beam import *
+from ocelot.cpbd.beam import Particle
 from ctypes import CDLL, c_double, c_int, POINTER
-from numpy import array, zeros, abs
+from numpy import array, zeros, abs, sqrt
 from sys import path
-from ocelot.rad.undulator_params import *
-from ocelot.common.globals import *
+from ocelot.common.globals import h_eV_s, m_e_GeV, pi, speed_of_light
 from time import time
 
 """
@@ -26,7 +24,7 @@ else:
 """
 import ocelot
 import os
-from ocelot import *
+from ocelot.cpbd.elements import Undulator
 path_to_ocelot = os.path.dirname(ocelot.__file__)
 
 tail = "/lib/genera/build/genera_libs/radiation.so"

@@ -1,7 +1,7 @@
-from ocelot import *
-from ocelot.gui import *
+import matplotlib.pyplot as plt
+from ocelot import Twiss, Drift, Marker, Quadrupole, MagneticLattice, twiss
 from ocelot.cpbd.matcher import MatchProblem
-
+from ocelot.gui.accelerator import plot_opt_func
 
 start = Marker(eid="start")
 d = Drift(l=0.5, eid="d")

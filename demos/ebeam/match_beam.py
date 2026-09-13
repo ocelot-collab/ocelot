@@ -3,12 +3,20 @@ import sys
 
 sys.path.append(ocelot_dir)
 
-from ocelot.gui.accelerator import *
-from ocelot import *
+import matplotlib.pyplot as plt
+from ocelot.cpbd.beam import Twiss, get_envelope
+from ocelot.cpbd.beam.generator import generate_parray
+from ocelot.cpbd.elements import Cavity
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.match import match, match_beam
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.optics import twiss
+from ocelot.cpbd.sc import SpaceCharge
+from ocelot.cpbd.track import track
+from ocelot.cpbd.transformations.second_order import SecondTM
+from ocelot.gui.accelerator import plot_API, plot_opt_func
 import time
-from ocelot.common.globals import *
 import injector_lattice as i1
-from ocelot.cpbd.match import *
 
 
 tws0 = Twiss()

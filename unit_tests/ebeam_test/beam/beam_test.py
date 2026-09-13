@@ -1,5 +1,10 @@
 """Test of the demo file demos/ebeam/csr_ex.py"""
 
+import numpy as np
+from ocelot.cpbd.beam.analysis import get_current, get_envelope
+from ocelot.cpbd.beam.generator import generate_parray
+
+
 import os
 import sys
 import copy

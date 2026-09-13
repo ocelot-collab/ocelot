@@ -1,7 +1,8 @@
 """
 S.Tomin and I.Zagorodnov, 2017, DESY/XFEL
 """
-from ocelot.common.globals import *
+import numpy as np
+from ocelot.common.globals import m_e_eV
 import logging
 
 logger = logging.getLogger(__name__)

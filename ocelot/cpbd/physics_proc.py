@@ -1,8 +1,8 @@
+import logging
 from ocelot.cpbd.io import save_particle_array
 from ocelot.common.globals import h_eV_s, m_e_eV, m_e_GeV, ro_e, speed_of_light, q_e
 from ocelot.cpbd.beam import Twiss, global_slice_analysis, s_to_cur, get_envelope
 from ocelot.utils.acc_utils import slice_bunching
-from ocelot.common.ocelog import *
 from ocelot.cpbd.beam import ParticleArray
 
 import numpy as np

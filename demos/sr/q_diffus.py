@@ -63,7 +63,7 @@ num_bins = 50
 n, bins, patches = plt.hist((np.array(Uq) - beam.E)/beam.E, num_bins, density=True, facecolor='green', alpha=0.5)
 
 print("sigma = ", sigma)
-print(sigma/sqrt(nund*nperiods))
+print(sigma/np.sqrt(nund*nperiods))
 y = stats.norm.pdf(bins, 0, sigma)
 plt.plot(bins, y, 'r--', lw=2)
 plt.xlabel(r'$\delta E/ E $')

@@ -39,11 +39,12 @@ def check_result(data):
     return result
 
 
-def check_value(value, value_ref, tolerance=1.0e-15, tolerance_type='relative', assert_info='', numerical_zero=1e-15):
+def check_value(value, value_ref, tolerance=1.0e-15, tolerance_type='relative', assert_info='', numerical_zero=1e-15, absolute_tolerance=0.0):
     """Value with reference value check function
 
     if relative_tolerance='relative' then tolerance is relative (this is default value)
                                      if both numbers less than numerical zero then return None
+                                     absolute_tolerance adds an absolute error allowance near zero
     if relative_tolerance='absolute' then tolerance is absolute
     there is no tolerance for string values
     """
@@ -60,28 +61,30 @@ def check_value(value, value_ref, tolerance=1.0e-15, tolerance_type='relative', 
 
     if tolerance_type == 'relative':
         abs_value_ref = np.abs(value_ref)
+        threshold = tolerance * abs_value_ref + absolute_tolerance
     else:
-        abs_value_ref = 1.0
+        threshold = tolerance
 
-    if np.abs(value - value_ref) <= tolerance * abs_value_ref:
+    if np.abs(value - value_ref) <= threshold:
         return None
     else:
-        return assert_info + ' value is "' + str(value) + '"\n reference value is "' + str(value_ref) + '"\n tolerance is "' + str(tolerance) + '"\n tolerance type is "' + tolerance_type + '"\n\n'
+        return assert_info + ' value is "' + str(value) + '"\n reference value is "' + str(value_ref) + '"\n tolerance is "' + str(tolerance) + '"\n tolerance type is "' + tolerance_type + '"\n absolute tolerance is "' + str(absolute_tolerance) + '"\n\n'
 
 
-def check_matrix(matrix, matrix_ref, tolerance=1.0e-15, tolerance_type='relative', assert_info='', numerical_zero=1e-15):
+def check_matrix(matrix, matrix_ref, tolerance=1.0e-15, tolerance_type='relative', assert_info='', numerical_zero=1e-15, absolute_tolerance=0.0):
     """Matrix with reference matrix check function"""
 
     result = []
     for (index, x), (index_ref, x_ref) in zip(np.ndenumerate(matrix), np.ndenumerate(matrix_ref)):
         result.append(check_value(x, x_ref, tolerance, tolerance_type,
                                   assert_info=assert_info+' matrix element '+str(index)+'\n',
-                                  numerical_zero=numerical_zero))
+                                  numerical_zero=numerical_zero,
+                                  absolute_tolerance=absolute_tolerance))
     
     return result
 
 
-def check_dict(dict_t, dict_ref, tolerance=1.0e-15, tolerance_type='relative', assert_info=''):
+def check_dict(dict_t, dict_ref, tolerance=1.0e-15, tolerance_type='relative', assert_info='', absolute_tolerance=0.0):
     """Dictionary with reference dictionary check function"""
     
     if len(dict_t) != len(dict_ref):
@@ -100,18 +103,21 @@ def check_dict(dict_t, dict_ref, tolerance=1.0e-15, tolerance_type='relative', a
             if isinstance(elem[key], list):
                 result += check_matrix(np.asarray(elem[key]), np.asarray(elem_ref[key]),
                                        tolerance, tolerance_type, assert_info=assert_info+
-                                                                              ' line is '+str(line)+ "/" + str(len(dict_t)) +' key is '+str(key)+'\n')
+                                                                              ' line is '+str(line)+ "/" + str(len(dict_t)) +' key is '+str(key)+'\n',
+                                       absolute_tolerance=absolute_tolerance)
                 continue
 
             if isinstance(elem[key], dict):
                 result += check_dict([elem[key]], [elem_ref[key]],
                                      tolerance, tolerance_type, assert_info=assert_info+
-                                                                            ' line is '+str(line)+ "/" + str(len(dict_t)) + ' key is '+str(key)+'\n')
+                                                                            ' line is '+str(line)+ "/" + str(len(dict_t)) + ' key is '+str(key)+'\n',
+                                     absolute_tolerance=absolute_tolerance)
                 continue
 
             result.append(check_value(elem[key], elem_ref[key],
                                       tolerance, tolerance_type, assert_info=assert_info+
-                                                                             'line is '+str(line)+ "/" + str(len(dict_t)) +' key is '+str(key)+'\n'))
+                                                                             'line is '+str(line)+ "/" + str(len(dict_t)) +' key is '+str(key)+'\n',
+                                      absolute_tolerance=absolute_tolerance))
     
     return result
 

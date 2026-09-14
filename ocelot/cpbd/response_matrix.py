@@ -687,7 +687,9 @@ class ResponseMatrix:
 
     def extract(self, cor_list, bpm_list):
         df_slice = self.extract_df_slice(cor_list, bpm_list)
-        return df_slice.values
+        # pandas 3 exposes shared arrays as read-only; callers edit this slice
+        # before passing it back to inject().
+        return df_slice.to_numpy(copy=True)
 
     def retrieve_from_scan(self, df_scan):
         from sklearn.linear_model import LinearRegression
@@ -738,7 +740,7 @@ class ResponseMatrix:
         """
         df_slice = self.data2df(matrix=inj_matrix, bpm_names=bpm_list, cor_names=cor_list)
         self.df.update(df_slice)
-        self.matrix = self.df.values
+        self.matrix = self.df.to_numpy(copy=True)
         return self.matrix
 
     def data2df(self, matrix, bpm_names, cor_names):
@@ -751,7 +753,7 @@ class ResponseMatrix:
         self.cor_names = list(self.df.columns.values)
         bpms_all = list(self.df.index.values)
         self.bpm_names = self.xy_names2bpm_id(bpms_all)
-        self.matrix = self.df.values
+        self.matrix = self.df.to_numpy(copy=True)
 
     def dump(self, filename):
         df = self.data2df(matrix=self.matrix, bpm_names=self.bpm_names, cor_names=self.cor_names)

@@ -33,6 +33,8 @@ Ocelot provides:
 
 ## Getting Started
 
+Ocelot requires Python 3.11 or newer. Python 3.10 is no longer supported.
+
 For requirements and installation instructions, see the official guide:
 👉 [**Installation & Setup**](https://www.ocelot-collab.com/docs/docu/intro)
 
@@ -169,11 +171,12 @@ Ocelot's core functionality is organized into key modules:
 
 ## Note to Developers
 ### Installation
-For development it is recommended to use a virtual environment and install the development dependencies via the following commands:
+For development, use Python 3.11 or newer to create a virtual environment and
+install the development dependencies:
 ```bash
 #!/usr/bin/env bash
 
-python3 -m venv .venv
+python3.11 -m venv .venv
 
 . .venv/bin/activate # or for Windows: .venv\Scripts\activate
 pip install --upgrade pip
@@ -181,6 +184,46 @@ pip install -e ".[dev]"
 ```
 This automatically installs all dependencies locally into the folder `.venv` whithout changing your system Python installation.
 This package is then added to the environment as is (editable mode) so that changes to the source code are immediately reflected in this environment.
+
+### Optional features
+
+Install additional dependencies for the features you use:
+
+```bash
+pip install -e ".[openpmd]"  # openPMD file I/O and viewer
+pip install -e ".[pmd]"      # openPMD tools plus openpmd-beamphysics
+pip install -e ".[mpi]"      # MPI bindings (requires an MPI runtime)
+pip install -e ".[moga]"     # multi-objective optimization with DEAP
+```
+
+Extras can be combined, for example `pip install -e ".[dev,openpmd,moga]"`.
+The public documentation uses Docusaurus in the separate
+[website repository](https://github.com/ocelot-collab/ocelot-collab.github.io).
+The unused `docs` extra and Sphinx dependencies have been removed.
+
+### OpenMP conflicts on macOS
+
+A pip environment created from a conda Python can load pyFFTW's bundled
+`libomp.dylib` alongside the conda runtime used by Numba. Parallel calculations
+can then abort with `OMP: Error #15` or a segmentation fault. This can be
+reproduced with pyFFTW and Numba alone, without Ocelot.
+
+For simulations launched sequentially from one Python thread, select Numba's
+built-in `workqueue` backend before starting Python:
+
+```bash
+export NUMBA_THREADING_LAYER=workqueue
+python -m pytest unit_tests -q
+# Or run your simulation with the same environment setting.
+```
+
+This changes the threading backend, not the radiation calculation. Numba's
+`workqueue` backend does not support concurrent or nested parallel calls. For
+those workflows, use an environment with compatible OpenMP libraries or a
+supported TBB installation; see the
+[Numba threading documentation](https://numba.readthedocs.io/en/stable/user/threading-layer.html).
+Setting `KMP_DUPLICATE_LIB_OK=True` does not resolve the incompatible runtimes
+and can turn the initialization error into a crash.
 
 ### Tools
 Useful tools for development can be found in the `tasks.py` script for automating common development tasks. Use `inv --list` to see available commands (requires `invoke` package automatically installed by the previous step).

@@ -4,14 +4,14 @@ import numpy as np
 import pytest
 
 try:
-    import pmd_beamphysics as pmd
+    import beamphysics as pmd
 except ImportError:
     IS_PMD_INSTALLED = False
 else:
     IS_PMD_INSTALLED = True
     from ocelot.adaptors import pmd as pmd_adaptor
 
-# Define decorator to skip tests if pmd_beamphysics is not installed.
+# Define decorator to skip tests if openpmd-beamphysics is not installed.
 only_if_pmd_installed = pytest.mark.skipif(
     not IS_PMD_INSTALLED, reason='PMD required to run tests')
 
@@ -57,7 +57,7 @@ def compare_particle_group_with_array(pgroup, parray):
     np.testing.assert_allclose(pgroup.y, parray.y())
     np.testing.assert_allclose(pgroup.py / refmom, parray.py())
 
-    np.testing.assert_allclose(pgroup.z, parray.tau())
+    np.testing.assert_allclose(pgroup.z, -parray.tau())
     dp = (pgroup.energy - refenergy) / refmom
     np.testing.assert_allclose(dp, parray.p())
 
@@ -86,3 +86,26 @@ def test_parray_to_particle_group(pmd_parray):
     """Conversion of ParticleArray to ParticleGroup"""
     pgroup = pmd_adaptor.particle_array_to_particle_group(pmd_parray)
     compare_particle_group_with_array(pgroup, pmd_parray)
+
+
+@only_if_pmd_installed
+def test_particle_array_round_trip_preserves_longitudinal_order():
+    parray = ParticleArray(3)
+    parray.E = 1.0
+    parray.rparticles[:] = [
+        [1e-5, -2e-5, 3e-5],
+        [1e-6, 2e-6, -3e-6],
+        [-4e-5, 5e-5, 6e-5],
+        [-2e-6, 3e-6, 4e-6],
+        [-3e-4, 2e-4, 7e-4],
+        [-0.01, 0.0, 0.01],
+    ]
+    parray.q_array[:] = [1e-12, 2e-12, 1e-12]
+
+    pgroup = pmd_adaptor.particle_array_to_particle_group(parray)
+    restored = pmd_adaptor.particle_group_to_parray(pgroup)
+
+    np.testing.assert_array_equal(restored.tau(), parray.tau())
+    np.testing.assert_allclose(restored.rparticles, parray.rparticles, rtol=1e-9, atol=1e-14)
+    np.testing.assert_array_equal(restored.q_array, parray.q_array)
+    np.testing.assert_allclose(restored.E, parray.E, rtol=1e-12)

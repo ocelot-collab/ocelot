@@ -7,7 +7,7 @@ name = "ocelot-collab"
 version = '26.06.1'
 description = "Accelerator, radiation and x-ray optics simulation framework"
 readme = { file = "README.md", content-type = "text/markdown" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "GPL-3.0-only"
 license-files = ["LICENSE"]
 authors = [
@@ -16,9 +16,11 @@ authors = [
 dependencies = [
 	"numpy==2.2",
 	"scipy<=1.13",
+	"scikit-learn>=1.9",
 	"matplotlib>=3.7,<=3.9",
-	"pandas",
+	"pandas>=3.0",
 	"h5py>=3.14",
+	"tfs-pandas>=4.0",
 	"numexpr>=2.6.1",
 	"pyfftw>=0.10",
 	"numba",
@@ -29,10 +31,11 @@ Homepage = "https://github.com/ocelot-collab/ocelot"
 Repository = "https://github.com/ocelot-collab/ocelot"
 
 [project.optional-dependencies]
-docs = ["Sphinx", "alabaster", "sphinxcontrib-jsmath"]
+mpi = ["mpi4py"]
 openpmd = ["openpmd-api", "openpmd-viewer"]
-pmd = ["pmd-beamphysics"]
-dev = ["invoke", "build", "pytest", "ipykernel", "ipywidgets", "nbconvert", "sympy", "imageio", "seaborn", "plotly", "pmd-beamphysics", "openpmd-api", "openpmd-viewer"]
+pmd = ["openpmd-api", "openpmd-viewer", "openpmd-beamphysics>=0.16"]
+moga = ["deap"]
+dev = ["invoke", "build", "pytest", "ipykernel", "ipywidgets", "nbconvert", "sympy", "imageio", "seaborn", "plotly"]
 
 [tool.setuptools]
 include-package-data = false

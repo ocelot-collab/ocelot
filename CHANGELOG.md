@@ -7,7 +7,35 @@ Versioning is date based: `YY.MM.patch`.
 
 ## [Unreleased]
 
-- None yet.
+### Changed
+
+- Raised the minimum supported Python version from 3.10 to 3.11 in the Python
+  package and conda recipe, matching the pandas 3 and scikit-learn 1.9 minimums.
+- Added scikit-learn and TFS-Pandas dependencies and synchronized their conda
+  requirements with the Python package.
+- Added `mpi` and `moga` installation extras. Kept the `openpmd` extra for
+  openPMD I/O and expanded `pmd` to include both openPMD and openpmd-beamphysics.
+- Replaced the obsolete `pmd-beamphysics` distribution with the maintained
+  `openpmd-beamphysics` package and its `beamphysics` import, fixing PMD file
+  writing with NumPy 2.
+- Added separate script and notebook exclusions to the demo runner.
+
+### Fixed
+
+- Kept extracted and loaded response matrices writable with pandas 3 so callers
+  can continue editing and injecting response-matrix values.
+- Corrected the longitudinal-coordinate sign when importing PMD particle groups,
+  preserving bunch order through an export/import round trip.
+- Added an absolute tolerance of `1e-15` to the CSR particle and space-charge
+  Twiss reference comparisons so roundoff near zero does not fail relative
+  checks. Reference data and simulation algorithms are unchanged.
+- Documented a Numba `workqueue` workaround for conflicting OpenMP runtimes in
+  mixed conda/pip environments on macOS.
+
+### Removed
+
+- Removed the unused `docs` extra and Sphinx dependencies. Public documentation
+  is built with Docusaurus in the website repository.
 
 ## [26.06.1] - 2026-06-08
 

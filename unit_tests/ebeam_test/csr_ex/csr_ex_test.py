@@ -204,7 +204,10 @@ def test_track_with_csr(lattice, p_array, parameter, update_ref_values=False):
     result1 = check_dict(tws_track, tws_track_p_array_ref['tws_track'], TOL, assert_info=' tws_track - ')
     if parameter == 1:
         result1 = [None]
-    result2 = check_dict(p, tws_track_p_array_ref['p_array'], TOL, assert_info=' p_array - ')
+    # Cancellation near x=0 leaves differences of order 1e-16 m between
+    # numerical-library builds. Keep the relative check with a 1e-15 floor.
+    result2 = check_dict(p, tws_track_p_array_ref['p_array'], TOL,
+                         assert_info=' p_array - ', absolute_tolerance=1e-15)
     assert check_result(result1+result2)
 
 

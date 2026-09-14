@@ -153,7 +153,13 @@ def run_tests(c, dry_run: bool = False) -> bool:
 
 
 @task()
-def run_demos(c, critical_demos_only: bool = False, dry_run: bool = False) -> bool:
+def run_demos(
+    c,
+    critical_demos_only: bool = False,
+    exclude_scripts: bool = False,
+    exclude_notebooks: bool = False,
+    dry_run: bool = False,
+) -> bool:
     """Runs demo scripts and notebooks."""
 
     if critical_demos_only:
@@ -173,6 +179,10 @@ def run_demos(c, critical_demos_only: bool = False, dry_run: bool = False) -> bo
         "notebook_total": 0,
     }
     for demo in demos:
+        if exclude_scripts and demo.endswith(".py"):
+            continue
+        if exclude_notebooks and demo.endswith(".ipynb"):
+            continue
 
         demo_path = root / demo
         if not demo_path.exists():
@@ -314,7 +324,9 @@ def commit_release(
 
 
 @task()
-def build(c, build_dir: str=BUILD_DIR, allow_dirty: bool = False, dry_run: bool = False) -> None:
+def build(
+    c, build_dir: str = BUILD_DIR, allow_dirty: bool = False, dry_run: bool = False
+) -> None:
     """Builds the package."""
 
     if not allow_dirty and not is_clean_worktree():

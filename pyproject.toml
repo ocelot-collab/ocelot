@@ -16,9 +16,11 @@ authors = [
 dependencies = [
 	"numpy==2.2",
 	"scipy<=1.13",
+	"scikit-learn>=1.9",
 	"matplotlib>=3.7,<=3.9",
-	"pandas",
+	"pandas>=3.0",
 	"h5py>=3.14",
+	"tfs-pandas>=4.0",
 	"numexpr>=2.6.1",
 	"pyfftw>=0.10",
 	"numba",
@@ -29,10 +31,10 @@ Homepage = "https://github.com/ocelot-collab/ocelot"
 Repository = "https://github.com/ocelot-collab/ocelot"
 
 [project.optional-dependencies]
-docs = ["Sphinx", "alabaster", "sphinxcontrib-jsmath"]
-openpmd = ["openpmd-api", "openpmd-viewer"]
-pmd = ["pmd-beamphysics"]
-dev = ["invoke", "build", "pytest", "ipykernel", "ipywidgets", "nbconvert", "sympy", "imageio", "seaborn", "plotly", "pmd-beamphysics", "openpmd-api", "openpmd-viewer"]
+mpi = ["mpi4py"]
+pmd = ["openpmd-api", "openpmd-viewer", "pmd-beamphysics"]
+moga = ["deap"]
+dev = ["invoke", "build", "Sphinx", "alabaster", "sphinxcontrib-jsmath", "pytest", "ipykernel", "ipywidgets", "nbconvert", "sympy", "imageio", "seaborn", "plotly"]
 
 [tool.setuptools]
 include-package-data = false

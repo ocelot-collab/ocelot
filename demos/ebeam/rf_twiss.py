@@ -3,8 +3,14 @@ sys.path.append("../../")
 
 import matplotlib.pyplot as plt
 
-from ocelot import *
-from ocelot.gui import *
+from ocelot.cpbd.beam.core import Beam, Twiss
+from ocelot.cpbd.elements.bend import Bend
+from ocelot.cpbd.elements.cavity import Cavity
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.optics import twiss
+from ocelot.gui.accelerator import plot_lattice, plot_opt_func
 import numpy as np
 
 phi_bc2 = 0.033646252962410

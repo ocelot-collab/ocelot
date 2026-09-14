@@ -1,5 +1,11 @@
 """Test of the demo file demos/ebeam/space_charge.py"""
 
+from ocelot.cpbd.beam.analysis import get_current
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.sc import LSC, SpaceCharge
+from ocelot.cpbd.track import track
+
+
 import os
 import sys
 import copy

@@ -1,7 +1,17 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot.gui.accelerator import *
-from ocelot import *
+import matplotlib.pyplot as plt
+from ocelot.common.globals import pi
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.elements.bend import Bend
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.sextupole import Sextupole
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.match import match
+from ocelot.cpbd.optics import periodic_twiss
+from ocelot.cpbd.transformations.transfer_map import TransferMap
+from ocelot.gui.accelerator import plot_opt_func
 
 Q1 = Quadrupole(l= 0.4, k1=-1.3, eid= "Q1")
 Q2 = Quadrupole(l= 0.8, k1=1.4, eid= "Q2")

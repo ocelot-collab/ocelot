@@ -5,7 +5,7 @@ from scipy.integrate import odeint
 from scipy import optimize
 from ocelot.common.globals import m_e_GeV, m_e_eV, speed_of_light
 from numpy.linalg import norm
-from ocelot.common.ocelog import *
+import logging
 from ocelot.cpbd.r_matrix import bend_edge_matrix
 
 _logger = logging.getLogger(__name__)

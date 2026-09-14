@@ -2,9 +2,8 @@
 
 import re
 
-from ocelot.cpbd.magnetic_lattice import *
-from ocelot.cpbd.elements import *
-from ocelot.cpbd.io import *
+from ocelot.cpbd.magnetic_lattice import lattice_format_converter
+from ocelot.cpbd.elements import Quadrupole
 
 
 class AstraLatticeConverter:

@@ -14,7 +14,7 @@ import functools
 _logger = logging.getLogger(__name__)
 
 # my_viridis = deepcopy(matplotlib.pyplot.get_cmap('viridis')) 
-my_viridis = copy(matplotlib.cm.get_cmap("viridis"))
+my_viridis = copy(matplotlib.colormaps["viridis"])
 my_viridis.set_under('w')
 def_cmap = my_viridis
 

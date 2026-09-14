@@ -1,5 +1,5 @@
 import numpy as np
-from ocelot.gui import *
+from ocelot.gui.accelerator import show_da
 
 da = np.loadtxt("da.txt")
 xy = np.loadtxt("da_axis.txt")

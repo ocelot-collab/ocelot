@@ -8,10 +8,11 @@ functions common to xfel decks
 #from ocelot.adaptors import srwutil as srw
 
 
-from pylab import *
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import rc, rcParams
 
-from ocelot.adaptors.genesis import *
-params = {'backend': 'ps', 'axes.labelsize': 18, 'text.fontsize': 16, 'legend.fontsize': 24, 'xtick.labelsize': 32,  'ytick.labelsize': 32, 'text.usetex': True}
+params = {'backend': 'ps', 'axes.labelsize': 18, 'font.size': 16, 'legend.fontsize': 24, 'xtick.labelsize': 32,  'ytick.labelsize': 32, 'text.usetex': True}
 rcParams.update(params)
 rc('text', usetex=True) # required to have greek fonts on redhat
 
@@ -76,7 +77,7 @@ def show_output(g, show_field = False, output_file = None, show_slice=0):
             s = sum( np.abs(np.multiply(slices[i,:,:], slices[i,:,:])) )
             P[i] = abs(s*s.conjugate()) * (dgrid**2 / npoints )**2  
     
-        plot(P)
+        plt.plot(P)
     plt.figure()
     plt.plot(np.linspace(-dgrid/2,dgrid/2,npoints),abs(E[:,int(npoints/2)]), lw=3), plt.grid(True)
             
@@ -163,7 +164,7 @@ def show_plots(displays, fig):
             x,y = f(x = np.linspace(-10, 10, 100))
             ax.plot(x, y, '.')
 
-    show()
+    plt.show()
 
 class Display:
     def __init__(self, data=lambda x: (x, 0*x) , xlabel='',ylabel=''):

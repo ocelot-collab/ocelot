@@ -1,13 +1,12 @@
 __author__ = 'Svitozar Serkez'
 
 from ocelot.rad.fel import FelParameters, calculateFelParameters, beam2fel
-# from ocelot.adaptors.genesis import *
 # from ocelot.rad.undulator_params import Ephoton2K
 from ocelot.cpbd.beam import parray2beam
 from ocelot.cpbd.track import update_effective_beta
-from ocelot.cpbd.elements import *
+from ocelot.cpbd.elements import Undulator
 import numpy as np
-from ocelot.common.globals import *
+from ocelot.common.globals import speed_of_light
 from copy import deepcopy
 import logging
 

@@ -6,7 +6,7 @@ S.Tomin
 
 from ctypes import c_double
 import numpy as np
-from ocelot.common.globals import *
+from ocelot.common.globals import alpha, pi, q_e
 
 
 def Py2C(array):

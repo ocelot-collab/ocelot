@@ -1,9 +1,14 @@
+import sys
+import matplotlib.pyplot as plt
+import numpy as np
+
 from ocelot.cpbd.transformations.transformation import TMTypes
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
-import sys
-from ocelot import *
-from ocelot.gui import *
-from pylab import *
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.optics import fodo_parameters, lattice_transfer_map, twiss
+from ocelot.cpbd.transformations.transfer_map import TransferMap
+from ocelot.gui.accelerator import plot_lattice
 
 def rematch(beta_mean, l_fodo, qdh, lat, extra_fodo, beam, qf, qd):
     

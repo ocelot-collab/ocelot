@@ -1,9 +1,13 @@
 """Test parameters description"""
 
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.multipole import Multipole
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+
+
 import pytest
 import numpy as np
 
-from ocelot import *
 
 """lattice elements description"""
 

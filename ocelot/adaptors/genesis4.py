@@ -1,4 +1,5 @@
 import time
+import errno
 import os
 import sys
 import socket
@@ -15,15 +16,16 @@ except ImportError:
 import numpy as np
 
 from ocelot import ParticleArray
-from ocelot.optics.wave import calc_ph_sp_dens, RadiationField
-from ocelot.common.globals import *
+from ocelot.common.py_func import copy_this_script
+from ocelot.optics.wave import calc_ph_sp_dens, wigner_out, RadiationField
+from ocelot.common.globals import h_eV_s, m_e_GeV, m_e_eV, q_e, speed_of_light
 from ocelot.adaptors.genesis import GenesisElectronDist  # tmp
-from ocelot.common.ocelog import *
-from ocelot.utils.launcher import *
+import logging
+from ocelot.common.ocelog import ind_str
+from ocelot.utils.launcher import MpiLauncher
 from ocelot.cpbd.beam import Beam, BeamArray
 from ocelot.cpbd.elements import Element, Drift, Quadrupole, Undulator, Marker
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
-from ocelot.common.py_func import copy_this_script
 from ocelot.rad.undulator_params import lambda2eV, eV2lambda
 
 _logger = logging.getLogger(__name__)
@@ -867,7 +869,7 @@ def gen4_lat_str(lat, line_name='LINE', zstop=np.inf):
         if hasattr(element, 'l'):
             location += element.l
         else:
-            _logging.warning('[beta] element had no length: {:}'.format(str(element)))
+            _logger.warning('[beta] element had no length: {:}'.format(str(element)))
 
         if isinstance(element, Undulator):
             element_name = element_num + 'UND'
@@ -2045,7 +2047,7 @@ def read_edist_hdf5(filepath, charge=None):
         try:
             edist.part_charge = h5.get('part_charge')
             _logger.debug('retrieved edist charge per particle = {}'.format(edist.part_charge))
-        except TyprError:
+        except TypeError:
             edist.part_charge = None
             _logger.warn('no part_charge in edist')
         

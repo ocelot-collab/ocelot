@@ -1,9 +1,8 @@
 __author__ = 'Sergey Tomin'
 import sys
-ind = sys.path[0].find("ocelot")
-sys.path.append(sys.path[0][:ind])
+sys.path.append("../..")
 
-from ocelot import *
+from ocelot import Quadrupole, Bend, Sextupole, Drift, MagneticLattice, KickTM, create_track_list, track_nturns_mpi
 from time import time
 import numpy as np
 from mpi4py import MPI
@@ -19,7 +18,7 @@ Q2 = Quadrupole(l=0.8, k1=1.4, eid= "Q2")
 Q3 = Quadrupole(l=0.4, k1=-1.7, eid= "Q3")
 Q4 = Quadrupole(l=0.5, k1=1.19250444829 , eid= "Q4")
 
-B  = Bend(l=2.7, k1=-.06, angle=2*pi/16., e1=pi/16., e2=pi/16., eid= "B")
+B  = Bend(l=2.7, k1=-.06, angle=2*np.pi/16., e1=np.pi/16., e2=np.pi/16., eid= "B")
 
 SF = Sextupole(l=0.01, k2 = 5.8914775395193555*100, eid= "SF") #random value
 SD = Sextupole(l=0.01, k2 = -6.8036102026266558*100, eid= "SD") #random value

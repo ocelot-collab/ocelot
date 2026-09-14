@@ -1,4 +1,13 @@
-from ocelot import * 
+from ocelot.cpbd.beam.core import Twiss
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.hcor import Hcor
+from ocelot.cpbd.elements.marker import Marker
+from ocelot.cpbd.elements.monitor import Monitor
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.sbend import SBend
+from ocelot.cpbd.elements.sextupole import Sextupole
+from ocelot.cpbd.elements.vcor import Vcor
+
 
 tws0 = Twiss()
 tws0.emit_xn = 0.5e-6

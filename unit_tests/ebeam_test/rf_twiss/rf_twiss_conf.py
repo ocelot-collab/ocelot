@@ -1,9 +1,17 @@
 """Test parameters description"""
 
+from ocelot.cpbd.beam.particle import ParticleArray
+from ocelot.cpbd.elements.bend import Bend
+from ocelot.cpbd.elements.cavity import Cavity
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.transformations.second_order import SecondTM
+
+
 import pytest
 import numpy as np
 
-from ocelot import *
 
 """lattice elements description"""
 

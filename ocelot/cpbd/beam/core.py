@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import logging
 import numpy as np
 import warnings
 from typing import Iterable
 import ocelot.common.globals as glb
 from ocelot.common.math_op import find_nearest_idx
-from ocelot.common.ocelog import *
+from ocelot.common.ocelog import ind_str
 import copy
 
 _logger = logging.getLogger(__name__)

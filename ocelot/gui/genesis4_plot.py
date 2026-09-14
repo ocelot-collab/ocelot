@@ -17,9 +17,11 @@ ax.set_ylim(ymin=0)
 
 import sys
 import os
+import logging
 import glob
 import csv
 import time
+import numpy as np
 import matplotlib
 
 # check if Xserver is connected
@@ -33,16 +35,20 @@ import matplotlib
 # matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
-import numpy as np
-import logging
-from ocelot.adaptors.genesis4 import *
-from ocelot.common.globals import *  # import of constants like "h_eV_s" and
-from ocelot.common.math_op import *  # import of mathematical functions
-from ocelot.utils.xfel_utils import *
+from ocelot.adaptors.genesis4 import (
+    Genesis4Output, Genesis4ParticlesDump, dpa42edist, read_dfl4, read_dpa4, read_gout4,
+)
+from ocelot.adaptors.genesis import read_out_file
+from ocelot.common.math_op import fwhm3, n_moment
 from ocelot.optics.utils import calc_ph_sp_dens
-from ocelot.optics.wave import *
+from numpy import complex128
+from ocelot.common.globals import h_eV_s, m_e_GeV, m_e_MeV, pi, speed_of_light
+from ocelot.common.math_op import std_moment
+from ocelot.optics.wave import RadiationField, wigner_out
 from copy import deepcopy
-from ocelot.gui.settings_plot import *
+from matplotlib import rcParams
+from ocelot.common.ocelog import ind_str
+from ocelot.gui.settings_plot import def_cmap, if_plottable
 from ocelot.gui.dfl_plot import plot_dfl, plot_wigner
 from ocelot.gui.genesis_plot import plot_edist
 

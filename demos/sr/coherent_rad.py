@@ -1,22 +1,19 @@
 __author__ = 'Sergey Tomin'
 import sys
-import matplotlib
-from ocelot.rad import *
-
-from ocelot.gui import *
-from ocelot import *
-
-from ocelot.rad.radiation_py import *
-from ocelot.rad.undulator_params import *
 import copy
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+
+from ocelot import ParticleArray, MagneticLattice, Undulator
+from ocelot.rad import coherent_radiation, Screen
+from ocelot.gui import show_flux
 
 
 sigma_tau = 100e-6/2.36
 tau_p_cor = 0.013/2.36
 tau = np.array([-1, 0, 1])*sigma_tau
 phi = tau/1.45859E-04*360
-
-
 
 font = {'size'   : 14}
 matplotlib.rc('font', **font)

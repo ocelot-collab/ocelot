@@ -1,15 +1,18 @@
-from ocelot.cpbd.beam import BeamArray, generate_beam
-from ocelot.adaptors.genesis import edist2beam, beam2edist
-from ocelot.gui.beam_plot import plot_beam
-from ocelot.gui.genesis_plot import plot_edist
-
-import numpy as np
-from ocelot.common.globals import *
 """
 Created on Mon Jan  6 20:29:09 2020
 
 @author: andrei
 """
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+from ocelot.common.globals import speed_of_light
+from ocelot.cpbd.beam import BeamArray, generate_beam
+from ocelot.adaptors.genesis import edist2beam, beam2edist
+from ocelot.gui.beam_plot import plot_beam
+from ocelot.gui.genesis_plot import plot_edist
+
 
 # Create electron beam file (slice parameters) with polynomial energy chirp, quadratic beta, emittance, energy spread and non-zero alpha. Plot it.
 beam = BeamArray()

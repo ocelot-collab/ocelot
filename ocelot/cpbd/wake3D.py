@@ -6,8 +6,6 @@ Added wake table WakeTableDechirperOffAxis on 11.2019
 """
 import numpy as np
 
-from ocelot.adaptors import *
-from ocelot.adaptors.astra2ocelot import *
 from ocelot.cpbd.physics_proc import PhysProc
 import ocelot.common.globals as glb
 import logging

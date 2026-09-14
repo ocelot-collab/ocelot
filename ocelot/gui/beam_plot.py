@@ -2,21 +2,19 @@
 
 import sys
 import os
+import logging
 import csv
 import time
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import logging
 
 
-from ocelot.adaptors.genesis import *
-from ocelot.common.globals import *  # import of constants like "h_eV_s" and
-from ocelot.common.math_op import *  # import of mathematical functions
-from ocelot.utils.xfel_utils import *
 from ocelot.optics.utils import calc_ph_sp_dens
-from ocelot.optics.wave import *
-from ocelot.gui.settings_plot import *
+from ocelot.common.globals import hr_eV_s, speed_of_light
+from matplotlib import rcParams
+from ocelot.common.ocelog import ind_str
+from ocelot.gui.settings_plot import if_plottable, save_show
 from ocelot.cpbd.beam import BeamFormFactor
 
 _logger = logging.getLogger(__name__)

@@ -1,9 +1,9 @@
+import logging
 import numpy as np
 import ocelot.common.globals as glb
 
 from . import beam_utils
 from . import core
-from ocelot.common.ocelog import *
 
 _logger = logging.getLogger(__name__)
 

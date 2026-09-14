@@ -5,7 +5,7 @@ from numpy import pi, array, hstack, zeros, linspace
 from sys import exit, path
 from os import name as os_name
 import os
-from ocelot.common.globals import *
+from ocelot.common.globals import m_e_GeV, m_e_eV, speed_of_light
 from ocelot.cpbd.beam import Particle
 from ocelot.lib.genera.src.python.trajectory.motion import Motion
 und_type = "undulator"

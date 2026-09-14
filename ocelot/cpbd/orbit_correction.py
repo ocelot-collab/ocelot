@@ -1,12 +1,20 @@
 __author__ = 'Sergey Tomin'
 
+# Explicit re-exports used by existing simulation scripts.
+from ocelot.cpbd.beam import Beam as Beam
+from ocelot.cpbd.magnetic_lattice import MagneticLattice as MagneticLattice
+from ocelot.cpbd.optics import lattice_transfer_map as lattice_transfer_map
+from ocelot.cpbd.track import lattice_track as lattice_track
+from ocelot.cpbd.transformations.second_order import SecondTM as SecondTM
+from ocelot.cpbd.transformations.transfer_map import TransferMap as TransferMap
+
 import numpy as np
 from numpy.linalg import svd
 from scipy.interpolate import splrep, splev
 from scipy.optimize import linprog
 from ocelot.cpbd.match import closed_orbit
-from ocelot.cpbd.track import *
-from ocelot.cpbd.response_matrix import *
+from ocelot.cpbd.elements import Hcor, Monitor, Vcor
+from ocelot.cpbd.response_matrix import ResponseMatrix
 from scipy.linalg import block_diag, lstsq
 import copy
 import json

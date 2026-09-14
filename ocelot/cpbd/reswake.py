@@ -5,7 +5,7 @@ import numpy as np
 from numpy.fft import fft, ifft, irfft
 from scipy.integrate import simpson
 
-from ocelot.common.globals import *
+from ocelot.common.globals import Z0, mu_0, pi, speed_of_light
 
 
 def wake2impedance(s, w):

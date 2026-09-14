@@ -1,9 +1,9 @@
+import logging
 import numpy as np
 from copy import deepcopy
 from typing import TypeVar
 
 import ocelot.common.globals as glb
-from ocelot.common.ocelog import *
 
 _logger = logging.getLogger(__name__)
 

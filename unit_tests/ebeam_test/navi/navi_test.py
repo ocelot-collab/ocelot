@@ -1,5 +1,14 @@
 """Test of the demo file demos/ebeam/csr_ex.py"""
 
+import numpy as np
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.physics_proc import EmptyProc
+from ocelot.cpbd.track import track
+
+
 import os
 import sys
 import copy

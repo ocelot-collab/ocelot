@@ -1,5 +1,8 @@
 """Test of the demo file demos/ebeam/dba_tracking.py"""
 
+from ocelot.cpbd.beam.generator import generate_parray
+
+
 import os
 import sys
 from copy import copy
@@ -8,7 +11,6 @@ import time
 import numpy as np
 import pytest
 
-from ocelot import *
 from scipy.interpolate import interp1d
 from scipy.integrate import trapezoid
 

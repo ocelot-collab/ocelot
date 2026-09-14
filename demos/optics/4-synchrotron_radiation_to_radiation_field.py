@@ -8,6 +8,10 @@ Examples of converting synchrotron radiation (ocelot.rad.screen.Screen object) t
 __author__ = "Mykola Veremchuk"
 
 import numpy as np
+
+import matplotlib
+matplotlib.use('qtagg')
+
 from ocelot.cpbd.elements import Undulator
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.beam import Beam
@@ -15,8 +19,8 @@ from ocelot.rad.screen import Screen
 from ocelot.rad.radiation_py import calculate_radiation
 from ocelot.optics.wave import dfl_waistscan, screen2dfl, RadiationField
 from ocelot.gui.dfl_plot import plot_dfl, plot_dfl_waistscan
-import matplotlib
-matplotlib.use('qtagg')
+
+
 # %%
 # generating 2D synchrotron radiation (it will take about 1-3 minute)
 # LOOK TUTORIAL ABOUT GENERATING SYNCHROTRON RADIATION IN demos/ipython_tutorials/9_synchrotron_radiation.ipynb

@@ -6,22 +6,28 @@ import sys
 import os
 import csv
 import time
+from copy import deepcopy
+import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors  # for wigner log scale
-import numpy as np
 import logging
 
-from ocelot.gui.settings_plot import *
+from matplotlib import rcParams
+from ocelot.gui.settings_plot import def_cmap, if_plottable
 
-from ocelot.adaptors.genesis import *
-from ocelot.common.globals import *  # import of constants like "h_eV_s" and
-from ocelot.common.math_op import *  # import of mathematical functions like gauss_fit
-from ocelot.utils.xfel_utils import *
+from ocelot.common.math_op import fwhm3, gauss_fit
 #from ocelot.optics.utils import calc_ph_sp_dens
-from ocelot.optics.wave import *
+from ocelot.common.globals import h_eV_s, pi, speed_of_light
+from ocelot.common.math_op import find_nearest_idx, mprefix
+from ocelot.common.ocelog import ind_str
+from ocelot.optics.wave import (
+    WignerDistributionLongitudinal, WignerDistributionTransverse, calc_ph_sp_dens,
+    dfldomain_check, wigner_out,
+)
+from ocelot.rad.undulator_params import k2angle, k2lambda, lambda2eV
 
-from ocelot.gui.colormaps2d.colormap2d import *
+from ocelot.gui.colormaps2d.colormap2d import imshow2d
 
 # in order to run decorators properly
 import functools
@@ -192,8 +198,8 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         if len(z_lim) == 1:
             z_lim = [z_lim, z_lim]
         if z_lim[0] > z_lim[1]:
-            z_lim[0] = -inf
-            z_lim[1] = inf
+            z_lim[0] = -np.inf
+            z_lim[1] = np.inf
         if z_lim[1] < np.amin(z) or z_lim[1] > np.amax(z):
             z_lim[1] = np.amax(z)
             # print('      set top lim to max')
@@ -305,7 +311,7 @@ def plot_dfl(dfl, domains=None, z_lim=[], xy_lim=[], figsize=4, cmap=def_cmap, l
         x_line, y_line = x_line / np.max(x_line), y_line / np.max(y_line)
 
     if cmap_cutoff not in [None, False, 0]:
-        cmap = matplotlib.cm.get_cmap(cmap)
+        cmap = matplotlib.colormaps.get_cmap(cmap)
         cmap.set_under("w")
         xy_proj[xy_proj < xy_proj.max() * cmap_cutoff] = -1e-10
         yz_proj[yz_proj < yz_proj.max() * cmap_cutoff] = -1e-10

@@ -17,23 +17,26 @@ ax.set_ylim(ymin=0)
 
 import sys
 import os
+import logging
+from copy import deepcopy
 import csv
 import time
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import logging
 
-from ocelot.adaptors.genesis import *
-from ocelot.common.globals import *  # import of constants like "h_eV_s" and
-from ocelot.common.math_op import *  # import of mathematical functions
-from ocelot.utils.xfel_utils import *
 from ocelot.optics.utils import calc_ph_sp_dens
-from ocelot.optics.wave import *
 
-from ocelot.gui.colormaps2d.colormap2d import *
-from ocelot.gui.settings_plot import *
-from ocelot.gui.dfl_plot import *  # tmp
+from matplotlib import rc, rcParams
+from ocelot.adaptors.genesis import (
+    GenesisOutput, dpa2edist, read_dfl_file_out, read_dpa_file_out, read_out_file,
+)
+from ocelot.common.globals import h_eV_s, m_e_GeV, m_e_MeV, pi, speed_of_light
+from ocelot.common.math_op import fwhm3, n_moment, std_moment
+from ocelot.common.ocelog import ind_str
+from ocelot.gui.dfl_plot import plot_dfl, plot_wigner
+from ocelot.gui.settings_plot import def_cmap, if_plottable
+from ocelot.optics.wave import dfl_pad_z, wigner_out
 from ocelot.gui.beam_plot import plot_beam # tmp
 
 # from pylab import rc, rcParams #tmp
@@ -49,7 +52,7 @@ __author__ = "Svitozar Serkez"
 @if_plottable
 def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):
     print('start')
-    from ocelot.utils.xfel_utils import background
+    from ocelot.common.py_func import background
     i = 0
     dir = exp_dir + 'run_' + str(i) + '/'
 
@@ -71,7 +74,7 @@ def plot_gen_out_all_paral(exp_dir, stage=1, savefig='png', debug=1):
 # plot_gen_stat(proj_dir=exp_dir, run_inp=[], stage_inp=[], param_inp=[], s_param_inp=['p_int','energy','r_size_weighted'], z_param_inp=[], dfl_param_inp=[], s_inp=['max'], z_inp=[0,'end'], savefig=1, saveval=1, showfig=0, debug=0)
 
 @if_plottable
-def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', vartype_dfl=complex128, debug=1, *args,
+def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', vartype_dfl=np.complex128, debug=1, *args,
                      **kwargs):
     """
     plots all possible output from the genesis output
@@ -148,7 +151,7 @@ def plot_gen_out_all(handle=None, savefig='png', showfig=False, choice='all', va
             if choice[2]:
                 f2 = plot_gen_out_z(handle, z=0, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
             if choice[3]:
-                f3 = plot_gen_out_z(handle, z=inf, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
+                f3 = plot_gen_out_z(handle, z=np.inf, showfig=showfig, savefig=savefig, debug=debug, *args, **kwargs)
             if choice[11] != 0:
                 if choice[11] == -1:
                     try:
@@ -684,7 +687,7 @@ def subfig_z_spec(ax_spectrum, g, zi=None, y_units='ev', estimate_ph_sp_dens=Tru
 
 
 @if_plottable
-def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=True, fig_name=None, z=inf,
+def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=True, fig_name=None, z=np.inf,
                        savefig=False, showfig=1, debug=1, **kwargs):
     print('soon this function will be replaced by plot_gen_out_z_new (currently being tested)')
     number_ticks = 6
@@ -699,7 +702,7 @@ def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=T
 
     import matplotlib.ticker as ticker
 
-    if z == inf:
+    if z == np.inf:
         # print ('Showing profile parameters at the end of undulator')
         z = np.amax(g.z)
 
@@ -841,7 +844,7 @@ def plot_gen_out_z_old(g, figsize=(10, 14), x_units='um', y_units='ev', legend=T
                          verticalalignment='top', transform=ax_spectrum.transAxes,
                          color='red')  # horizontalalignment='center', verticalalignment='center',
 
-    phase = unwrap(g.phi_mid[:, zi])
+    phase = np.unwrap(g.phi_mid[:, zi])
 
     phase_cor = np.arange(g.nSlices) * (maxspectrum_wavelength - g('xlamds')) / g('xlamds') * g('zsep') * 2 * pi
     phase_fixed = phase + phase_cor
@@ -1505,7 +1508,7 @@ def subfig_evo_rad_spec_sz(ax_spectrum_evo, g, legend, norm=1, **kwargs):
 
 
 @if_plottable
-def plot_gen_out_scanned_z(g, figsize=(10, 14), legend=True, fig_name=None, z=inf, savefig=False):
+def plot_gen_out_scanned_z(g, figsize=(10, 14), legend=True, fig_name=None, z=np.inf, savefig=False):
     if g('itdp') == True:
         print('    plotting scan at ' + str(z) + ' [m]')
         print('!     Not implemented yet for time dependent, skipping')
@@ -1518,7 +1521,7 @@ def plot_gen_out_scanned_z(g, figsize=(10, 14), legend=True, fig_name=None, z=in
 
     import matplotlib.ticker as ticker
 
-    if z == inf:
+    if z == np.inf:
         # print 'Showing profile parameters at the end of undulator'
         z = np.amax(g.z)
 
@@ -1870,7 +1873,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[],
                     if len(param_matrix) == len(outlist[irun].z):  # case if the array is 1D (no s/z matrix presented)
                         break
                     else:
-                        if z_ind == 'end' or z_ind == inf:
+                        if z_ind == 'end' or z_ind == np.inf:
                             z_value.append(param_matrix[:, -1])  # after undulator
                         elif z_ind == 'start':
                             z_value.append(param_matrix[:, 0])  # before undulator
@@ -1953,7 +1956,7 @@ def plot_gen_stat(proj_dir, run_inp=[], stage_inp=[], param_inp=[],
 
                         if len(param_matrix) != len(
                                 outlist[irun].z):  # case if the array is 1D (no s/z matrix presented)
-                            if z_ind == 'end' or z_ind == inf:
+                            if z_ind == 'end' or z_ind == np.inf:
                                 run_value = param_matrix[:, -1]  # after undulator
                             elif z_ind == 'start':
                                 run_value = param_matrix[:, 0]  # before undulator
@@ -2117,7 +2120,7 @@ def plot_gen_corr(proj_dir, run_inp=[], p1=(), p2=(), savefig=False, showfig=Tru
     matrix_1 = np.array(matrix_1)
     matrix_2 = np.array(matrix_2)
 
-    if ndim(matrix_1) == 2:
+    if np.ndim(matrix_1) == 2:
         var_1 = matrix_1[:, index_z1]
     else:
         if s_1 == 'mean':
@@ -2127,7 +2130,7 @@ def plot_gen_corr(proj_dir, run_inp=[], p1=(), p2=(), savefig=False, showfig=Tru
         else:
             var_1 = matrix_1[:, index_s1, index_z1]
 
-    if ndim(matrix_2) == 2:
+    if np.ndim(matrix_2) == 2:
         var_2 = matrix_2[:, index_z2]
     else:
         if s_2 == 'mean':
@@ -2661,7 +2664,7 @@ def show_output(g, show_field=False, show_slice=0):
 
         fig.add_subplot(133)
         spec = np.abs(np.fft.fft(slices[:, int(npoints / 2), int(npoints / 2)])) ** 2
-        freq_ev = h * fftfreq(len(spec), d=zsep * xlamds / c)
+        freq_ev = h * np.fft.fftfreq(len(spec), d=zsep * xlamds / c)
         plt.plot(freq_ev, spec)
         plt.title('Spectrum/axis')
 
@@ -2683,7 +2686,7 @@ def show_plots(displays, fig):
             x, y = f(x=np.linspace(-10, 10, 100))
             ax.plot(x, y, '.')
 
-    show()
+    plt.show()
 
 
 class Display:

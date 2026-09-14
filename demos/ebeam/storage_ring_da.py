@@ -1,7 +1,16 @@
 __author__ = 'Sergey Tomin'
 
-from ocelot.gui import *
-from ocelot import *
+from ocelot.common.globals import pi
+from ocelot.cpbd.chromaticity import compensate_chromaticity
+from ocelot.cpbd.elements.bend import Bend
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.sextupole import Sextupole
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.track import contour_da, create_track_list, freq_analysis, track_nturns
+from ocelot.cpbd.transformations.kick import KickTM
+from ocelot.cpbd.transformations.transfer_map import TransferMap
+from ocelot.gui.accelerator import show_da, show_mu
 import numpy as np
 from time import time
 

@@ -1,6 +1,6 @@
 # from numpy.core.umath import sqrt
 from ocelot.common.globals import m_e_eV, m_e_GeV
-from ocelot.cpbd.beam import *
+from ocelot.cpbd.beam import ParticleArray, Twiss
 import numpy as np
 
 

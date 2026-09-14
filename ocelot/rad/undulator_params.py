@@ -6,7 +6,8 @@ Sergey Tomin.
 
 import scipy.special as sf
 from scipy.special import jn
-from ocelot.common.globals import *
+import numpy as np
+from ocelot.common.globals import h_eV_s, m_e_GeV, m_e_eV, pi, speed_of_light
 from ocelot.common.ocelog import logging
 _logger = logging.getLogger(__name__)
 

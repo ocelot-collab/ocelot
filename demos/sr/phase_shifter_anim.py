@@ -1,16 +1,17 @@
 __author__ = 'tomins'
 import sys 
 sys.path.append("../..")
+
 import os
+from pathlib import Path
+import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation
-from matplotlib import animation
-import numpy as np
-from pathlib import Path
-from ocelot.rad import *
-from ocelot import *
-from ocelot.gui import *
+
+from ocelot import Undulator, MagneticLattice, Drift, Hcor, Beam
+from ocelot.rad import calculate_radiation, Screen
+from ocelot.gui import show_flux
 
 font = {'size'   : 10}
 matplotlib.rc('font', **font)

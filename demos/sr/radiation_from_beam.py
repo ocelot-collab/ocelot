@@ -1,10 +1,11 @@
 __author__ = 'Sergey Tomin'
 
-import matplotlib
-from ocelot import *
-from ocelot.rad import *
-from ocelot.gui import *
 import numpy as np
+import matplotlib.pyplot as plt
+
+from ocelot import ParticleArray, Undulator, MagneticLattice
+from ocelot.rad import Screen, coherent_radiation
+from ocelot.gui import show_flux
 
 
 chirp_coeff = 0.01/2.36

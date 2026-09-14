@@ -1,5 +1,15 @@
 """Test of the demo file demos/ebeam/dogleg.py"""
 
+import numpy as np
+from ocelot.cpbd.beam.generator import generate_parray
+from ocelot.cpbd.elements.quadrupole import Quadrupole
+from ocelot.cpbd.elements.sbend import SBend
+from ocelot.cpbd.elements.sextupole import Sextupole
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.physics_proc import BeamTransform
+from ocelot.cpbd.track import track
+
+
 import os
 import sys
 import copy

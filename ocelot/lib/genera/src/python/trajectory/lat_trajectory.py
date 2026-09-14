@@ -2,9 +2,10 @@ from ocelot import MagneticLattice
 
 __author__ = 'Sergey Tomin'
 from ocelot.lib.genera.src.python.trajectory.undulator import und_trace
-from numpy import append
-from ocelot.cpbd.optics import *
-from ocelot.cpbd.elements import *
+from numpy import append, array, sqrt
+from ocelot.common.globals import speed_of_light
+from ocelot.cpbd.optics import trace_obj
+from ocelot.cpbd.elements import Undulator
 from ocelot.cpbd.beam import Particle
 from ocelot.lib.genera.src.python.trajectory.motion import Motion
 from scipy.interpolate import splrep, splev
@@ -146,4 +147,3 @@ def trace4radiation(lat,particle0, accuracy = 1):
             particle = particle_end(motion, particle)
         motions.append(motion)
     return motions
-

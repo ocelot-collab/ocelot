@@ -9,7 +9,9 @@ sequence = read_lattice_elegant(file_flo=file_flo.txt, file_par=file_par.txt)
 lat = MagneticLattice(sequence)
 '''
 import csv
-from ocelot.cpbd.elements import *
+from ocelot.cpbd.elements import (
+    Bend, Cavity, Drift, Hcor, Marker, Monitor, Quadrupole, RBend, Sextupole, Undulator, Vcor,
+)
 from math import *
 import sys
 import numpy as np

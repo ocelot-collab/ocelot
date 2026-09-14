@@ -1,5 +1,19 @@
 """Test of the demo file demos/ebeam/csr_ex.py"""
 
+import numpy as np
+from ocelot.cpbd.beam.analysis import get_current
+from ocelot.cpbd.csr import CSR
+from ocelot.cpbd.elements.bend import Bend
+from ocelot.cpbd.elements.drift import Drift
+from ocelot.cpbd.elements.undulator import Undulator
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
+from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.optics import lattice_transfer_map
+from ocelot.cpbd.track import track
+from ocelot.cpbd.transformations.second_order import SecondTM
+from ocelot.utils.acc_utils import chicane_RTU
+
+
 from csr_ex_conf import *
 from unit_tests.params import *
 import os

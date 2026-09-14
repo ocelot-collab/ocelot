@@ -33,6 +33,8 @@ Ocelot provides:
 
 ## Getting Started
 
+Ocelot requires Python 3.11 or newer. Python 3.10 is no longer supported.
+
 For requirements and installation instructions, see the official guide:
 👉 [**Installation & Setup**](https://www.ocelot-collab.com/docs/docu/intro)
 
@@ -169,11 +171,12 @@ Ocelot's core functionality is organized into key modules:
 
 ## Note to Developers
 ### Installation
-For development it is recommended to use a virtual environment and install the development dependencies via the following commands:
+For development, use Python 3.11 or newer to create a virtual environment and
+install the development dependencies:
 ```bash
 #!/usr/bin/env bash
 
-python3 -m venv .venv
+python3.11 -m venv .venv
 
 . .venv/bin/activate # or for Windows: .venv\Scripts\activate
 pip install --upgrade pip
@@ -181,6 +184,22 @@ pip install -e ".[dev]"
 ```
 This automatically installs all dependencies locally into the folder `.venv` whithout changing your system Python installation.
 This package is then added to the environment as is (editable mode) so that changes to the source code are immediately reflected in this environment.
+
+### Optional features
+
+Install additional dependencies for the features you use:
+
+```bash
+pip install -e ".[openpmd]"  # openPMD file I/O and viewer
+pip install -e ".[pmd]"      # openPMD tools plus openpmd-beamphysics
+pip install -e ".[mpi]"      # MPI bindings (requires an MPI runtime)
+pip install -e ".[moga]"     # multi-objective optimization with DEAP
+```
+
+Extras can be combined, for example `pip install -e ".[dev,openpmd,moga]"`.
+The public documentation uses Docusaurus in the separate
+[website repository](https://github.com/ocelot-collab/ocelot-collab.github.io).
+The unused `docs` extra and Sphinx dependencies have been removed.
 
 ### Tools
 Useful tools for development can be found in the `tasks.py` script for automating common development tasks. Use `inv --list` to see available commands (requires `invoke` package automatically installed by the previous step).

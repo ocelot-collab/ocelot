@@ -4,14 +4,14 @@ import numpy as np
 import pytest
 
 try:
-    import pmd_beamphysics as pmd
+    import beamphysics as pmd
 except ImportError:
     IS_PMD_INSTALLED = False
 else:
     IS_PMD_INSTALLED = True
     from ocelot.adaptors import pmd as pmd_adaptor
 
-# Define decorator to skip tests if pmd_beamphysics is not installed.
+# Define decorator to skip tests if openpmd-beamphysics is not installed.
 only_if_pmd_installed = pytest.mark.skipif(
     not IS_PMD_INSTALLED, reason='PMD required to run tests')
 

@@ -7,7 +7,7 @@ name = "ocelot-collab"
 version = '26.06.1'
 description = "Accelerator, radiation and x-ray optics simulation framework"
 readme = { file = "README.md", content-type = "text/markdown" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "GPL-3.0-only"
 license-files = ["LICENSE"]
 authors = [
@@ -32,9 +32,10 @@ Repository = "https://github.com/ocelot-collab/ocelot"
 
 [project.optional-dependencies]
 mpi = ["mpi4py"]
-pmd = ["openpmd-api", "openpmd-viewer", "pmd-beamphysics"]
+openpmd = ["openpmd-api", "openpmd-viewer"]
+pmd = ["openpmd-api", "openpmd-viewer", "openpmd-beamphysics>=0.16"]
 moga = ["deap"]
-dev = ["invoke", "build", "Sphinx", "alabaster", "sphinxcontrib-jsmath", "pytest", "ipykernel", "ipywidgets", "nbconvert", "sympy", "imageio", "seaborn", "plotly"]
+dev = ["invoke", "build", "pytest", "ipykernel", "ipywidgets", "nbconvert", "sympy", "imageio", "seaborn", "plotly"]
 
 [tool.setuptools]
 include-package-data = false

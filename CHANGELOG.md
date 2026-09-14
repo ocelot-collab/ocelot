@@ -7,7 +7,28 @@ Versioning is date based: `YY.MM.patch`.
 
 ## [Unreleased]
 
-- None yet.
+### Changed
+
+- Raised the minimum supported Python version from 3.10 to 3.11 in the Python
+  package and conda recipe, matching the pandas 3 and scikit-learn 1.9 minimums.
+- Added scikit-learn and TFS-Pandas dependencies and synchronized their conda
+  requirements with the Python package.
+- Added `mpi` and `moga` installation extras. Kept the `openpmd` extra for
+  openPMD I/O and expanded `pmd` to include both openPMD and openpmd-beamphysics.
+- Replaced the obsolete `pmd-beamphysics` distribution with the maintained
+  `openpmd-beamphysics` package and its `beamphysics` import, fixing PMD file
+  writing with NumPy 2.
+- Added separate script and notebook exclusions to the demo runner.
+
+### Fixed
+
+- Kept extracted and loaded response matrices writable with pandas 3 so callers
+  can continue editing and injecting response-matrix values.
+
+### Removed
+
+- Removed the unused `docs` extra and Sphinx dependencies. Public documentation
+  is built with Docusaurus in the website repository.
 
 ## [26.06.1] - 2026-06-08
 

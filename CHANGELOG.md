@@ -24,6 +24,13 @@ Versioning is date based: `YY.MM.patch`.
 
 - Kept extracted and loaded response matrices writable with pandas 3 so callers
   can continue editing and injecting response-matrix values.
+- Corrected the longitudinal-coordinate sign when importing PMD particle groups,
+  preserving bunch order through an export/import round trip.
+- Added an absolute tolerance of `1e-15` to the CSR particle and space-charge
+  Twiss reference comparisons so roundoff near zero does not fail relative
+  checks. Reference data and simulation algorithms are unchanged.
+- Documented a Numba `workqueue` workaround for conflicting OpenMP runtimes in
+  mixed conda/pip environments on macOS.
 
 ### Removed
 

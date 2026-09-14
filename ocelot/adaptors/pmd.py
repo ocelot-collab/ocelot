@@ -9,6 +9,8 @@ from ocelot.cpbd.beam import ParticleArray
 def particle_group_to_parray(pgroup: pmd.ParticleGroup) -> ParticleArray:
     """Construct an Ocelot ParticleArray from an openPMD-beamphysics ParticleGroup.
     The particle type is assumed to be electrons.
+    The longitudinal coordinates use opposite signs: ``tau = -z``, matching
+    :func:`particle_array_to_particle_group`.
 
     :param pgroup: ParticleGroup from which to construct the ParticleArray
     :return: ParticleArray corresponding to the provided ParticleGroup
@@ -26,7 +28,7 @@ def particle_group_to_parray(pgroup: pmd.ParticleGroup) -> ParticleArray:
     rpart[1] = pgroup.px / reference_momentum
     rpart[2] = pgroup.y
     rpart[3] = pgroup.py / reference_momentum
-    rpart[4] = pgroup.z
+    rpart[4] = -pgroup.z
     rpart[5] = (pgroup.energy - reference_energy) / reference_momentum
 
     parray.E = reference_energy * 1e-9  # Convert eV to GeV

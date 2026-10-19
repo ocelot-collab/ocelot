@@ -1,6 +1,7 @@
 __author__ = 'Sergey Tomin'
 
 import numpy as np
+from math import factorial
 from scipy.integrate import odeint
 from scipy import optimize
 from ocelot.common.globals import m_e_GeV, m_e_eV, speed_of_light
@@ -453,6 +454,69 @@ def t_nnn_transport(L, h, k1, k2, energy=0):
     return T
 
 
+def _mad_focusing(L, k2):
+    """MAD8 c, s, d and f functions, including their zero-strength limits."""
+    if k2 == 0:
+        return 1., L, L * L / 2, L ** 3 / 6
+    k = np.sqrt(k2 + 0.j)
+    phase = k * L
+    c = np.cos(phase).real
+    s = (np.sin(phase) / k).real
+    # The half-angle form avoids subtracting nearly equal cosines.
+    d = 2 * (np.sin(phase / 2) / k).real ** 2
+    a = k2 * L * L
+    if abs(a) <= 0.1:
+        f = L ** 3 * (1 / 6 + a * (-1 / 120 + a * (1 / 5040 + a * (
+            -1 / 362880 + a * (1 / 39916800 - a / 6227020800)))))
+    else:
+        f = (L - s) / k2
+    return c, s, d, f
+
+
+def _mad_mixed_integrals(L, kx2, ky2, cx, sx, dx, fx):
+    """Evaluate Jc, Js, Jd, Jf without a singularity at kx2 = 4*ky2.
+
+    These are the divided differences in MAD8's Physical Methods Manual,
+    section 1.3, Eq. (1.8). The sum/difference-frequency form follows
+    MAD-X's tmsect routine and also covers nonzero resonance.
+    """
+    a, b = kx2 * L * L, 4 * ky2 * L * L
+    if max(abs(a), abs(b)) <= 0.1:
+        # Divided Taylor series: H_n(a,b) = sum(a**j*b**(n-j)).
+        # Unlike a quotient of two series, this remains accurate at a == b.
+        values = np.array([1 / 2, 1 / 6, 1 / 24, 1 / 120])
+        signed_h = 1.
+        for n in range(1, 7):
+            signed_h = -a * signed_h + (-b) ** n
+            for j in range(4):
+                values[j] += signed_h / factorial(2 * n + j + 2)
+        jc = values[0] * L ** 2
+        js = values[1] * L ** 3
+        jd = values[2] * L ** 4
+        jf = values[3] * L ** 5
+        return jc, js, jd, jf
+
+    # f(2*ky, L) = (L - sy*cy)/(4*ky2), with limit L**3/6.
+    c2y, s2y, d2y, f2y = _mad_focusing(L, 4 * ky2)
+    denom = kx2 - 4 * ky2
+    if abs(a - b) > 0.1 * max(abs(a), abs(b)):
+        jc = (c2y - cx) / denom
+        js = (s2y - sx) / denom
+        jd = (d2y - dx) / denom
+        jf = (f2y - fx) / denom
+        return jc, js, jd, jf
+
+    # For real magnets a nonzero resonance requires kx2 > 0 and ky2 > 0.
+    kx, ky = np.sqrt(kx2), np.sqrt(ky2)
+    cp, sp, _, _ = _mad_focusing(L, (kx / 2 + ky) ** 2)
+    cm, sm, _, _ = _mad_focusing(L, (kx / 2 - ky) ** 2)
+    jc = sp * sm / 2
+    js = (sp * cm - cp * sm) / (4 * kx * ky)
+    jd = (d2y - jc) / kx2
+    jf = (f2y - js) / kx2
+    return jc, js, jd, jf
+
+
 def t_nnn_mad(L, h, k1, k2, energy=0):
     """
     Universal function to return second order matrix.
@@ -481,43 +545,29 @@ def t_nnn_mad(L, h, k1, k2, energy=0):
     kx2 = (k1 + h*h)
     ky2 = -k1
     kx4 = kx2*kx2
-    ky4 = ky2*ky2
-    kx = np.sqrt(kx2 + 0.j)
-    ky = np.sqrt(-k1 + 0.j)
-    cx = np.cos(kx*L).real
-    sx = (np.sin(kx*L)/kx).real if kx != 0 else L
-    cy = np.cos(ky*L).real
-
-    sy = (np.sin(ky*L)/ky).real if ky != 0 else L
+    cx, sx, dx, J1 = _mad_focusing(L, kx2)
+    cy, sy, _, _ = _mad_focusing(L, ky2)
 
     sx2 = sx*sx
     sy2 = sy*sy
-    L2 = L*L
-    L3 = L2*L
-    L4 = L3*L
-    L5 = L4*L
-    dx = (1. - cx)/kx2 if kx != 0. else L*L/2.
     dx2 = dx * dx
     K1 = k1
     K2 = k2
 
-    d2y = 0.5 * sy * sy
-    s2y = sy * cy
-    c2x = np.cos(2 * kx * L).real
-    c2y = np.cos(2 * ky * L).real
-    fx = (L - sx) / kx2 if kx2 != 0 else L3 / 6.
-    f2y = (L - s2y) / ky2 if ky2 != 0 else L3 / 6
-    J1 = (L - sx) / kx2 if kx2 != 0 else L3 / 6.
-    J2 = (3. * L - 4. * sx + sx * cx) / (2 * kx4) if kx != 0 else L ** 5 / 20.
-    J3 = (15 * L - 22.5 * sx + 9 * sx * cx - 1.5 * sx * cx * cx + kx2 * sx2 * sx) / (
-                6 * kx4 * kx2) if kx != 0 else L ** 7 / 56.
-    #J3 = (15 * L - 22 * sx + 9 * sx * cx - 2 * sx * cx * cx ) / (
-    #        6 * kx4 * kx2) if kx != 0 else L ** 7 / 56.
-    J_denom = kx2 - 4 * ky2
-    Jc = (c2y - cx) / J_denom if J_denom != 0 else 0.5 * L2
-    Js = (cy * sy - sx) / J_denom if J_denom != 0 else L3 / 6
-    Jd = (d2y - dx) / J_denom if J_denom != 0 else L4 / 24
-    Jf = (f2y - fx) / J_denom if J_denom != 0 else L5 / 120
+    a = kx2 * L * L
+    if abs(a) <= 0.1:
+        # J2 = integral(d_x**2), J3 = integral(d_x**3). Use their
+        # dimensionless Taylor series to avoid cancellation near kx2 = 0.
+        J2 = L ** 5 * (1 / 20 + a * (-1 / 168 + a * (1 / 2880 + a * (
+            -17 / 1330560 + a * (31 / 94348800 + a * (
+                -1 / 159667200 + a * 5461 / 59281238016000))))))
+        J3 = L ** 7 * (1 / 56 + a * (-1 / 288 + a * (7 / 21120 + a * (
+            -1 / 49140 + a * (13 / 14515200 + a * (
+                -31 / 1034035200 + a * 63047 / 79506601574400))))))
+    else:
+        J2 = (3 * L - 4 * sx + sx * cx) / (2 * kx4)
+        J3 = (15 * L - 22 * sx + 9 * sx * cx - 2 * sx * cx * cx) / (6 * kx4 * kx2)
+    Jc, Js, Jd, Jf = _mad_mixed_integrals(L, kx2, ky2, cx, sx, dx, J1)
 
     khk = K2 + 2*h*K1
     T = np.zeros((6,6,6))

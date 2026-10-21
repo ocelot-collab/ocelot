@@ -272,11 +272,11 @@ class Twiss:
         tws.Dyp = R32 * tws0.Dy + R33 * tws0.Dyp + R35
 
         d_mux = np.arctan2(R01, R00 * tws0.beta_x - R01 * tws0.alpha_x)
-        if d_mux < 0: d_mux += np.pi
+        if d_mux < 0: d_mux += 2*np.pi
         tws.mux = tws0.mux + d_mux
 
         d_muy = np.arctan2(R23, R22 * tws0.beta_y - R23 * tws0.alpha_y)
-        if d_muy < 0: d_muy += np.pi
+        if d_muy < 0: d_muy += 2*np.pi
         tws.muy = tws0.muy + d_muy
 
         return tws
@@ -557,7 +557,7 @@ class BeamArray(Beam):
             return np.size(self.s)
 
         def charge(self):
-            return np.trapz(self.I, self.s / glb.speed_of_light)  # C
+            return np.trapezoid(self.I, self.s / glb.speed_of_light)  # C
 
         def params(self):
             l = self.len()

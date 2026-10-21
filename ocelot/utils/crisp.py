@@ -337,7 +337,7 @@ def ff_from_model(model, freqs, modelparas):
     else:
         zeitdom = model(zeit, modelparas)
     #normalize to densitiy 1
-    zeitdom = zeitdom / np.trapz(zeitdom, x=zeit)
+    zeitdom = zeitdom / np.trapezoid(zeitdom, x=zeit)
     #print (modelparas)
     #zeitdom= model(zeit, *[modelparas])
     #ff_model = np.fft.fft(zeitdom)
@@ -470,7 +470,7 @@ def gerchberg_saxton(formfactors, formfactors_noise, start_phase, phase_conditio
         """
         Change here
         """
-        this_curr_prof = this_curr_prof  #/np.trapz(this_curr_prof, x = x)
+        this_curr_prof = this_curr_prof  #/np.trapezoid(this_curr_prof, x = x)
         """
         """
         #new_formfactor = np.fft.fft(this_curr_prof)
@@ -487,7 +487,7 @@ def gerchberg_saxton(formfactors, formfactors_noise, start_phase, phase_conditio
             this_curr_prof = begin_curr_prof  # ohne Clean up
             x = np.arange(np.size(this_curr_prof))
             #outcommented this
-            #this_curr_prof = this_curr_prof /np.trapz(this_curr_prof, x = x)
+            #this_curr_prof = this_curr_prof /np.trapezoid(this_curr_prof, x = x)
             #new_formfactor = np.fft.fft(this_curr_prof)
             #wx, new_formfactor = nils_fft(x,this_curr_prof)
             #new_formfactor = new_formfactor * np.sqrt(2*np.pi)
@@ -517,7 +517,7 @@ def kramers_kronig_phase(frequencies, mess_formfactors):
         ff_here = np.delete(these_ff, i)
         freqs_here = np.delete(these_freqs, i)
         to_integrate = (np.log(ff_here) - np.log(these_ff[i])) / (these_freqs[i] ** 2 - freqs_here ** 2)
-        kk_phase[indices[i]] = 2 * these_freqs[i] / np.pi * np.trapz(to_integrate, x=freqs_here)
+        kk_phase[indices[i]] = 2 * these_freqs[i] / np.pi * np.trapezoid(to_integrate, x=freqs_here)
 
     return kk_phase
 
@@ -540,7 +540,7 @@ def norm_current(zeit, profil, charge):
     """
     Normalizes the longitudinal profile to the actual charge
     """
-    return profil / np.trapz(profil, x=zeit) * charge
+    return profil / np.trapezoid(profil, x=zeit) * charge
 
 
 def cleanup_formfactor(frequencies, formfactors, formfactors_noise, formfactors_det_limit,
@@ -706,7 +706,7 @@ def get_crisp_signal(s, current, n_shots=1, which_set='high'):
     s_centered = s - np.sum(s * current) / np.sum(current)
     # get charge
     t_in = s_centered / 3e8
-    charge = np.trapz(current, x=t_in)
+    charge = np.trapezoid(current, x=t_in)
     # linear time spacing
     t_spec = np.arange(-2, 2, 0.001) * 1e-12
     # needs to be sorted
@@ -714,7 +714,7 @@ def get_crisp_signal(s, current, n_shots=1, which_set='high'):
     t_in = np.sort(t_in)
     cur_spec = np.interp(t_spec, t_in, current, left=0, right=0)
     # normalize to one
-    cur_spec = cur_spec / np.trapz(cur_spec, x=t_spec)
+    cur_spec = cur_spec / np.trapezoid(cur_spec, x=t_spec)
 
     # plt.figure('Normalized and intrapolated')
     # plt.plot(t_spec*1e15,cur_spec*1e-3)

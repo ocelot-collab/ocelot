@@ -1026,7 +1026,7 @@ class Genesis4Output:
 
     @property
     def beam_charge(self):
-        return np.trapz(self.I, self.t)
+        return np.trapezoid(self.I, self.t)
 
     @property
     def rad_power(self): #TODO: refactor from property back to attribute?
@@ -1037,7 +1037,7 @@ class Genesis4Output:
 
     @property
     def rad_energy(self):
-        return np.trapz(self.rad_power, self.t)
+        return np.trapezoid(self.rad_power, self.t)
 
     @property
     def n_photons(self):
@@ -1081,7 +1081,7 @@ class Genesis4Output:
         scale_ev = np.fft.fftshift(scale_ev)
         
         if estimate_ph_sp_dens:
-            tt = np.trapz(spec, scale_ev, axis=axis)
+            tt = np.trapezoid(spec, scale_ev, axis=axis)
             if axis == 1:
                 tt[tt == 0] = np.inf
                 spec *= (self.n_photons / tt)[:, np.newaxis]

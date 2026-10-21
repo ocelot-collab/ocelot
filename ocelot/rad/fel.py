@@ -410,7 +410,7 @@ class FelParameters:
     def E(self, z=None):
         P = self.P(z)
         P[np.isnan(P)] = 0
-        return np.trapz(P, self.s / speed_of_light)
+        return np.trapezoid(P, self.s / speed_of_light)
         
     def tcoh(self,z=None):
         #check

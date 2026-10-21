@@ -2380,7 +2380,7 @@ def plot_edist(edist, figsize=4, fig_name=None, savefig=False, showfig=True, sca
 
     hist, edges = np.histogram(s, bins=bins[2])  # calculate current histogram
     edges = edges[0:-1]  # remove the last bin edge to save equal number of points
-    hist_int = np.trapz(hist, edges) / mult  # normalize
+    hist_int = np.trapezoid(hist, edges) / mult  # normalize
     hist = np.rint(hist.astype(float) / (hist_int / float(edist.charge())))
 
     ax_curr = fig.add_subplot(2, 1 + plot_x_y + plot_xy_s, 1)

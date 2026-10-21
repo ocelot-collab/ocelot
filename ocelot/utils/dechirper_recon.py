@@ -455,7 +455,7 @@ def track_1D(distance, R34, s_coord, y_scr_arr, charge=250e-12, energy=14, beta_
     # normalization
     g_track = interpolate.interp1d(bin_edges, hist, fill_value=(0, 0), bounds_error=False)
 
-    g_tr = g_track(y_scr_arr) / np.trapz(g_track(y_scr_arr), y_scr_arr)
+    g_tr = g_track(y_scr_arr) / np.trapezoid(g_track(y_scr_arr), y_scr_arr)
 
     return g_tr
 
@@ -589,7 +589,7 @@ def find_distance_to_corrugated_plate(s_coord, img_proc, x_px_size, R34=35.33, c
             return 100000
         proj = oim.get_image_proj(img_proc)
         g_img = interpolate.interp1d(np.arange(len(proj)) * x_px_size, proj, fill_value=(0, 0), bounds_error=False)
-        g_img_n = g_img(y_scr_arr) / np.trapz(g_img(y_scr_arr), y_scr_arr)
+        g_img_n = g_img(y_scr_arr) / np.trapezoid(g_img(y_scr_arr), y_scr_arr)
         g_track = track_1D(distance, R34=R34, s_coord=s_coord * 1e-6, y_scr_arr=y_scr_array, charge=charge,
                            energy=energy,
                            beta_y=beta_y, emit=emit)

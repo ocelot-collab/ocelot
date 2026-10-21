@@ -1130,9 +1130,9 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
     # _logger.debug('spec.shape = {}'.format(spec.shape))
 
     if spec_squared:
-        spec_sum = np.trapz(spec, x=freq_ev, axis=axis)
+        spec_sum = np.trapezoid(spec, x=freq_ev, axis=axis)
     else:
-        spec_sum = np.trapz(abs(spec) ** 2, x=freq_ev, axis=axis)
+        spec_sum = np.trapezoid(abs(spec) ** 2, x=freq_ev, axis=axis)
 
     if np.size(spec_sum) == 1:
         if spec_sum == 0:  # avoid division by zero
@@ -1253,9 +1253,9 @@ def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase=None, fd_p
     # normalization for pulse energy
     if en_pulse == None:
         _logger.debug(ind_str + 'no en_pulse provided, calculating from integral of td_env')
-        en_pulse = np.trapz(td_env, td_scale / speed_of_light)
+        en_pulse = np.trapezoid(td_env, td_scale / speed_of_light)
 
-    pulse_energies = np.trapz(abs(td) ** 2, td_scale_i / speed_of_light, axis=0)
+    pulse_energies = np.trapezoid(abs(td) ** 2, td_scale_i / speed_of_light, axis=0)
     scale_coeff = en_pulse / np.mean(pulse_energies)
     td *= np.sqrt(scale_coeff)
 

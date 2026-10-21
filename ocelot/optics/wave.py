@@ -2908,6 +2908,8 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     newN and newL define the final desire number of points and size of the mesh
     when newN and newL are not None interpN and interpL values are ignored
     coordinate convention is (x,y)
+    method selects 'linear', 'cubic', or 'quintic' spline interpolation;
+    points outside the original transverse grid are filled with zeros.
     """
 
     _logger.info('interpolating radiation file')
@@ -3024,14 +3026,23 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     iy_max = np.where(yscale1 <= yscale2[-1])[-1][-1]
     _logger.debug(ind_str + 'energy before interpolation ' + str(dfl.E()))
     # interp_func = rgi((zscale1,yscale1,xscale1), dfl.fld, fill_value=0, bounds_error=False, method='nearest')
+    from scipy.interpolate import RectBivariateSpline
+
+    spline_orders = {'linear': 1, 'cubic': 3, 'quintic': 5}
+    if method not in spline_orders:
+        raise ValueError("method must be 'linear', 'cubic', or 'quintic'")
+    order = spline_orders[method]
+    outside_x = (xscale2 < xscale1[0]) | (xscale2 > xscale1[-1])
+    outside_y = (yscale2 < yscale1[0]) | (yscale2 > yscale1[-1])
     fld2 = []
     for nslice, fslice in enumerate(dfl.fld):
         _logger.log(5, ind_str + 'slice %s' % (nslice))
-        re_func = scipy.interpolate.interp2d(xscale1, yscale1, np.real(fslice), fill_value=0, bounds_error=False,
-                                             kind=method)
-        im_func = scipy.interpolate.interp2d(xscale1, yscale1, np.imag(fslice), fill_value=0, bounds_error=False,
-                                             kind=method)
-        fslice2 = re_func(xscale2, yscale2) + 1j * im_func(xscale2, yscale2)
+        # The field is indexed (y, x), whereas the spline is indexed (x, y).
+        re_func = RectBivariateSpline(xscale1, yscale1, fslice.real.T, kx=order, ky=order, s=0)
+        im_func = RectBivariateSpline(xscale1, yscale1, fslice.imag.T, kx=order, ky=order, s=0)
+        fslice2 = (re_func(xscale2, yscale2) + 1j * im_func(xscale2, yscale2)).T
+        fslice2[:, outside_x] = 0
+        fslice2[outside_y, :] = 0
         P1 = sum(sum(abs(fslice[iy_min:iy_max, ix_min:ix_max]) ** 2))
         P2 = sum(sum(abs(fslice2) ** 2))
         # print(P1, P2)
@@ -4061,9 +4072,9 @@ def calc_ph_sp_dens(spec, freq_ev, n_photons, spec_squared=1):
     # _logger.debug('spec.shape = {}'.format(spec.shape))
 
     if spec_squared:
-        spec_sum = np.trapz(spec, x=freq_ev, axis=axis)
+        spec_sum = np.trapezoid(spec, x=freq_ev, axis=axis)
     else:
-        spec_sum = np.trapz(abs(spec) ** 2, x=freq_ev, axis=axis)
+        spec_sum = np.trapezoid(abs(spec) ** 2, x=freq_ev, axis=axis)
 
     if np.size(spec_sum) == 1:
         if spec_sum == 0:  # avoid division by zero
@@ -4186,9 +4197,9 @@ def imitate_1d_sase_like(td_scale, td_env, fd_scale, fd_env, td_phase=None, fd_p
     # normalization for pulse energy
     if en_pulse == None:
         _logger.debug(ind_str + 'no en_pulse provided, calculating from integral of td_env')
-        en_pulse = np.trapz(td_env, td_scale / speed_of_light)
+        en_pulse = np.trapezoid(td_env, td_scale / speed_of_light)
 
-    pulse_energies = np.trapz(abs(td) ** 2, td_scale_i / speed_of_light, axis=0)
+    pulse_energies = np.trapezoid(abs(td) ** 2, td_scale_i / speed_of_light, axis=0)
     scale_coeff = en_pulse / np.mean(pulse_energies)
     td *= np.sqrt(scale_coeff)
 

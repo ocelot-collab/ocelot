@@ -528,7 +528,7 @@ The columns below deliberately separate:
 | `Octupole` | No | `TransferMap` via inherited `Magnet` first-order hook | `TransferMap`, `SecondTM`, `KickTM`, `RungeKuttaGlobalTM`, `RungeKuttaOcelotTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | none | `k3` enters `KickTM` and the hard-edge RK field; `SecondTM` still comes from inherited generic `Magnet` second-order hooks. |
 | `Solenoid` | No | `TransferMap` via solenoid-specific first-order hook | `TransferMap`, `SecondTM`, `RungeKuttaGlobalTM`, `RungeKuttaOcelotTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | none | `SecondTM` currently comes from the generic `Element` second-order fallback; RK uses a hard-edge longitudinal field. |
 | `Hcor` / `Vcor` | No | `TransferMap` via `CorAtom` first-order hook | `TransferMap`, `SecondTM` | none | These are not `Magnet` subclasses, so they do not inherit generic kick hooks. |
-| `XYQuadrupole` | No | `TransferMap` via `XYQuadrupoleAtom` first-order hook | `TransferMap` only | the atom also has `SecondTM` and inherited `KickTM` hook surface, but the wrapper intentionally exposes only first-order active tracking | Important wrapper-level exception. |
+| `XYQuadrupole` | No | analytical weak-curvature `TransferMap` via `XYQuadrupoleAtom` | `TransferMap` only | inherited magnetic hooks are not supported tracking paths; the second-order hook raises explicitly | Position-dependent curvature requires the family-specific slice builder. |
 | `Bend`, `SBend`, `RBend` | Yes | `TransferMap` via bend entrance/main/exit first-order hooks | `TransferMap`, `SecondTM`, `KickTM`, `RungeKuttaGlobalTM`, `RungeKuttaOcelotTM`, `RungeKuttaTM`, `RungeKuttaTrTM` | none | `KickTM` is declared here because the bend atoms do provide the full inherited `Magnet` kick hook family, including edges. |
 
 ### RF, field-integrated, and special families
@@ -540,6 +540,40 @@ The columns below deliberately separate:
 | `TDCavity` | No | `TransferMap` via `TDCavityAtom` first-order hook | `TransferMap`, `SecondTM` | none | A straightforward no-edge RF family that follows the normal wrapper-declared TM contract. |
 | `Undulator` | No | `TransferMap` via `UndulatorAtom` first-order hook | `TransferMap`, `SecondTM`, `RungeKuttaGlobalTM`, `RungeKuttaOcelotTM`, `RungeKuttaTM`, `RungeKuttaTrTM`, `UndulatorTestTM` | none | `MagneticLattice.update_transfer_maps()` also has special-case length handling when a field map is attached. |
 | `Multipole` | No | `TransferMap` via `MultipoleAtom` first-order hook | `MultipoleTM` only | first-order `TransferMap` exists for optics but the wrapper intentionally exposes only `MultipoleTM` as an active tracking method | This first-order path is a linearized multipole optics map, not a pure drift. |
+
+### XYQuadrupole Physics and Slices
+
+`XYQuadrupole` implements the analytical linear model from S. Tomin,
+*Beam Transport Through a Quadrupole with Offsets in Both Transverse Planes*,
+revised v4, Eqs. (37), (41), (43)-(44) and Appendices C-D.
+
+- `x_offs=a` and `y_offs=b` are reference entrance offsets from the magnetic
+  axis, measured in the unrolled magnet frame, with parallel entry.
+- `l` is reference arc length. Maps act between planes normal to that
+  reference, not the fixed laboratory magnet faces.
+- Particles are deviations from the moving reference. The offsets generate
+  dispersion, not an affine orbit kick; separate `dx`/`dy` translations still
+  use `B = (I - R_rotated) d`.
+- The reference curvatures vary as `hx(s)=k1*a*Cx(s)` and
+  `hy(s)=-k1*b*Cy(s)`. The transverse focusing remains the ordinary quadrupole
+  focusing; curvature-squared focusing is omitted. The geometric terms
+  quadratic in offsets in `R56` are retained, as required by the Hamiltonian.
+- The fifth coordinate is Ocelot's `tau=-sigma`; the paper's longitudinal
+  row changes sign. `energy=0` selects the usual ultrarelativistic convention.
+- The weak-gradient arrival integral uses the regular Appendix C series.
+- `get_section_tms(delta_l, start_l)` builds
+  `R(start_l + delta_l) @ inv(R(start_l))` for both tracking and optics.
+  Reusing the entrance map at every slice would reset the reference and give
+  step-dependent dispersion and timing.
+- `get_transfer_geometry()` integrates the Bishop position/frame equations
+  with the same varying curvatures, returning midpoint and exit geometry.
+  SciPy is loaded only when a curved survey is requested.
+
+The model requires small reference angles and `abs(k1)*X0(s)**2 << 1` and
+`abs(k1)*Y0(s)**2 << 1` along the magnet. It is a first-order body model;
+fringe fields and the paper's cubic-Hamiltonian extension are not implemented.
+`SecondTM` remains unsupported. Focused physics and integration tests live in
+`unit_tests/cpbd/elements/test_xyquadrupole.py`.
 
 ### Matrix Slice Policy
 

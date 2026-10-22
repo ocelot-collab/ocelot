@@ -135,8 +135,15 @@ Ocelot's core functionality is organized into key modules:
 ### 📘 Lattice Elements & Design
 - [**Elements**](./ocelot/cpbd/elements/) - Lattice element definitions (dipoles, quadrupoles, cavities, etc.)
   - `OpticElement`, `Element`, `Magnet` - Base classes with inheritance hierarchy
-  - `Drift`, `Bend`, `RBend`, `SBend`, `Quadrupole`, `Sextupole`, `Octupole`
+  - `Drift`, `Bend`, `RBend`, `SBend`, `Quadrupole`, `XYQuadrupole`, `Sextupole`, `Octupole`
   - `Cavity`, `TDCavity`, `Undulator`, `Marker`, `Monitor`, `Aperture`
+
+`XYQuadrupole` provides first-order transport and survey about a reference
+trajectory entering a quadrupole with offsets in both transverse planes.
+Its weak-curvature model retains the varying reference curvature, and slices
+preserve that same trajectory. See
+[XYQuadrupole physics and slices](./ocelot/cpbd/elements/README.md#xyquadrupole-physics-and-slices)
+for coordinate conventions, validity limits, and supported tracking methods.
 
 ### 🔬 Beam Physics & Tracking
 - [**Beam**](./ocelot/cpbd/beam/) - Beam models and particle arrays

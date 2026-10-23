@@ -286,17 +286,14 @@ class Twiss:
         M = tm.get_params(energy=E).get_rotated_R()
         zero_tol = 1.e-10
         if abs(tm.get_delta_e()) > zero_tol:
-            Ei = self.E
             Ef = self.E + tm.get_delta_e()
-            k = np.sqrt(Ef / Ei)
-            M[0, 0] = M[0, 0] * k
-            M[0, 1] = M[0, 1] * k
-            M[1, 0] = M[1, 0] * k
-            M[1, 1] = M[1, 1] * k
-            M[2, 2] = M[2, 2] * k
-            M[2, 3] = M[2, 3] * k
-            M[3, 2] = M[3, 2] * k
-            M[3, 3] = M[3, 3] * k
+            # Remove the transverse emittance damping before propagating
+            # normalized Twiss parameters. With the same damping d in both
+            # planes, det(M_transverse) = d**2 and the required scale is
+            # 1/sqrt(d). Cavity uses d = Ei/Ef, whereas TWCavity uses pi/pf;
+            # assuming the former for every map breaks low-energy optics.
+            k = np.linalg.det(M[:4, :4]) ** (-0.25)
+            M[:4, :4] *= k
             E = Ef
 
         tws = self.track(M, self)

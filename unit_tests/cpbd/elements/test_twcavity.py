@@ -16,6 +16,7 @@ from ocelot.cpbd.beam import ParticleArray
 from ocelot.cpbd.elements import Cavity, Drift, TWCavity
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.navi import Navigator
+from ocelot.cpbd.physics_proc import PhysProc
 from ocelot.cpbd.track import track
 
 E0 = 0.150          # GeV
@@ -197,18 +198,32 @@ def test_twcavity_longitudinal_tracking_matches_standing_wave(phi):
 
 
 def test_twcavity_slicing_preserves_the_full_map():
-    """Tracking through a sliced cavity must reproduce the unsliced result."""
+    """At relativistic energy, real slices agree within the RF approximation."""
+    class CountSteps(PhysProc):
+        def __init__(self):
+            super().__init__()
+            self.steps = []
+
+        def apply(self, parray, dz):
+            self.steps.append(dz)
+
     kwargs = dict(l=L, v=V, phi=25., freq=FREQ)
     start = np.random.default_rng(5).normal(0., 1., (6, 16)) * 1e-4
     results = []
-    for unit_step in (L, 0.1):
-        lattice = MagneticLattice((Drift(l=0.1), TWCavity(**kwargs), Drift(l=0.1)))
+    for unit_step, expected_steps in ((L, 1), (0.1, 10)):
+        cavity = TWCavity(**kwargs)
+        end = Drift(l=0.1)
+        lattice = MagneticLattice((Drift(l=0.1), cavity, end))
         parray = ParticleArray(n=16)
         parray.E = E0
         parray.rparticles[:] = start
         navi = Navigator(lattice)
         navi.unit_step = unit_step
+        process = CountSteps()
+        navi.add_physics_proc(process, cavity, end)
         _, parray = track(lattice, parray, navi=navi, print_progress=False)
+        assert len(process.steps) == expected_steps
+        assert sum(process.steps) == pytest.approx(L)
         results.append((parray.E, parray.rparticles.copy()))
     assert results[0][0] == pytest.approx(results[1][0], rel=1e-12)
     assert results[0][1] == pytest.approx(results[1][1], abs=5e-8)

@@ -1,14 +1,47 @@
 import numpy as np
 import pytest
 from unittest.mock import patch
-from ocelot.cpbd.beam import Twiss
+from ocelot.cpbd.beam import ParticleArray, Twiss
 from ocelot.cpbd.beam import core as beam_core
-from ocelot.cpbd.elements import Drift, Quadrupole
+from ocelot.cpbd.elements import Cavity, Drift, Quadrupole, TWCavity
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.optics import UnstableLatticeError, periodic_twiss, twiss
 from ocelot.common.globals import m_e_GeV
 
 gamma = 14 / m_e_GeV
+
+
+@pytest.mark.parametrize("cavity_type", [Cavity, TWCavity])
+@pytest.mark.parametrize("energy", [0.0007, 0.002, 0.006, 0.150])
+@pytest.mark.parametrize("phase", [0., 25., 180.])
+def test_accelerating_twiss_matches_tracked_covariance(cavity_type, energy, phase):
+    """Optics must normalize the damping actually used by the cavity map."""
+    seed = Twiss(E=energy, beta_x=1.2, alpha_x=0.3, beta_y=2.1, alpha_y=-0.4)
+    voltage = 0.1 * energy if phase == 180. else 0.02
+    cavity = cavity_type(l=1., v=voltage, phi=phase, freq=1.3e9)
+    lattice = MagneticLattice([Drift(l=0.2), cavity, Drift(l=0.7)])
+
+    # Symmetric particles give exact input second moments without sampling
+    # noise. The downstream drift also tests the propagated gamma function.
+    covariance = np.zeros((4, 4))
+    covariance[:2, :2] = [[seed.beta_x, -seed.alpha_x], [-seed.alpha_x, seed.gamma_x]]
+    covariance[2:, 2:] = [[seed.beta_y, -seed.alpha_y], [-seed.alpha_y, seed.gamma_y]]
+    particles = ParticleArray(n=8)
+    particles.E = energy
+    particles.rparticles[:4] = np.linalg.cholesky(covariance) @ np.c_[np.eye(4), -np.eye(4)] * 1e-6
+
+    for element in lattice.sequence:
+        for tm in element.tms:
+            tm.apply(particles)
+    optics = twiss(lattice, seed)[-1]
+    assert optics.E == pytest.approx(particles.E, rel=1e-14)
+    for plane, rows in (("x", slice(0, 2)), ("y", slice(2, 4))):
+        cov = np.cov(particles.rparticles[rows], bias=True)
+        geometric_emittance = np.sqrt(np.linalg.det(cov))
+        assert getattr(optics, f"beta_{plane}") == pytest.approx(cov[0, 0] / geometric_emittance, rel=1e-10)
+        assert getattr(optics, f"alpha_{plane}") == pytest.approx(-cov[0, 1] / geometric_emittance, rel=1e-10, abs=1e-12)
+        assert getattr(optics, f"gamma_{plane}") == pytest.approx(cov[1, 1] / geometric_emittance, rel=1e-10)
+
 
 def _assert_twiss_properties(tw):
     assert np.isclose(tw.emit_xn, 0.6e-6, rtol=1e-10)

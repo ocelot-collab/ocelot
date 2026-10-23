@@ -3,6 +3,7 @@ import logging
 import numpy as np
 
 from ocelot.cpbd.transformations.tw_cavity import TWCavityTM
+from ocelot.common.globals import m_e_GeV
 from ocelot.cpbd.rf_maps import rf_long_r_terms
 from ocelot.cpbd.r_matrix import uni_matrix
 from ocelot.cpbd.elements.element import Element
@@ -49,6 +50,17 @@ class TWCavityAtom(Element):
             """
             Body matrix of a travelling-wave structure.
 
+            The body has no ponderomotive focusing: R11 = 1 and R21 = 0, the
+            angle only damps adiabatically and all the radial focusing comes
+            from the edge lenses. R12 is p0 * Integral(dz / p(z)) over the
+            linear energy ramp, which evaluates to
+            p0 z [asinh(p1) - asinh(p0)] / dgamma, and R22 is the momentum
+            ratio p0 / p1. Both are written in momentum rather than energy:
+            using gamma in their place is the beta -> 1 approximation, which
+            overestimates them by 40% at 0.7 MeV and 3% at 2 MeV although the
+            two agree to better than 1e-4 above 50 MeV. This matches the
+            default (travelling-wave) RF matrix of elegant.
+
             :param z: length of the (slice of the) structure [m]
             :param V: voltage of the (slice of the) structure [GV]
             :param E: initial energy [GeV]
@@ -58,9 +70,23 @@ class TWCavityAtom(Element):
             """
             phi = phi * np.pi / 180.
             de = V * np.cos(phi)
-            # log1p keeps the full precision of the small-gradient limit
-            r12 = z * E / de * np.log1p(de / E) if de != 0 else z
-            r22 = E / (E + de)
+            g0 = E / m_e_GeV
+            g1 = (E + de) / m_e_GeV
+            if g0 <= 1. or g1 <= 1.:
+                logger.error("TWCAVITY: energy at or below the rest energy (gamma_initial = %s, "
+                             "gamma_final = %s), check ParticleArray.E or Twiss.E OR cavity.v/cavity.phi", g0, g1)
+            p0 = np.sqrt(g0 * g0 - 1.)
+            p1 = np.sqrt(g1 * g1 - 1.)
+            dgamma = g1 - g0
+            if dgamma != 0:
+                # asinh(p1) - asinh(p0) == log1p((dgamma + p1 - p0) / (g0 + p0)).
+                # p1 - p0 is written as dgamma (g1 + g0) / (p1 + p0) so that no
+                # step subtracts two nearly equal numbers as the gradient vanishes.
+                dp = dgamma * (g1 + g0) / (p1 + p0)
+                r12 = z * p0 * np.log1p((dgamma + dp) / (g0 + p0)) / dgamma
+            else:
+                r12 = z
+            r22 = p0 / p1
             r55_cor, r56, r65, r66 = rf_long_r_terms(z=z, V=V, E=E, freq=freq, phi=phi)
             cav_matrix = np.array([[1, r12, 0., 0., 0., 0.],
                                    [0, r22, 0., 0., 0., 0.],

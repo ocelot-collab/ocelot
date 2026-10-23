@@ -46,9 +46,13 @@ def reference_R(z, v, energy, freq, phi_deg):
     b0, b1 = np.sqrt(1. - 1. / g0 ** 2), np.sqrt(1. - 1. / g1 ** 2)
     k = 2. * np.pi * freq / speed_of_light
 
+    p0, p1 = np.sqrt(g0 ** 2 - 1.), np.sqrt(g1 ** 2 - 1.)
     body = np.eye(6)
-    body[0, 1] = body[2, 3] = z * energy / de * np.log1p(de / energy) if de != 0 else z
-    body[1, 1] = body[3, 3] = energy / e1
+    # at the zero crossing de is 1e-18 rather than 0, so g1 - g0 rounds to
+    # exactly zero; the drift limit of R12 is the length
+    body[0, 1] = body[2, 3] = (z * p0 * (np.arcsinh(p1) - np.arcsinh(p0)) / (g1 - g0)
+                               if g1 != g0 else z)
+    body[1, 1] = body[3, 3] = p0 / p1
     body[4, 5] = -z / (g1 * g1 * g0 * b1) * (g1 + g0) / (b1 + b0)
     # the zero-crossing limit in rf_maps carries no sin(phi) factor; that is a
     # documented standing-wave limitation kept for bit-compatibility, so the
@@ -208,3 +212,37 @@ def test_twcavity_slicing_preserves_the_full_map():
         results.append((parray.E, parray.rparticles.copy()))
     assert results[0][0] == pytest.approx(results[1][0], rel=1e-12)
     assert results[0][1] == pytest.approx(results[1][1], abs=5e-8)
+
+
+@pytest.mark.parametrize("energy", [0.0007, 0.001, 0.002, 0.005, 0.010, 0.050, 0.150, 1.000])
+def test_twcavity_body_matches_elegant_default_rf_matrix(energy):
+    """
+    elegant's default RFCA matrix is the travelling-wave one (STANDING_WAVE
+    defaults to 0, BODY_FOCUS_MODEL to None): the "old TRANSPORT matrix" block
+    of compute_matrices.c. Transcribed here from its own variables, where
+    sf1 = gamma0, f2 = gamma1, sf5 = p1, f4 = p0 + gamma0, f6 = gamma1 + p1
+    and cscPhi0 / dgMax = 1 / dgamma.
+
+    The body carries no focusing there either (R[0][0] = 1, R[1][0] unset), so
+    the two codes should agree exactly, including at low energy where the
+    beta -> 1 form of R12 and R22 is off by tens of percent.
+    """
+    phi = 0.
+    g0 = energy / m_e_GeV
+    p00 = np.sqrt(g0 ** 2 - 1.)
+    dgamma = V * np.cos(np.radians(phi)) / m_e_GeV
+    sf1 = np.sqrt(1. + p00 ** 2)
+    f2 = sf1 + dgamma
+    sf5 = np.sqrt(f2 ** 2 - 1.)
+    f4 = p00 + sf1
+    f6 = f2 + sf5
+    r12_elegant = L * p00 * (np.log(f6) - np.log(f4)) / dgamma
+    r22_elegant = p00 / sf5
+
+    _, r_main, _ = TWCavity(l=L, v=V, phi=phi, freq=FREQ).R(energy)
+    assert r_main[0, 0] == 1.
+    assert r_main[1, 0] == 0.
+    assert r_main[0, 1] == pytest.approx(r12_elegant, rel=1e-12)
+    assert r_main[1, 1] == pytest.approx(r22_elegant, rel=1e-12)
+    assert r_main[2, 3] == pytest.approx(r_main[0, 1], rel=1e-12)
+    assert r_main[3, 3] == pytest.approx(r_main[1, 1], rel=1e-12)

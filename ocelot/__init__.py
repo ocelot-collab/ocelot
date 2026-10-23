@@ -156,6 +156,7 @@ _LAZY_EXPORTS = {
     "Marker": ("ocelot.cpbd.elements.marker", "Marker"),
     "Octupole": ("ocelot.cpbd.elements.octupole", "Octupole"),
     "Cavity": ("ocelot.cpbd.elements.cavity", "Cavity"),
+    "TWCavity": ("ocelot.cpbd.elements.twcavity", "TWCavity"),
     "Aperture": ("ocelot.cpbd.elements.aperture", "Aperture"),
     "XYQuadrupole": ("ocelot.cpbd.elements.xyquadruple", "XYQuadrupole"),
 

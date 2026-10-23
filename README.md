@@ -157,6 +157,12 @@ for coordinate conventions, validity limits, and supported tracking methods.
   - `MagneticLattice` - Core lattice object for simulations
   - `Navigator` - Lattice navigation utilities
 
+RK field tracking supports both fixed Cartesian coordinates and coordinates
+relative to a bending reference. See [RK coordinate conventions and current
+limits](./ocelot/cpbd/README_RK_COORDINATES.md) and the executed
+[Runge–Kutta tutorial](./demos/docs/18_runge_kutta_tracking.ipynb), including
+synchrotron-radiation use of the Cartesian integrator.
+
 ### ⚡ Physics Processes
 - [**Space Charge**](./ocelot/cpbd/sc.py) - Space charge effects
 - [**CSR**](./ocelot/cpbd/csr.py) - Coherent synchrotron radiation

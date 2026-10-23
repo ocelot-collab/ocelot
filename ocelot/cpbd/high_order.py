@@ -987,290 +987,251 @@ def moments_py(bx, by, Bx, By, Bz, dzk):
 moments = moments_py if not nb_flag else nb.jit(moments_py, nopython=True)
 
 
-def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0.):
+def _rk_energy(energy, delta):
+    """Reference beta, particle beta and |P|^2, with P = mechanical p / p0."""
+    if not np.isfinite(energy) or energy <= m_e_GeV:
+        raise ValueError("RK tracking requires total reference energy above the electron rest energy")
+    beta0 = np.sqrt(1. - (m_e_GeV / energy)**2)
+    relative_energy = 1. / beta0 + np.asarray(delta)
+    momentum2 = 1. + 2. * np.asarray(delta) / beta0 + np.asarray(delta)**2
+    if np.any(relative_energy <= 0) or np.any(momentum2 <= 0):
+        raise ValueError("RK tracking requires positive particle momentum and energy")
+    beta = np.sqrt(momentum2) / relative_energy
+    return beta0, beta, momentum2
+
+
+def _rk_forward_pz(px, py, momentum2):
+    pz2 = momentum2 - px * px - py * py
+    if np.any(pz2 <= 0) or not np.all(np.isfinite(pz2)):
+        raise ValueError("RK tracking requires forward motion in Cartesian Z; reduce the step or change the tracking frame")
+    return np.sqrt(pz2)
+
+
+def _rk_field_rhs(state, z, momentum2, field_scale, mag_field):
+    """d(X,PX,Y,PY,path)/dZ in a static field; no paraxial approximation."""
+    x, px, y, py, path = state
+    pz = _rk_forward_pz(px, py, momentum2)
+    xp, yp = px / pz, py / pz
+    bx, by, bz = mag_field(x, y, z)
+    return np.array([xp, field_scale * (yp * bz - by),
+                     yp, field_scale * (bx - xp * bz), np.sqrt(momentum2) / pz])
+
+
+def _rk_field_step(state, z, dz, momentum2, field_scale, mag_field):
+    """One RK4 step, including path length at the same four stages."""
+    k1 = _rk_field_rhs(state, z, momentum2, field_scale, mag_field)
+    k2 = _rk_field_rhs(state + dz * k1 / 2, z + dz / 2, momentum2, field_scale, mag_field)
+    k3 = _rk_field_rhs(state + dz * k2 / 2, z + dz / 2, momentum2, field_scale, mag_field)
+    k4 = _rk_field_rhs(state + dz * k3, z + dz, momentum2, field_scale, mag_field)
+    return state + dz / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+
+
+def _rk_field_interval(state, z_start, z_stop, max_step, momentum2, field_scale, mag_field):
+    """Advance particles from their individual starting Z to individual ending Z."""
+    steps = max(1, int(np.ceil(np.max(np.abs(z_stop - z_start)) / max_step)))
+    dz = (z_stop - z_start) / steps
+    for i in range(steps):
+        state = _rk_field_step(state, z_start + i * dz, dz, momentum2, field_scale, mag_field)
+    return state
+
+
+def _rk_slopes(rparticles, energy):
+    """Copy normalized mechanical momenta to the low-level slope convention."""
+    _, _, momentum2 = _rk_energy(energy, rparticles[5])
+    pz = _rk_forward_pz(rparticles[1], rparticles[3], momentum2)
+    result = rparticles.copy()
+    result[1] /= pz
+    result[3] /= pz
+    return result
+
+
+def _rk_momenta(slopes, energy):
+    """Copy Cartesian slopes to mechanical momenta normalized by fixed p0."""
+    _, _, momentum2 = _rk_energy(energy, slopes[5])
+    pz = np.sqrt(momentum2 / (1. + slopes[1]**2 + slopes[3]**2))
+    result = slopes.copy()
+    result[1] *= pz
+    result[3] *= pz
+    return result
+
+
+def rk_track_in_field(y0, s_stop, N, energy, mag_field, s_start=0., *, return_path=False):
+    """RK4 Cartesian trajectory in a static magnetic field, with Z independent.
+
+    Input is a (6, n) array of (X, dX/dZ, Y, dY/dZ, unused, delta), where
+    delta=(E-E0)/(p0*c). This is a SLOPE interface, not ParticleArray momenta.
+    The field callback returns (Bx, By, Bz) in tesla in this same fixed frame.
+    ``s_start`` and ``s_stop`` are Cartesian Z, not curved reference arc length.
+    N is the number of samples including both endpoints (N-1 RK4 steps).
+
+    Returns the historical (9*N, n) radiation format, with blocks
+    (X, X', Y, Y', Z, delta, Bx, By, Bz). If return_path=True, also returns
+    cumulative particle path lengths, shape (N, n), integrated with RK4.
+    Only forward motion in Z is supported. The existing Ocelot field sign
+    convention is retained; internal mechanical momenta are normalized by p0.
     """
-    Runge-Kutta solver of the exact trajectory equations in the fixed coordinate system {X, Y, Z]}.
-    X, Y - transverse coordinates, Z - longitudinal.
-
-    Trajectory equations:
-    x'' = v/(dz/dt)*e/p*(y'*Bz - By*(1.+x'^2) + x'*y'*Bx)
-    y'' = -v/(dz/dt)*e/p*(x'*Bz - Bx*(1.+y'^2) + x'*y'*By)
-    v/(dz/dt) = sqrt(1 + y'^2 + x'^2)
-    z' is not needed in the initial conditions and z' is not used for SR calculation
-        therefore z' can be arbitrary defined in the returning array. z' = dE/(ps*c)
-
-    :param y0: array n*6; initial coordinates of n particles
-                [x0, x0'=dx/dz, y0, y0=dy/dz, 0, dE0/pc,
-                x1, x1', y1, y1', 0, dE1/pc, ...
-                xn, xn', yn, yn', 0, dEn/pc]
-    :param s_stop: z - longitudinal coordinate of end of RK tracking
-    :param N: number of steps
-    :param energy: energy of particle in [GeV]
-    :param mag_field: function. Bx, By, Bz = mag_field(X, Y, Z)
-    :param s_start: starting longitudinal coordinate
-    :return: array with length N*9- coordinates and magnetic fields on the trajectory
-            [x, x', y, y', z, dE/pc, Bx, By, Bz, ...
-            xn, xn', yn, yn', zn, zn', Bxn, Byn, Bzn]
-    """
-
-    # pc_ref = np.sqrt(energy**2 - m_e_GeV**2)
-    z = np.linspace(s_start, s_stop, num=N)
-    h = z[1] - z[0]
-    N = len(z)
-    gamma0 = energy/m_e_GeV
-    charge = 1
-    mass = 1 #in electron mass
-    u = np.zeros((N*9, np.shape(y0)[1]))
-    dz = h
-    beta0 = np.sqrt(1. - 1./(gamma0*gamma0))
-    gammai = gamma0*(1 + y0[5]*beta0)
-    k = charge*speed_of_light/(m_e_eV*mass*gammai)
-    u[0, :] = y0[0]
-    u[1, :] = y0[1]
-    u[2, :] = y0[2]
-    u[3, :] = y0[3]
-    u[4, :] = z[0] #y0[4]
-    u[5, :] = y0[5]
-    dzk = dz*k
-    for i in range(N-1):
-        X = u[i*9 + 0]
-        Y = u[i*9 + 2]
-        Z = u[i*9 + 4]
-        bxconst = u[i*9 + 1]
-        byconst = u[i*9 + 3]
-        #bz = u[i*6 + 5]
-        bx = bxconst
-        by = byconst
-        kx1 = bx*dz
-        ky1 = by*dz
-        Bx, By, Bz = mag_field(X, Y, Z)
-        mx1, my1 = moments(bx, by, Bx, By, Bz, dzk)
-        u[i*9 + 6] = Bx
-        u[i*9 + 7] = By
-        u[i*9 + 8] = Bz
-        #K2
-        bx = bxconst + mx1/2.
-        by = byconst + my1/2.
-        kx2 = bx*dz
-        ky2 = by*dz
-        Bx, By, Bz = mag_field(X + kx1/2., Y + ky1/2., Z + dz/2.)
-        mx2, my2 = moments(bx, by, Bx, By, Bz, dzk)
-        # K3
-        bx = bxconst + mx2/2.
-        by = byconst + my2/2.
-        kx3 = bx*dz
-        ky3 = by*dz
-        Bx, By, Bz = mag_field(X + kx2/2., Y + ky2/2., Z + dz/2.)
-        mx3, my3 = moments(bx, by, Bx, By, Bz, dzk)
-        #K4
-        Z_n = Z + dz
-        bx = bxconst + mx3
-        by = byconst + my3
-        kx4 = bx*dz
-        ky4 = by*dz
-        Bx, By, Bz = mag_field(X + kx3, Y + ky3, Z_n)
-        mx4, my4 = moments(bx, by, Bx, By, Bz, dzk)
-
-        u[(i + 1) * 9 + 0] = X + 1/6.*(kx1 + 2.*(kx2 + kx3) + kx4)
-        u[(i + 1) * 9 + 1] = bxconst + 1/6.*(mx1 + 2.*(mx2 + mx3) + mx4) #// conversion in mrad
-        u[(i + 1) * 9 + 2] = Y + 1/6.*(ky1 + 2.*(ky2 + ky3) + ky4)
-        u[(i + 1) * 9 + 3] = byconst + 1/6.*(my1 + 2.*(my2 + my3) + my4)
-        u[(i + 1) * 9 + 4] = Z_n #u[i*9 + 4] + dz*np.sqrt(1 + u[(i+1)*9 + 1]**2 + u[(i+1)*9 + 3]**2)
-        u[(i + 1) * 9 + 5] = y0[5]
-        # beta_z as 6-th coordinate
-        #u[(i+1)*9 + 5] = betai/np.sqrt(1 + u[(i+1)*9 + 1]*u[(i+1)*9 + 1] + u[(i+1)*9 + 3]*u[(i+1)*9 + 3])#dGamma2 - (u[(i+1)*9 + 1]*u[(i+1)*9 + 1] + u[(i+1)*9 + 3]*u[(i+1)*9 + 3])/2.
-
-    u[(N-1)*9 + 6], u[(N-1)*9 + 7], u[(N-1)*9 + 8] = mag_field(u[(N-1)*9 + 0], u[(N-1)*9 + 2], u[(N-1)*9 + 4])
-    return u
+    if isinstance(N, (bool, np.bool_)) or not isinstance(N, (int, np.integer)) or N < 2:
+        raise ValueError("RK tracking requires an integer npoints >= 2")
+    if s_stop < s_start:
+        raise ValueError("RK tracking requires s_stop >= s_start")
+    y0 = np.asarray(y0, dtype=float)
+    beta0, _, momentum2 = _rk_energy(energy, y0[5])
+    field_scale = speed_of_light / (energy * 1e9 * beta0)
+    momenta = _rk_momenta(y0, energy)
+    state = np.vstack((momenta[:4], np.zeros(y0.shape[1])))
+    z_grid = np.linspace(s_start, s_stop, N)
+    dz = z_grid[1] - z_grid[0]
+    trajectory = np.empty((N, 9, y0.shape[1]))
+    paths = np.empty((N, y0.shape[1])) if return_path else None
+    for i, z in enumerate(z_grid):
+        pz = _rk_forward_pz(state[1], state[3], momentum2)
+        trajectory[i, :6] = np.array([state[0], state[1] / pz, state[2], state[3] / pz,
+                                      np.full(y0.shape[1], z), y0[5]])
+        for j, component in enumerate(mag_field(state[0], state[2], z)):
+            trajectory[i, 6 + j] = component
+        if return_path:
+            paths[i] = state[4]
+        if i < N - 1:
+            state = _rk_field_step(state, z, dz, momentum2, field_scale, mag_field)
+    result = trajectory.reshape(N * 9, y0.shape[1])
+    return (result, paths) if return_path else result
 
 
 def rk_field(rparticles, s_start, s_stop, N, energy, mag_field, long_dynamics=True):
+    """Track normalized mechanical coordinates between fixed Cartesian Z planes.
+
+    The fifth coordinate is tau=ct-Z/beta0, preserving its entrance offset.
+    Only the current state and accumulated path are stored, independent of N.
+    Use rk_track_in_field directly when Cartesian slopes/trajectory samples
+    are needed, and rk_field_to_ocelot for a curved reference's normal planes.
     """
-    Method to track particles through mag field
+    if isinstance(N, (bool, np.bool_)) or not isinstance(N, (int, np.integer)) or N < 2:
+        raise ValueError("RK tracking requires an integer npoints >= 2")
+    if s_stop < s_start:
+        raise ValueError("RK tracking requires s_stop >= s_start")
+    beta0, beta, momentum2 = _rk_energy(energy, rparticles[5])
+    _rk_forward_pz(rparticles[1], rparticles[3], momentum2)
+    if s_stop == s_start or rparticles.shape[1] == 0:
+        return rparticles
 
-    :param rparticles: initial coordinates of the particles shape (6xN), N number of particles (e.g. ParticleArray.rparticles)
-    :param s_start:
-    :param s_stop:
-    :param N: number of points on the trajectory
-    :param energy: in GeV
-    :param mag_field: must be function e.g. lambda x, y, z: (Bx, By, Bz)
-    :param long_dynamics: True, if True, includes longitudinal dynamics, otherwise only transverse
-    :return:
-    """
-    if s_start > s_stop:
-        print("rk_field: s_start > s_stop. Setup s_start = 0")
-        s_start = 0.
-
-    ref_path = 0
-
+    field_scale = speed_of_light / (energy * 1e9 * beta0)
+    state = np.vstack((rparticles[:4], np.zeros(rparticles.shape[1])))
+    dz = (s_stop - s_start) / (N - 1)
+    for i in range(N - 1):
+        state = _rk_field_step(state, s_start + i * dz, dz, momentum2, field_scale, mag_field)
+    # Check the exit as well as the intermediate RK stages before updating input.
+    _rk_forward_pz(state[1], state[3], momentum2)
+    rparticles[:4] = state[:4]
     if long_dynamics:
-        traj_ref = rk_track_in_field(np.array([[0], [0], [0], [0], [0], [0]]), s_stop, N, energy, mag_field, s_start=s_start)
-        x1 = traj_ref[1+9::9]
-        y1 = traj_ref[3+9::9]
-        dz = traj_ref[4+9::9] - traj_ref[4:-9:9]
-        ref_path = np.sum(dz*np.sqrt(1 + x1*x1 + y1*y1))
-
-    traj_data = rk_track_in_field(rparticles, s_stop, N, energy, mag_field, s_start=s_start)
-
-    z_fin = rparticles[4, :]
-
-    if long_dynamics:
-        x1 = traj_data[1+9::9, :]
-        y1 = traj_data[3+9::9, :]
-        dz = traj_data[4+9::9, :] - traj_data[4:-9:9, :]
-        z_fin += traj_data[4, :] + np.sum(dz*np.sqrt(1 + x1*x1 + y1*y1), axis=0) - ref_path
-
-    rparticles[0, :] = traj_data[(N-1)*9 + 0, :]
-    rparticles[1, :] = traj_data[(N-1)*9 + 1, :]
-    rparticles[2, :] = traj_data[(N-1)*9 + 2, :]
-    rparticles[3, :] = traj_data[(N-1)*9 + 3, :]
-    rparticles[4, :] = z_fin
-    rparticles[5, :] = traj_data[(N-1)*9 + 5, :]
+        rparticles[4] += state[4] / beta - (s_stop - s_start) / beta0
     return rparticles
 
 
-def _rotation_between(v_from, v_to):
-    v_from = v_from / np.linalg.norm(v_from)
-    v_to = v_to / np.linalg.norm(v_to)
-    axis = np.cross(v_from, v_to)
-    sin_a = np.linalg.norm(axis)
-    cos_a = np.dot(v_from, v_to)
+def _rk_reference(s_values, max_step, energy, mag_field):
+    """Cartesian reference positions and Bishop frames at entrance-based arc s.
 
-    if sin_a < 1.e-14:
-        if cos_a > 0:
-            return np.eye(3)
-        axis = np.cross(v_from, np.array([1., 0., 0.]))
-        if np.linalg.norm(axis) < 1.e-14:
-            axis = np.cross(v_from, np.array([0., 1., 0.]))
-        axis = axis / np.linalg.norm(axis)
-        sin_a = 0.
-        cos_a = -1.
-    else:
-        axis = axis / sin_a
-
-    kx, ky, kz = axis
-    k = np.array([
-        [0., -kz, ky],
-        [kz, 0., -kx],
-        [-ky, kx, 0.],
-    ])
-    return np.eye(3) + sin_a * k + (1. - cos_a) * (k @ k)
-
-
-def _transported_exit_frame(ref_directions):
-    t_hat = ref_directions[0] / np.linalg.norm(ref_directions[0])
-    x_hat = np.array([1., 0., 0.])
-    x_hat = x_hat - np.dot(x_hat, t_hat) * t_hat
-    x_hat = x_hat / np.linalg.norm(x_hat)
-    y_hat = np.cross(t_hat, x_hat)
-
-    for direction in ref_directions[1:]:
-        t_new = direction / np.linalg.norm(direction)
-        rot = _rotation_between(t_hat, t_new)
-        x_hat = rot @ x_hat
-        x_hat = x_hat - np.dot(x_hat, t_new) * t_new
-        x_hat = x_hat / np.linalg.norm(x_hat)
-        y_hat = np.cross(t_new, x_hat)
-        t_hat = t_new
-
-    return x_hat, y_hat, t_hat
-
-
-def _cumulative_path_lengths(traj):
-    paths = np.zeros((traj.shape[0], traj.shape[2]))
-    dz = traj[1:, 4, :] - traj[:-1, 4, :]
-    xp = traj[1:, 1, :]
-    yp = traj[1:, 3, :]
-    paths[1:, :] = np.cumsum(dz * np.sqrt(1. + xp * xp + yp * yp), axis=0)
-    return paths
-
-
-def _interp_on_grid(values, index, weight):
-    if index == 0:
-        return values[0]
-    return (1. - weight) * values[index - 1] + weight * values[index]
-
-
-def rk_field_to_ocelot(rparticles, s_start, s_stop, N, energy, mag_field, long_dynamics=True):
+    The reference starts at the origin along +Z, with horizontal axis +X.
+    Recomputing from that same entrance makes independent slice calls agree;
+    no mutable reference is cached on an element reused in a lattice.
     """
-    Track particles through a static magnetic field and return Ocelot coordinates.
+    beta0, _, _ = _rk_energy(energy, 0.)
+    field_scale = speed_of_light / (energy * 1e9 * beta0)
 
-    ``rk_track_in_field`` integrates in a fixed Cartesian frame.  This helper
-    tracks an internal zero reference particle, finds the reference exit point by
-    path length, transports the transverse frame along that reference trajectory,
-    and projects the beam back to coordinates relative to that reference.
+    def rhs(state):
+        position, tangent, ex = state.reshape(3, 3)
+        b = field_scale * np.asarray(mag_field(*position), dtype=float).reshape(3)
+        dt = np.cross(tangent, b)
+        return np.r_[tangent, dt, -tangent * np.dot(ex, dt)]
+
+    state = np.array([0., 0., 0., 0., 0., 1., 1., 0., 0.])
+    s = 0.
+    positions, frames = [], []
+    for target in s_values:
+        if target < s:
+            raise ValueError("Reference arc lengths must be nonnegative and ordered")
+        steps = max(1, int(np.ceil((target - s) / max_step)))
+        ds = (target - s) / steps
+        for _ in range(steps):
+            k1 = rhs(state)
+            k2 = rhs(state + ds * k1 / 2)
+            k3 = rhs(state + ds * k2 / 2)
+            k4 = rhs(state + ds * k3)
+            state += ds / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+            tangent = state[3:6]
+            tangent /= np.linalg.norm(tangent)
+            ex = state[6:9]
+            ex -= tangent * np.dot(tangent, ex)
+            ex /= np.linalg.norm(ex)
+            if tangent[2] <= 0:
+                raise ValueError("RK reference must move forward in Cartesian Z")
+        s = target
+        positions.append(state[:3].copy())
+        frames.append(np.column_stack((state[6:9], np.cross(state[3:6], state[6:9]), state[3:6])))
+    return np.asarray(positions), np.asarray(frames)
+
+
+def rk_field_to_ocelot(rparticles, s_start, s_stop, N, energy, mag_field,
+                       long_dynamics=True, *, reference_length=None):
+    """Track between normal planes of one continuously curved reference.
+
+    Input/output transverse momenta are MECHANICAL p/p0 in Bishop axes;
+    vector-potential terms for canonical momenta inside fields are not added.
+    s_start/s_stop are reference arc lengths measured from the element entrance.
+    The reference and field always retain that original entrance frame.
+    reference_length fixes the RK step for slices of the same full element.
     """
-    if s_start > s_stop:
-        print("rk_field_to_ocelot: s_start > s_stop. Setup s_start = 0")
-        s_start = 0.
-
-    target_path = s_stop - s_start
-    if target_path <= 1.e-15:
+    if isinstance(N, (bool, np.bool_)) or not isinstance(N, (int, np.integer)) or N < 2:
+        raise ValueError("RK tracking requires an integer npoints >= 2")
+    if s_start < -1e-10 or s_stop < s_start - 1e-10:
+        raise ValueError("RK reference slices require 0 <= s_start <= s_stop")
+    s_start = max(0., s_start)
+    if s_stop - s_start <= 1e-15 or rparticles.shape[1] == 0:
         return rparticles
+    beta0, beta, momentum2 = _rk_energy(energy, rparticles[5])
+    max_step = (reference_length if reference_length is not None else s_stop) / (N - 1)
+    if max_step <= 0:
+        raise ValueError("RK reference length must be positive")
+    positions, frames = _rk_reference([s_start, s_stop], max_step, energy, mag_field)
+    origin_in, origin_out = positions
+    frame_in, frame_out = frames
+    normal_p = _rk_forward_pz(rparticles[1], rparticles[3], momentum2)
+    position = origin_in[:, None] + frame_in[:, :2] @ rparticles[[0, 2]]
+    momentum = frame_in @ np.vstack((rparticles[1], rparticles[3], normal_p))
+    if np.any(momentum[2] <= 0):
+        raise ValueError("RK particle must move forward in Cartesian Z")
+    state = np.vstack((position[0], momentum[0], position[1], momentum[1], np.zeros(rparticles.shape[1])))
+    field_scale = speed_of_light / (energy * 1e9 * beta0)
+    z = np.full(rparticles.shape[1], origin_out[2])
+    state = _rk_field_interval(state, position[2], z, max_step, momentum2, field_scale, mag_field)
 
-    ref_particle = np.zeros((6, 1))
-    work = np.hstack((ref_particle, rparticles.copy()))
-    traj = rk_track_in_field(work, s_stop, N, energy, mag_field, s_start=s_start)
-    traj = traj.reshape(N, 9, work.shape[1])
-
-    z_grid = traj[:, 4, 0]
-    paths = _cumulative_path_lengths(traj)
-    ref_path = paths[:, 0]
-
-    target_path = min(target_path, ref_path[-1])
-    index = int(np.searchsorted(ref_path, target_path, side="left"))
-    if index == 0:
-        weight = 0.
+    # Locate each actual trajectory's crossing. Small corrections are integrated
+    # through the field, so position, momentum and time all reach the same plane.
+    tangent = frame_out[:, 2]
+    plane_tolerance = 64 * np.finfo(float).eps * max(1., np.linalg.norm(origin_out))
+    for _ in range(10):
+        displacement = np.vstack((state[0], state[2], z)) - origin_out[:, None]
+        distance = tangent @ displacement
+        if np.max(np.abs(distance)) < plane_tolerance:
+            break
+        pz = _rk_forward_pz(state[1], state[3], momentum2)
+        projection = tangent @ np.vstack((state[1] / pz, state[3] / pz, np.ones_like(z)))
+        if np.any(projection <= 0):
+            raise ValueError("RK particle must cross the reference plane forwards")
+        z_next = z - distance / projection
+        state = _rk_field_interval(state, z, z_next, max_step, momentum2, field_scale, mag_field)
+        z = z_next
     else:
-        denom = ref_path[index] - ref_path[index - 1]
-        weight = 0. if abs(denom) < 1.e-15 else (target_path - ref_path[index - 1]) / denom
+        raise ValueError("RK trajectory did not converge to the reference exit plane")
 
-    state_at_exit_z = _interp_on_grid(traj, index, weight)
-    paths_at_exit_z = _interp_on_grid(paths, index, weight)
-    z_exit = _interp_on_grid(z_grid, index, weight)
-
-    ref_directions = np.column_stack((
-        traj[:index, 1, 0],
-        traj[:index, 3, 0],
-        np.ones(index),
-    ))
-    exit_ref_direction = np.array([state_at_exit_z[1, 0], state_at_exit_z[3, 0], 1.])
-    if len(ref_directions) == 0:
-        ref_directions = exit_ref_direction.reshape(1, 3)
-    else:
-        ref_directions = np.vstack((ref_directions, exit_ref_direction))
-
-    x_hat, y_hat, t_hat = _transported_exit_frame(ref_directions)
-
-    positions = np.vstack((
-        state_at_exit_z[0],
-        state_at_exit_z[2],
-        np.ones(work.shape[1]) * z_exit,
-    ))
-    directions = np.vstack((
-        state_at_exit_z[1],
-        state_at_exit_z[3],
-        np.ones(work.shape[1]),
-    ))
-
-    ref_position = positions[:, [0]]
-    plane_offset = t_hat @ (positions - ref_position)
-    direction_projection = t_hat @ directions
-    dz_to_plane = -plane_offset / direction_projection
-    positions_at_plane = positions + directions * dz_to_plane
-    paths_at_plane = paths_at_exit_z + dz_to_plane * np.linalg.norm(directions, axis=0)
-
-    dpos = positions_at_plane[:, 1:] - positions_at_plane[:, [0]]
-    particle_directions = directions[:, 1:]
-    particle_direction_projection = direction_projection[1:]
-
-    rparticles[0, :] = x_hat @ dpos
-    rparticles[1, :] = (x_hat @ particle_directions) / particle_direction_projection
-    rparticles[2, :] = y_hat @ dpos
-    rparticles[3, :] = (y_hat @ particle_directions) / particle_direction_projection
+    local_position = frame_out.T @ displacement
+    pz = _rk_forward_pz(state[1], state[3], momentum2)
+    local_momentum = frame_out.T @ np.vstack((state[1], state[3], pz))
+    if np.any(local_momentum[2] <= 0):
+        raise ValueError("RK particle must cross the reference plane forwards")
+    rparticles[0], rparticles[2] = local_position[:2]
+    rparticles[1], rparticles[3] = local_momentum[:2]
     if long_dynamics:
-        rparticles[4, :] = rparticles[4, :] + paths_at_plane[1:] - paths_at_plane[0]
-    rparticles[5, :] = state_at_exit_z[5, 1:]
+        rparticles[4] += state[4] / beta - (s_stop - s_start) / beta0
     return rparticles
 
 

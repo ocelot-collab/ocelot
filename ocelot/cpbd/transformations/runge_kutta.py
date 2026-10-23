@@ -4,7 +4,11 @@ from ocelot.cpbd.elements.element import Element
 
 class RungeKuttaGlobalTM(TransferMap):
     """[summary]
-    Runge-Kutta transformation in the fixed global field frame.
+    Runge-Kutta transformation in the fixed Cartesian field frame.
+
+    ParticleArray slots contain mechanical momenta / p0, not slopes. The
+    longitudinal coordinate is tau=ct-Z/beta0 with its entrance offset retained.
+    This does not automatically place successive fields in a surveyed lab.
 
     This is the historical ``RungeKuttaTM`` behavior.  It is useful when the
     output should remain in the Cartesian coordinates used by the field
@@ -22,7 +26,7 @@ class RungeKuttaGlobalTM(TransferMap):
         s_start = params.get('s_start')
         self.s_start = s_start if s_start else 0
         npoints = params.get('npoints')
-        self.npoints = npoints if npoints else 200
+        self.npoints = npoints if npoints is not None else 200
         self.long_dynamics = True
 
     @classmethod
@@ -70,14 +74,17 @@ class RungeKuttaOcelotTM(RungeKuttaGlobalTM):
     """
     Runge-Kutta transformation that returns Ocelot-relative beam coordinates.
 
-    The field integration itself is still performed in the fixed Cartesian
-    frame.  An internal zero reference particle is tracked through the same
-    field and the beam is projected back to the transported reference frame at
-    the element exit.
+    The field integration is Cartesian, while input/output coordinates belong
+    to normal planes of one reference defined at the element entrance. Slices
+    retain that reference and its Bishop axes. Transverse momenta are mechanical
+    p/p0; no vector-potential terms are added. Arrival time is tau=ct-s/beta0.
+    npoints bounds the RK step by full_element_length/(npoints-1).
     """
     def map_function(self, X, energy: float):
         from ocelot.cpbd.high_order import rk_field_to_ocelot
 
         params = self.get_params(energy)
         length = self.delta_length if self.delta_length is not None else self.length
-        return rk_field_to_ocelot(X, self.s_start, self.s_start + length, self.npoints, energy, params.mag_field, self.long_dynamics)
+        return rk_field_to_ocelot(X, self.s_start, self.s_start + length, self.npoints,
+                                  energy, params.mag_field, self.long_dynamics,
+                                  reference_length=self.length)

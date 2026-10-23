@@ -271,11 +271,12 @@ def test_track4rad_beam_accepts_undulator_subclass_and_honors_npoints(
     particles.E = 1.0
     calls = []
 
-    def fake_rk_track_in_field(y0, length, point_count, energy, mag_field):
+    def fake_rk_track_in_field(y0, length, point_count, energy, mag_field, *, return_path=False):
         calls.append(point_count)
         trajectory = np.zeros((point_count * 9, y0.shape[1]))
         trajectory[4::9, :] = np.linspace(0.0, length, point_count)[:, None]
-        return trajectory
+        paths = np.linspace(0., length, point_count)[:, None] * np.sqrt(1 + y0[1]**2 + y0[3]**2)
+        return (trajectory, paths) if return_path else trajectory
 
     monkeypatch.setattr(
         radiation_module,
@@ -322,7 +323,7 @@ def test_track4rad_beam_includes_trailing_non_undulator_section(monkeypatch):
     particles.E = 1.0
     particles.px()[0] = 1.0e-3
 
-    def fake_rk_track_in_field(y0, length, point_count, energy, mag_field):
+    def fake_rk_track_in_field(y0, length, point_count, energy, mag_field, *, return_path=False):
         trajectory = np.zeros((point_count * 9, y0.shape[1]))
         trajectory[0::9, :] = y0[0]
         trajectory[1::9, :] = y0[1]
@@ -330,7 +331,8 @@ def test_track4rad_beam_includes_trailing_non_undulator_section(monkeypatch):
         trajectory[3::9, :] = y0[3]
         trajectory[4::9, :] = np.linspace(0.0, length, point_count)[:, None]
         trajectory[5::9, :] = y0[5]
-        return trajectory
+        paths = np.linspace(0., length, point_count)[:, None] * np.sqrt(1 + y0[1]**2 + y0[3]**2)
+        return (trajectory, paths) if return_path else trajectory
 
     monkeypatch.setattr(
         radiation_module,
@@ -382,3 +384,135 @@ def test_track4rad_beam_rejects_lattice_without_trackable_elements():
 
     with pytest.raises(ValueError, match="no trackable nonzero-length"):
         radiation_module.track4rad_beam(particles, lattice)
+
+
+@pytest.mark.parametrize('energy', [0.001, 1.])
+def test_radiation_endpoint_matches_fixed_frame_rk_with_arrival_offsets(energy):
+    import copy
+    from ocelot.cpbd.high_order import rk_field
+
+    field = lambda x, y, z: (0.*x, 0.0001 + 0.*x, 0.*x)
+    undulator = Undulator(lperiod=.02, nperiods=5, Kx=0., npoints=81, mag_field=field)
+    particles = ParticleArray(n=2)
+    particles.E = energy
+    particles.rparticles[:] = np.array([[.001, .01, -.002, -.003, .004, .02],
+                                       [0., 0., 0., 0., -.002, -.01]]).T
+    expected = particles.rparticles.copy()
+    rk_field(expected, 0, undulator.l, 81, energy, field)
+    trajectories, _ = radiation_module.track4rad_beam(particles, MagneticLattice([undulator]))
+    np.testing.assert_allclose(particles.rparticles, expected, atol=2e-14, rtol=0)
+    assert particles.s == pytest.approx(undulator.l)
+    # Restoration must reproduce the saved SR endpoint exactly. Its slope
+    # conversions can differ by roundoff from direct momentum tracking above.
+    saved_endpoint = particles.rparticles.copy()
+    saved = BeamTraject(trajectories, end_particle_array=particles)
+    restored = copy.deepcopy(particles)
+    restored.rparticles[:] = 0
+    saved.p_array_end(restored)
+    np.testing.assert_array_equal(restored.rparticles, saved_endpoint)
+    # Repeated restoration does not accumulate path length again.
+    saved.p_array_end(restored)
+    np.testing.assert_array_equal(restored.rparticles, saved_endpoint)
+
+
+def test_standalone_trajectory_conversion_preserves_timing_and_momenta():
+    from ocelot.cpbd.high_order import rk_track_in_field
+    from ocelot.cpbd.transformations.exact_drift import ExactDriftTM
+
+    particles = ParticleArray(n=2)
+    particles.E = .001
+    particles.rparticles[:] = np.array([[0., .01, 0., -.02, .003, .02],
+                                       [0., 0., 0., 0., -.001, -.01]]).T
+    expected = particles.rparticles.copy()
+    ExactDriftTM._drift(expected, particles.E, .3)
+    beta0 = np.sqrt(1-(radiation_module.m_e_GeV/particles.E)**2)
+    slopes = particles.rparticles.copy()
+    pz = np.sqrt(1+2*slopes[5]/beta0+slopes[5]**2-slopes[1]**2-slopes[3]**2)
+    slopes[1] /= pz
+    slopes[3] /= pz
+    trajectory = rk_track_in_field(slopes, .3, 31, particles.E, lambda x,y,z: (0*x,0*x,0*x))
+    BeamTraject([trajectory]).p_array_end(particles)
+    np.testing.assert_allclose(particles.rparticles, expected, atol=2e-15, rtol=0)
+
+
+def test_non_undulator_samples_include_true_entrance_and_do_not_use_tau_as_z():
+    particles = ParticleArray(n=1)
+    particles.E = 1.
+    particles.x()[:] = .001
+    particles.px()[:] = .002
+    particles.tau()[:] = .03
+    trajectory, _ = radiation_module._track_non_undulator_segment(particles, [Drift(l=.2)], .4, 1., 1.)
+    assert trajectory[0, 0] == pytest.approx(.001)
+    assert trajectory[4, 0] == pytest.approx(.4)
+    assert trajectory[-5, 0] == pytest.approx(.6)
+    assert particles.x()[0] == pytest.approx(.0014)
+
+
+def test_radiation_loss_changes_energy_without_changing_direction(monkeypatch):
+    from ocelot.common.globals import m_e_GeV
+
+    monkeypatch.setattr(radiation_module, 'energy_loss_und', lambda *args: .01)
+    undulator = Undulator(lperiod=.02, nperiods=5, Kx=0., npoints=11)
+    particles = ParticleArray(n=1)
+    particles.E = 1.
+    particles.px()[:] = .02
+    particles.p()[:] = .04
+    p0_before = np.sqrt(particles.E**2-m_e_GeV**2)
+    energy_before = particles.E + particles.p()[0]*p0_before
+    magnitude_before = np.sqrt(energy_before**2-m_e_GeV**2)/p0_before
+    direction_x = particles.px()[0]/magnitude_before
+    radiation_module.track4rad_beam(particles, MagneticLattice([undulator]), energy_loss=True)
+    p0_after = np.sqrt(particles.E**2-m_e_GeV**2)
+    energy_after = particles.E + particles.p()[0]*p0_after
+    magnitude_after = np.sqrt(energy_after**2-m_e_GeV**2)/p0_after
+    assert particles.E == pytest.approx(.99)
+    assert energy_after == pytest.approx(energy_before-.01)
+    assert particles.px()[0]/magnitude_after == pytest.approx(direction_x, abs=1e-15)
+
+
+def test_radiation_segments_use_a_common_field_normalization(monkeypatch):
+    from ocelot.cpbd.beam import Beam
+
+    beam = Beam()
+    beam.E, beam.I = 1., .1
+    screen = Screen()
+    screen.z = 10
+    screen.nx = screen.ny = screen.num_energy = 1
+    screen.start_energy = screen.end_energy = 100
+
+    def trajectories(particles, lattice, **kwargs):
+        parts = [np.zeros((36, 1)), np.zeros((36, 1))]
+        parts[0][4::9, 0] = np.linspace(0, .1, 4)
+        parts[1][4::9, 0] = np.linspace(.1, .2, 4)
+        particles.E = .8  # after the second aggregate energy loss
+        return parts, [1., .9]
+
+    def equal_normalized_fields(gamma, trajectory, output):
+        output.arReEx[:] += 1.
+
+    monkeypatch.setattr(radiation_module, 'track4rad_beam', trajectories)
+    monkeypatch.setattr(radiation_module, 'radiation_py', equal_normalized_fields)
+    radiation_module.calculate_radiation(MagneticLattice([Drift(l=.2)]), screen, beam, energy_loss=True)
+    # Physical field amplitudes scale with gamma. Relative to the entrance
+    # normalization their coherent sum is 1 + 0.9, irrespective of final energy.
+    np.testing.assert_allclose(np.hypot(screen.arReEx, screen.arImEx), 1.9, atol=1e-14, rtol=0)
+
+
+def test_coherent_radiation_keeps_initial_arrival_offsets(monkeypatch):
+    from ocelot.cpbd.high_order import rk_field
+
+    field = lambda x,y,z: (0*x, 0*x, 0*x)
+    undulator = Undulator(lperiod=.02, nperiods=5, Kx=0, npoints=21, mag_field=field)
+    particles = ParticleArray(n=2)
+    particles.E = .001
+    particles.rparticles[4] = [.002, -.003]
+    particles.rparticles[5] = [.02, -.01]
+    expected = particles.rparticles.copy()
+    rk_field(expected, 0, .1, 21, particles.E, field)
+    screen = Screen()
+    screen.z = 10.
+    screen.nx = screen.ny = screen.num_energy = 1
+    screen.start_energy = screen.end_energy = 100.
+    monkeypatch.setattr(radiation_module, 'radiation_py', lambda *args: None)
+    radiation_module.coherent_radiation(MagneticLattice([undulator]), screen, particles, verbose=False)
+    np.testing.assert_allclose(particles.rparticles, expected, atol=2e-14, rtol=0)

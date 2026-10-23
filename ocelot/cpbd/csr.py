@@ -18,7 +18,7 @@ from ocelot.cpbd.elements.rbend import RBend
 from ocelot.cpbd.elements.sbend import SBend
 from ocelot.cpbd.elements.undulator import Undulator
 from ocelot.cpbd.elements.xyquadruple import XYQuadrupole
-from ocelot.cpbd.high_order import arcline, rk_track_in_field
+from ocelot.cpbd.high_order import arcline, rk_track_in_field, _rk_reference
 from ocelot.cpbd.physics_proc import PhysProc
 
 
@@ -960,7 +960,6 @@ class CSR(PhysProc):
 
         self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
         p = Particle()
-        beta = 1. if self.energy is None else np.sqrt(1. - 1./(self.energy/m_e_GeV)**2)
         self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, 1.]])
         if Undulator in [elem.__class__ for elem in lat.sequence[self.indx0:self.indx1+1]] and not self.rk_traj:
             self.rk_traj = True
@@ -971,12 +970,15 @@ class CSR(PhysProc):
                 "RK trajectory calc set but CSR.energy left unset."
             )
 
+        needs_frame = any(isinstance(el, XYQuadrupole) for el in lat.sequence[self.indx0:self.indx1+1])
+        trajectory_frame = np.eye(3)
         for elem in lat.sequence[self.indx0:self.indx1+1]:
 
             if elem.l == 0:
                 continue
             delta_s = elem.l
             step = self.traj_step
+            first_new_point = self.csr_traj.shape[1]
             if elem.__class__ in [Bend, RBend, SBend] and not self.rk_traj:
                 if elem.angle != 0:
                     R = -elem.l/elem.angle
@@ -988,23 +990,34 @@ class CSR(PhysProc):
                 R_vect = [-Ry, Rx, 0]
                 self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect)
 
-            elif elem.__class__ in [Bend, RBend, SBend, XYQuadrupole, Undulator] and self.energy is not None and self.rk_traj:
+            elif elem.__class__ is XYQuadrupole:
+                # Sample the same reference as the analytical model, or the
+                # actual quadrupole Lorentz orbit when RK is explicitly chosen.
+                count = max(1, int(np.ceil(delta_s / step)))
+                arc = np.linspace(0., delta_s, count + 1)
+                if self.rk_traj:
+                    field = elem.element.get_mag_field(self.energy)
+                    positions, frames = _rk_reference(arc, step, self.energy, field)
+                else:
+                    positions, frames = elem.element._reference_geometry(arc)
+                entrance = self.csr_traj[:, -1]
+                xyz = entrance[1:4, None] + trajectory_frame @ positions.T
+                tangents = trajectory_frame @ frames[:, :, 2].T
+                segment = np.vstack((entrance[0] + arc, xyz, tangents))
+                self.csr_traj = np.column_stack((self.csr_traj, segment[:, 1:]))
+                trajectory_frame = trajectory_frame @ frames[-1]
+                continue
+
+            elif elem.__class__ in [Bend, RBend, SBend, Undulator] and self.energy is not None and self.rk_traj:
                 """
-                rk_track_in_field accepts initial conditions (initial coordinates) in the ParticleArray.rparticles format
-                from another hand the csr module use trajectory in another format (see csr.py)
+                RK input uses Cartesian slopes (X, Xprime, Y, Yprime, unused, delta).
+                CSR stores positions and unit tangent vectors instead.
                 """
 
                 if elem.l < 1e-10:
                     continue
                 delta_z = delta_s
-                if elem.__class__ is XYQuadrupole:
-                    hx = elem.k1 * elem.x_offs
-                    hy = -elem.k1 * elem.y_offs
-                    By = self.energy * 1e9 * beta * hx / speed_of_light
-                    Bx = -self.energy * 1e9 * beta * hy / speed_of_light
-                    def mag_field(x, y, z): return (Bx, By, 0)
-
-                elif elem.__class__ == Undulator:
+                if elem.__class__ == Undulator:
                     print("ENERGY = ",self.energy)
                     gamma = self.energy/m_e_GeV
                     delta_z = elem.lperiod * elem.nperiods
@@ -1064,6 +1077,19 @@ class CSR(PhysProc):
             else:
                 R_vect = [0, 0, 0.]
                 self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect)
+            # Carry the transverse axes through preceding arcs as well, so a
+            # following XYQuadrupole starts in the continuous reference frame.
+            directions = self.csr_traj[4:7, first_new_point:].T if needs_frame else ()
+            for direction in directions:
+                direction = direction / np.linalg.norm(direction)
+                old_t = trajectory_frame[:, 2]
+                axis = np.cross(old_t, direction)
+                cosine = np.dot(old_t, direction)
+                cross = np.array([[0., -axis[2], axis[1]],
+                                  [axis[2], 0., -axis[0]],
+                                  [-axis[1], axis[0], 0.]])
+                trajectory_frame = (np.eye(3) + cross + cross @ cross / (1. + cosine)) @ trajectory_frame
+
         # plot trajectory of the refernece particle
         if self.pict_debug:
             fig = self.plt.figure(figsize=(10, 8))

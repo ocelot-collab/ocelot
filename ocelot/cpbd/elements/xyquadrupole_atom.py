@@ -107,16 +107,8 @@ class XYQuadrupoleAtom(Magnet):
             "a second-order map requires the cubic Hamiltonian."
         )
 
-    def get_transfer_geometry(self):
-        """Survey the model's curved reference and Bishop frame (Appendix D).
-
-        Displacements start at the reference entrance, not the magnet axis.
-        Integrate the varying rotations in order: their generators generally
-        do not commute when both entrance offsets are nonzero.
-        """
-        if self.l == 0 or self.k1 == 0 or (self.x_offs == 0 and self.y_offs == 0):
-            return super().get_transfer_geometry()
-
+    def _reference_geometry(self, s_values):
+        """Sample the analytical model's reference for survey and CSR."""
         from scipy.integrate import solve_ivp
         from ocelot.common.geometry import get_tilt_matrix
 
@@ -129,10 +121,34 @@ class XYQuadrupoleAtom(Magnet):
             return np.r_[frame[:, 2], (frame @ omega).ravel()]
 
         solution = solve_ivp(rhs, (0.0, self.l), np.r_[np.zeros(3), np.eye(3).ravel()],
-                             t_eval=[self.l / 2, self.l], method="DOP853", rtol=1e-11, atol=1e-13)
+                             t_eval=s_values, method="DOP853", rtol=1e-11, atol=1e-13)
         if not solution.success:
             raise RuntimeError(f"XYQuadrupole reference survey failed: {solution.message}")
         roll = get_tilt_matrix(self.tilt)
-        mid, end = solution.y.T
-        return (roll @ end[:3], roll @ end[3:].reshape(3, 3) @ roll.T,
-                roll @ mid[:3], roll @ mid[3:].reshape(3, 3) @ roll.T)
+        positions = solution.y[:3].T @ roll.T
+        frames = roll @ solution.y[3:].T.reshape(-1, 3, 3) @ roll.T
+        return positions, frames
+
+    def default_mag_field(self, energy):
+        """Ideal quadrupole field in the reference entrance frame, for CSR RK.
+
+        The magnetic axis lies at minus (x_offs,y_offs) in the unrolled frame.
+        This field does not change the wrapper's analytical-only TM contract.
+        """
+        c, s = np.cos(self.tilt), np.sin(self.tilt)
+        brho_k = self._brho(energy) * self.k1
+
+        def field(x, y, z):
+            x_local = c * (x - self.dx) + s * (y - self.dy) + self.x_offs
+            y_local = -s * (x - self.dx) + c * (y - self.dy) + self.y_offs
+            bx, by = brho_k * y_local, brho_k * x_local
+            return c * bx - s * by, s * bx + c * by, 0. * x
+
+        return field
+
+    def get_transfer_geometry(self):
+        """Survey the same varying-curvature Bishop reference used by the map."""
+        if self.l == 0 or self.k1 == 0 or (self.x_offs == 0 and self.y_offs == 0):
+            return super().get_transfer_geometry()
+        positions, frames = self._reference_geometry([self.l / 2, self.l])
+        return positions[1], frames[1], positions[0], frames[0]

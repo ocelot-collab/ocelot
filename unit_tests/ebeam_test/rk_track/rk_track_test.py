@@ -44,7 +44,7 @@ def test_track_undulator_with_diff_chirp(lattice, p_array, parameter, update_ref
     if parameter == 1:
         p_array_track.p()[:] *= -1
 
-    else:
+    elif parameter == 2:
         p_array_track.p()[:] = 0
 
     navi = Navigator(lattice)

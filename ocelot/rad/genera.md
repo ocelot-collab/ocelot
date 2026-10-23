@@ -142,14 +142,16 @@ separate trajectory segments.
 
 ## Open problems
 
-### Non-undulator sampling convention
+### General curved beamline assembly
 
-The non-undulator tracker allocates `N` samples, advances with
-`length / N`, and stores coordinates against an inclusive `N`-point
-`linspace`. Tracking occurs before storing the first sample. Particle
-coordinates and stored longitudinal positions therefore do not represent
-exactly the same locations. Correcting this may change existing radiation
-references and needs a focused numerical test.
+Non-undulator sampling now stores the true entrance and exit, using N-1 advances
+for N samples. It converts momenta to slopes and no longer adds tau to Cartesian
+Z. Undulator tracking retains flight time and the actual endpoint ParticleArray;
+SR no longer infers its reference from the bunch's mean path.
+
+General placement of curved local-map samples in a common laboratory frame
+remains to be implemented. The current mixed-element SR path assumes a straight
+layout. See [RK coordinate status](../cpbd/README_RK_COORDINATES.md).
 
 ### Nonuniform input to `x2xgaus`
 

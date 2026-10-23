@@ -29,7 +29,7 @@ from ocelot.rad.screen import Screen
 from ocelot.common.globals import m_e_GeV, h_eV_s, q_e, speed_of_light, ro_e
 from ocelot.cpbd.elements import Undulator
 from ocelot.cpbd.field_map import field_map2field_func as _field_map2field_func
-from ocelot.cpbd.high_order import rk_track_in_field
+from ocelot.cpbd.high_order import rk_track_in_field, _rk_energy, _rk_slopes, _rk_momenta
 from ocelot.cpbd import track
 from ocelot.cpbd.navi import Navigator
 from ocelot.cpbd import beam
@@ -113,10 +113,14 @@ class BeamTraject:
     ----------
     beam_trajectories
         Sequence of trajectory arrays returned by :func:`track4rad_beam`.
+    end_particle_array
+        Optional tracked endpoint to retain for exact, repeatable restoration
+        by :meth:`p_array_end`, including timing and reference energy.
     """
 
-    def __init__(self, beam_trajectories: Sequence[FloatArray]):
+    def __init__(self, beam_trajectories: Sequence[FloatArray], *, end_particle_array=None):
         self.U = beam_trajectories
+        self._end_particle_array = copy.deepcopy(end_particle_array)
 
     def n(self) -> int:
         """Return the number of particles in each trajectory segment."""
@@ -154,7 +158,7 @@ class BeamTraject:
         return self._coordinate(3, n)
 
     def p(self, n: int = 0) -> FloatArray:
-        """Return relative momentum deviations for particle ``n``."""
+        """Return energy deviations (E-E0)/(p0*c) for particle ``n``."""
         return self._coordinate(5, n)
 
     def s(self, n: int = 0) -> FloatArray:
@@ -168,36 +172,29 @@ class BeamTraject:
         return s
 
     def p_array_end(self, p_array: beam.ParticleArray) -> None:
-        """Replace a particle array with the final tracked coordinates.
+        """Restore the tracked endpoint, including its reference and arrival offsets.
 
-        The longitudinal coordinate is reconstructed relative to the mean path
-        length of all particles. The supplied ``ParticleArray`` is mutated in
-        place.
+        Radiation calculations retain the endpoint ParticleArray explicitly.
+        For standalone legacy trajectories without that endpoint, the supplied
+        array must contain the entrance state; conversion assumes a fixed
+        Cartesian frame, constant reference energy and tau=ct-Z/beta0.
         """
+        if self._end_particle_array is not None:
+            endpoint = self._end_particle_array
+            p_array.rparticles[:] = endpoint.rparticles
+            p_array.E, p_array.s = endpoint.E, endpoint.s
+            return
 
-        s_fin = p_array.tau()
-
-        for u in self.U:
-            x1 = u[1::9, :]
-            y1 = u[3::9, :]
-            # dz = u[4 + 9::9, :] - u[4:-9:9, :]
-            z = u[4::9, :]
-            s_fin += trapezoid(np.sqrt(1 + x1 * x1 + y1 * y1), z, axis=0)
-            # s_fin += np.sum(dz * np.sqrt(1 + x1 * x1 + y1 * y1), axis=0)
-
-        N = int(np.shape(self.U[-1])[0] / 9)
-
-        # ref_path is reference path of the particle with zero initial conditions
-        # in sake of speed and simplicity we assume that ref_path is equal to path of the beam in average
-
-        ref_path = np.mean(s_fin)
-
-        p_array.rparticles[0, :] = self.U[-1][(N - 1) * 9 + 0, :]
-        p_array.rparticles[1, :] = self.U[-1][(N - 1) * 9 + 1, :]
-        p_array.rparticles[2, :] = self.U[-1][(N - 1) * 9 + 2, :]
-        p_array.rparticles[3, :] = self.U[-1][(N - 1) * 9 + 3, :]
-        p_array.rparticles[4, :] = ref_path - s_fin
-        p_array.rparticles[5, :] = self.U[-1][(N - 1) * 9 + 5, :]
+        tau = p_array.tau().copy()
+        for trajectory in self.U:
+            beta0, beta, _ = _rk_energy(p_array.E, trajectory[5])
+            z = trajectory[4::9]
+            path = trapezoid(np.sqrt(1 + trajectory[1::9]**2 + trajectory[3::9]**2), z, axis=0)
+            tau += path / beta - (z[-1] - z[0]) / beta0
+        final = _rk_momenta(self.U[-1][-9:-3], p_array.E)
+        p_array.rparticles[:4] = final[:4]
+        p_array.rparticles[4] = tau
+        p_array.rparticles[5] = final[5]
 
 
 def bspline(x: FloatArray, y: FloatArray, x_new: FloatArray) -> FloatArray:
@@ -1010,25 +1007,26 @@ def calculate_radiation(
     # plt.plot(U[0][4::9, :], U[0][::9, :])
     # plt.show()
     screen_copy = _screen_field_workspace(screen)
-    relative_momenta = p_array.p()
+    gamma_normalization = ebeam.E / m_e_GeV
     for i in range(p_array.n):
-        # print("%i/%i" % (i, p_array.n))
-        # wlengthes = h_eV_s*speed_of_light/screen_copy.Eph
-        # screen_copy.arPhase[:] = tau0[i]/wlengthes*2*np.pi
         for u, e in zip(U, E):
-            gamma = (1 + relative_momenta[i]) * e / m_e_GeV
+            # Each segment's kernel returns fields normalized by its gamma.
+            # Accumulate in one common normalization when energy loss is enabled.
+            for component in (screen_copy.arReEx, screen_copy.arImEx,
+                              screen_copy.arReEy, screen_copy.arImEy):
+                component.fill(0.)
+            gamma = (e + u[5, i] * np.sqrt(e**2 - m_e_GeV**2)) / m_e_GeV
             radiation_py(gamma, u[:, i], screen_copy)
-        screen.arReEx += screen_copy.arReEx
-        screen.arImEx += screen_copy.arImEx
-        screen.arReEy += screen_copy.arReEy
-        screen.arImEy += screen_copy.arImEy
+            weight = gamma / gamma_normalization
+            screen.arReEx += weight * screen_copy.arReEx
+            screen.arImEx += weight * screen_copy.arImEx
+            screen.arReEy += weight * screen_copy.arReEy
+            screen.arImEy += weight * screen_copy.arImEy
         screen.arPhase += screen_copy.arPhase
-    gamma_mean = (1 + np.mean(p_array.p())) * p_array.E / m_e_GeV
-    screen.distPhoton(gamma_mean, current=ebeam.I)
-    screen.Ef_electron = E[-1]
+    screen.distPhoton(gamma_normalization, current=ebeam.I)
+    screen.Ef_electron = p_array.E
     screen.motion = U
-    beam_traj = BeamTraject(beam_trajectories=U)
-    beam_traj.p_array_end(p_array)
+    beam_traj = BeamTraject(beam_trajectories=U, end_particle_array=p_array)
     screen.beam_traj = beam_traj
 
     # adding fast oscillating term to the phase
@@ -1097,7 +1095,8 @@ def coherent_radiation(
     -----
     ``screen`` and ``p_array`` are mutated. The initial particle ``tau`` values
     are used for radiation phase, while final particle coordinates are written
-    back through :meth:`BeamTraject.p_array_end`.
+    directly by tracking, retaining their entrance arrival offsets. The endpoint
+    is also saved by :class:`BeamTraject`.
 
     The photon distributions ``screen.Total``, ``screen.Sigma``, and
     ``screen.Pi`` are normalized per passage of the supplied bunch, per
@@ -1138,11 +1137,11 @@ def coherent_radiation(
     p_array.tau()[:] = 0
 
     U, E = track4rad_beam(p_array, lat, energy_loss=energy_loss, quantum_diff=quantum_diff, accuracy=accuracy)
+    p_array.tau()[:] += tau0
     # plt.plot(U[0][4::9, :], U[0][::9, :])
     # plt.show()
     screen_copy = _screen_field_workspace(screen)
     wavelengths = h_eV_s * speed_of_light / screen.Eph
-    relative_momenta = p_array.p()
     electron_counts = p_array.q_array / q_e
     for i in range(p_array.n):
         # print("%i/%i" % (i, p_array.n))
@@ -1161,7 +1160,7 @@ def coherent_radiation(
             screen_copy.arReEy.fill(0.0)
             screen_copy.arImEy.fill(0.0)
 
-            gamma = (1 + relative_momenta[i]) * e / m_e_GeV
+            gamma = (e + u[5, i] * np.sqrt(e**2 - m_e_GeV**2)) / m_e_GeV
 
             radiation_py(gamma, u[:, i], screen_copy)
 
@@ -1175,10 +1174,9 @@ def coherent_radiation(
     screen.coherent_photon_dist()
     screen.rebuild_efields(*_trajectory_start_mm(U[0]))
 
-    screen.Ef_electron = E[-1]
+    screen.Ef_electron = p_array.E
     screen.motion = U
-    beam_traj = BeamTraject(beam_trajectories=U)
-    beam_traj.p_array_end(p_array)
+    beam_traj = BeamTraject(beam_trajectories=U, end_particle_array=p_array)
     screen.beam_traj = beam_traj
 
     return screen
@@ -1228,9 +1226,9 @@ def _track_non_undulator_segment(
 ) -> tuple[FloatArray | None, float]:
     """Track a buffered non-undulator section and sample its trajectory.
 
-    The sampling and coordinate conventions intentionally match the historical
-    non-undulator block in :func:`track4rad_beam`. The returned longitudinal
-    position is the end of the section in the radiation trajectory frame.
+    Samples include both endpoints, with slopes converted from mechanical
+    momenta. This path assumes a straight Cartesian layout; general placement
+    of curved local-map samples needs the corresponding reference geometry.
     """
     if not elements:
         return None, z_start
@@ -1244,17 +1242,19 @@ def _track_non_undulator_segment(
     trajectory = np.zeros(
         (n_points * 9, np.shape(p_array.rparticles)[1])
     )
-    step = section.totalLen / n_points
+    step = section.totalLen / (n_points - 1)
 
     for index, z in enumerate(
         np.linspace(z_start, z_start + section.totalLen, num=n_points)
     ):
-        track.tracking_step(section, p_array, step, navigator)
-        trajectory[index * 9 + 0, :] = p_array.rparticles[0]
-        trajectory[index * 9 + 1, :] = p_array.rparticles[1]
-        trajectory[index * 9 + 2, :] = p_array.rparticles[2]
-        trajectory[index * 9 + 3, :] = p_array.rparticles[3]
-        trajectory[index * 9 + 4, :] = p_array.rparticles[4] + z
+        if index:
+            track.tracking_step(section, p_array, step, navigator)
+        slopes = _rk_slopes(p_array.rparticles, p_array.E)
+        trajectory[index * 9 + 0, :] = slopes[0]
+        trajectory[index * 9 + 1, :] = slopes[1]
+        trajectory[index * 9 + 2, :] = slopes[2]
+        trajectory[index * 9 + 3, :] = slopes[3]
+        trajectory[index * 9 + 4, :] = z
         trajectory[index * 9 + 5, :] = p_array.rparticles[5]
 
     return trajectory, z_start + section.totalLen
@@ -1274,7 +1274,9 @@ def track4rad_beam(
     ----------
     p_array
         Particle ensemble to track. Coordinates are mutated to the end of each
-        processed segment.
+        processed segment, using normalized mechanical momenta and retaining
+        entrance tau. Undulator segments use tau=ct-Z/beta0 in the fixed frame.
+        General curved laboratory assembly is not implemented by this routine.
     lat
         Magnetic lattice containing the radiating elements. Undulator
         subclasses are recognized as radiating elements.
@@ -1356,24 +1358,41 @@ def track4rad_beam(
         mag_field = elem.element.create_runge_kutta_main_params(energy).mag_field
 
         N = _undulator_trajectory_points(elem, accuracy)
-        u = rk_track_in_field(
-            p_array.rparticles,
+        beta0, beta, _ = _rk_energy(energy, p_array.p())
+        u, paths = rk_track_in_field(
+            _rk_slopes(p_array.rparticles, energy),
             mag_length,
             N,
             energy,
             mag_field,
+            return_path=True,
         )
 
-        p_array.x()[:] = u[-9, :]
-        p_array.px()[:] = u[-8, :]
-        p_array.y()[:] = u[-7, :]
-        p_array.py()[:] = u[-6, :]
+        p_array.rparticles[:4] = _rk_momenta(u[-9:-3], energy)[:4]
+        p_array.tau()[:] += paths[-1] / beta - mag_length / beta0
+        p_array.s += mag_length
         s = u[-5, 0]
         u[4::9] += L
         L += s
         U.append(u)
         E.append(energy)
-        energy -= energy_correction
+        if energy_correction != 0:
+            # The existing radiation model removes the same energy from each
+            # particle along its direction, once at the undulator exit.
+            p0_before = np.sqrt(energy**2 - m_e_GeV**2)
+            particle_energy = energy + p_array.p() * p0_before
+            momentum_before = np.sqrt(particle_energy**2 - m_e_GeV**2)
+            new_energy = energy - energy_correction
+            if new_energy <= m_e_GeV or np.any(particle_energy - energy_correction <= m_e_GeV):
+                raise ValueError("Radiation energy loss leaves a particle below rest energy")
+            p0_after = np.sqrt(new_energy**2 - m_e_GeV**2)
+            momentum_after = np.sqrt((particle_energy - energy_correction)**2 - m_e_GeV**2)
+            factor = momentum_after / momentum_before * p0_before / p0_after
+            p_array.px()[:] *= factor
+            p_array.py()[:] *= factor
+            p_array.p()[:] *= p0_before / p0_after
+            energy = new_energy
+        p_array.E = energy
 
     u, L = _track_non_undulator_segment(
         p_array,

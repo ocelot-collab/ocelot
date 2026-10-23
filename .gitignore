@@ -24,3 +24,8 @@ tmp/*
 !.gitkeep
 unit_tests/ebeam_test/linac_orb_correct/ref_results/test.p
 unit_tests/ebeam_test/section_track/data/
+
+# Generated demo output
+/demos/ebeam/da.txt
+/demos/ebeam/da_axis.txt
+/demos/sr/animation.html

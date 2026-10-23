@@ -455,11 +455,16 @@ Examples:
 For RK tracking there are now two coordinate contracts:
 
 - `RungeKuttaGlobalTM` integrates and returns the fixed Cartesian field-frame
-  coordinates used by the RK solver; the legacy `RungeKuttaTM` name inherits
-  this behavior for backwards compatibility
+  positions and normalized mechanical momenta; the legacy `RungeKuttaTM` name
+  inherits this behavior. Only the low-level `rk_track_in_field` uses slopes
 - `RungeKuttaOcelotTM` uses the same RK field integration but tracks an
   internal zero reference particle and converts the beam back to Ocelot
-  coordinates relative to the transported reference trajectory
+  coordinates relative to the transported reference trajectory. Slices use the
+  original element-entrance reference, and all particle coordinates reach the
+  same exit normal plane. No canonical vector-potential terms are added.
+
+See [RK corrections and remaining work](../README_RK_COORDINATES.md) for timing,
+slicing, CSR/SR integration and the limits of the mechanical coordinate convention.
 
 ### 3. Atom hook surface
 

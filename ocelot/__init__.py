@@ -57,7 +57,7 @@ __all__ = [
     # === Lattice Elements ===
     'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",
     'SBend', 'Bend', 'Drift', 'Undulator', 'Hcor', "Solenoid", "TDCavity",
-    'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity", "Aperture",
+    'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity", "TWCavity", "Aperture",
     "XYQuadrupole",
 
     # === Lattice Matching ===
@@ -156,6 +156,7 @@ _LAZY_EXPORTS = {
     "Marker": ("ocelot.cpbd.elements.marker", "Marker"),
     "Octupole": ("ocelot.cpbd.elements.octupole", "Octupole"),
     "Cavity": ("ocelot.cpbd.elements.cavity", "Cavity"),
+    "TWCavity": ("ocelot.cpbd.elements.twcavity", "TWCavity"),
     "Aperture": ("ocelot.cpbd.elements.aperture", "Aperture"),
     "XYQuadrupole": ("ocelot.cpbd.elements.xyquadruple", "XYQuadrupole"),
 

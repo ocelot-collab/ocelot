@@ -57,7 +57,7 @@ __all__ = [
     # === Lattice Elements ===
     'Element', 'Multipole', 'Quadrupole', 'RBend', "Matrix", "UnknownElement",
     'SBend', 'Bend', 'Drift', 'Undulator', 'Hcor', "Solenoid", "TDCavity",
-    'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity", "Aperture",
+    'Vcor', "Sextupole", "Monitor", "Marker", "Octupole", "Cavity", "TWCavity", "Aperture",
     "XYQuadrupole",
 
     # === Lattice Matching ===

@@ -3,8 +3,7 @@ import logging
 import numpy as np
 
 from ocelot.cpbd.transformations.tw_cavity import TWCavityTM
-from ocelot.cpbd.high_order import m_e_GeV
-from ocelot.common.globals import speed_of_light
+from ocelot.cpbd.rf_maps import rf_long_r_terms
 from ocelot.cpbd.r_matrix import uni_matrix
 from ocelot.cpbd.elements.element import Element
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
@@ -15,10 +14,17 @@ logger = logging.getLogger(__name__)
 
 class TWCavityAtom(Element):
     """
-    Traveling wave cavity
+    Traveling wave cavity (phase velocity equal to the speed of light).
+
     v - voltage [GV]
     freq - frequency [Hz]
     phi - phase in [deg]
+
+    The body of a travelling-wave structure has no ponderomotive focusing: it
+    only damps adiabatically, and the net radial focusing comes from the
+    entrance/exit edge lenses -gamma'/(2 gamma0) and +gamma'/(2 gamma1)
+    (Rosenzweig & Serafini, PRE 49, 1599 (1994)). The longitudinal map is the
+    same as for a standing wave and is shared through ocelot.cpbd.rf_maps.
     """
     def __init__(self, l=0., v=0., phi=0., freq=0., eid=None, **kwargs):
         super().__init__(eid=eid, has_edge=True, **kwargs)
@@ -27,7 +33,6 @@ class TWCavityAtom(Element):
         self.freq = freq  # Hz
         self.phi = phi  # in grad
         self.E = 0
-        print("NOT FINISHED. IT WILL NOT WORK")
 
     def __str__(self):
         s = 'TWCavity('
@@ -42,23 +47,26 @@ class TWCavityAtom(Element):
 
         def tw_cavity_R_z(z, V, E, freq, phi=0.):
             """
-            :param z: length
-            :param de: delta E
-            :param f: frequency
-            :param E: initial energy
+            Body matrix of a travelling-wave structure.
+
+            :param z: length of the (slice of the) structure [m]
+            :param V: voltage of the (slice of the) structure [GV]
+            :param E: initial energy [GeV]
+            :param freq: frequency [Hz]
+            :param phi: phase [deg]
             :return: matrix
             """
             phi = phi * np.pi / 180.
             de = V * np.cos(phi)
-            r12 = z * E / de * np.log(1. + de / E) if de != 0 else z
+            # log1p keeps the full precision of the small-gradient limit
+            r12 = z * E / de * np.log1p(de / E) if de != 0 else z
             r22 = E / (E + de)
-            r65 = V * np.sin(phi) / (E + de) * (2 * np.pi / (speed_of_light / freq)) if freq != 0 else 0
-            r66 = r22
+            r55_cor, r56, r65, r66 = rf_long_r_terms(z=z, V=V, E=E, freq=freq, phi=phi)
             cav_matrix = np.array([[1, r12, 0., 0., 0., 0.],
                                    [0, r22, 0., 0., 0., 0.],
                                    [0., 0., 1, r12, 0., 0.],
                                    [0., 0., 0, r22, 0., 0.],
-                                   [0., 0., 0., 0., 1., 0],
+                                   [0., 0., 0., 0., 1. + r55_cor, r56],
                                    [0., 0., 0., 0., r65, r66]]).real
             return cav_matrix
 
@@ -70,6 +78,11 @@ class TWCavityAtom(Element):
         return R
 
     def _R_entrance(self, z, V, E, phi=0.):
+        """
+        Entrance edge lens, -gamma'/(2 gamma0).
+
+        `E` is the reference energy in front of the structure.
+        """
         phi = phi * np.pi / 180.
         de = V * np.cos(phi)
         r = np.eye(6)
@@ -78,10 +91,17 @@ class TWCavityAtom(Element):
         return r
 
     def _R_exit(self, z, V, E, phi=0.):
+        """
+        Exit edge lens, +gamma'/(2 gamma1).
+
+        `E` is the reference energy *behind* the structure: the transfer-map
+        chain has already added the energy gain of the body before this edge
+        map is built, so it must not be added a second time here.
+        """
         phi = phi * np.pi / 180.
         de = V * np.cos(phi)
         r = np.eye(6)
-        r[1, 0] = +de / z / 2. / (E + de)
+        r[1, 0] = +de / z / 2. / E
         r[3, 2] = r[1, 0]
         return r
 

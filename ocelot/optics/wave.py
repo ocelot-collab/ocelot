@@ -2165,9 +2165,11 @@ def dfl_gen_undulator_mp(dfl, z, L_w, E_ph, N_b=1, N_e=1, sig_x=0, sig_y=0, sig_
 
 def dfl_gen_undulator_serval(E_ph=1042, L_w=1, shape=(51, 51, 100), dgrid=(1e-3, 1e-3, 50e-6), 
                              sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, jitter_kx=0, jitter_ky=0,
-                             k_support ='intensity', s_support='intensity', seed=None):
+                             k_support ='intensity', s_support='intensity', seed=None, showfig=False):
     '''
     Creates SR radiation using SERVAL (C) algorithmn
+
+    :param showfig: display the initial noise field for diagnostics (default: False).
     '''
     _logger.info('Generating undulator field with SERVAL algorithm')
     
@@ -2782,8 +2784,8 @@ def dfl_prop_iris(dfl, N=10, a=0.055, center=(0,0), b=0.3, n_iter_per_iris=1,
     dfl_waveguide = deepcopy(dfl)
     dfl_waveguide.to_domain('sf')
     
-    E_x_lineout = np.zeros((dfl_waveguide.Nx(), n_iter_per_iris*N), dtype='cfloat')
-    E_y_lineout = np.zeros((dfl_waveguide.Ny(), n_iter_per_iris*N), dtype='cfloat')
+    E_x_lineout = np.zeros((dfl_waveguide.Nx(), n_iter_per_iris*N), dtype=np.complex128)
+    E_y_lineout = np.zeros((dfl_waveguide.Ny(), n_iter_per_iris*N), dtype=np.complex128)
 
     rad_left_array = np.array([])
     loss_per_cell_array = np.array([])

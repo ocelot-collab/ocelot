@@ -6,14 +6,16 @@ Common tasks for developers only.
 from __future__ import annotations
 
 from invoke import task
-import importlib.util
 import os
 import re
 import subprocess
 import sys
 import shutil
-import traceback
 import tempfile
+import json
+import signal
+import time
+import tomllib
 from pathlib import Path
 
 VERBOSE = True
@@ -41,7 +43,7 @@ VERSION_FILES = (
     ),
 )
 
-BUILD_DIR = Path("build")
+BUILD_DIR = Path("dist")
 
 
 def repo_root() -> Path:
@@ -52,6 +54,7 @@ def dev_env() -> dict[str, str]:
     env = os.environ.copy()
     # Set MPLBACKEND to Agg to prevent matplotlib from trying to open a window and blocking the execution of the script until manual intervention.
     env.setdefault("MPLBACKEND", "Agg")
+    env["PYTHONPATH"] = str(repo_root()) + os.pathsep + env.get("PYTHONPATH", "")
     return env
 
 
@@ -89,13 +92,6 @@ def run(
 
 def capture(command: list[str], *, cwd: Path) -> str:
     return subprocess.check_output(command, cwd=cwd, text=True).strip()
-
-
-def promt_continue() -> None:
-    """Prompt the user to continue, abort if the answer is not yes."""
-    input_str = input("Continue [Y/n]? ").strip().lower()
-    if input_str not in ("y", "yes", ""):
-        raise SystemExit("Abort.")
 
 
 def is_clean_worktree() -> bool:
@@ -148,83 +144,60 @@ def run_tests(c, dry_run: bool = False) -> bool:
             env=dev_env(),
         )
     except subprocess.CalledProcessError as e:
-        return False
+        raise SystemExit(e.returncode)
     return True
 
 
 @task()
-def run_demos(
-    c,
-    critical_demos_only: bool = False,
-    exclude_scripts: bool = False,
-    exclude_notebooks: bool = False,
-    dry_run: bool = False,
-) -> bool:
-    """Runs demo scripts and notebooks."""
-
-    if critical_demos_only:
-        demos = CRITICAL_DEMOS
-    else:
-        demos = get_all_demos()
-
+def run_demos(c, critical_demos_only=False, exclude_scripts=False,
+              exclude_notebooks=False, dry_run=False, timeout=300, pattern=""):
+    """Run demos in a copied tree; retain logs, executed notebooks and JSON results."""
+    if timeout <= 0:
+        raise SystemExit("Demo timeout must be positive")
+    demos = list(CRITICAL_DEMOS) if critical_demos_only else get_all_demos()
+    demos = [d for d in demos if pattern in d
+             and not (exclude_scripts and d.endswith(".py"))
+             and not (exclude_notebooks and d.endswith(".ipynb"))]
+    if not demos:
+        raise SystemExit("No demos selected")
+    if dry_run:
+        for demo in demos:
+            print("Would run:", demo)
+        return True
     root = repo_root()
-    env = dev_env()
-    cwd = root / "tmp" / "demos"
-    cwd.mkdir(parents=True, exist_ok=True)
-
-    counters = {
-        "script_success": 0,
-        "script_total": 0,
-        "notebook_success": 0,
-        "notebook_total": 0,
-    }
+    (root / "tmp").mkdir(exist_ok=True)
+    output = Path(tempfile.mkdtemp(prefix="demo-check-", dir=root / "tmp"))
+    shutil.copytree(root / "demos", output / "demos",
+                    ignore=shutil.ignore_patterns("__pycache__", ".ipynb_checkpoints"))
+    results = []
     for demo in demos:
-        if exclude_scripts and demo.endswith(".py"):
-            continue
-        if exclude_notebooks and demo.endswith(".ipynb"):
-            continue
-
-        demo_path = root / demo
-        if not demo_path.exists():
-            raise SystemExit(f"Demo not found: {demo}")
-
-        if demo_path.suffix == ".py":
-            kind = "script"
-            cmd = [sys.executable, str(demo_path)]
-
-        if demo_path.suffix == ".ipynb":
-            kind = "notebook"
-            cmd = [
-                sys.executable,
-                "-m",
-                "jupyter",
-                "nbconvert",
-                "--to",
-                "notebook",
-                "--execute",
-                "--output-dir",
-                str(cwd),
-                str(demo_path),
-            ]
-        try:
-            counters[kind + "_total"] += 1
-            run(cmd, cwd=cwd, dry_run=dry_run, env=env, supress_stdout=True)
-            counters[kind + "_success"] += 1
-        except subprocess.CalledProcessError as e:
-            print(f"FAILED: Error encountered while executing {demo}:")
-            traceback.print_exception(type(e), e, e.__traceback__)
-
-    print("Demo execution summary:")
-    print(
-        f"scripts executed successfully: {counters['script_success']}/{counters['script_total']}"
-    )
-    print(
-        f"notebooks executed successfully: {counters['notebook_success']}/{counters['notebook_total']}"
-    )
-
-    return (counters["script_success"] == counters["script_total"]) and (
-        counters["notebook_success"] == counters["notebook_total"]
-    )
+        path = output / demo
+        log = path.with_suffix(path.suffix + ".log")
+        command = [sys.executable, str(path)]
+        if path.suffix == ".ipynb":
+            command = [sys.executable, "-m", "jupyter", "nbconvert", "--execute",
+                       "--to", "notebook", "--ExecutePreprocessor.timeout=" + str(timeout),
+                       "--output", path.stem + ".executed.ipynb", str(path)]
+        started = time.monotonic()
+        with log.open("w") as stream:
+            process = subprocess.Popen(command, cwd=path.parent, env=dev_env(),
+                                       stdin=subprocess.DEVNULL, stdout=stream,
+                                       stderr=subprocess.STDOUT, start_new_session=True)
+            try:
+                code = process.wait(timeout=timeout)
+                status = "passed" if code == 0 else "failed"
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait()
+                status, code = "timeout", None
+        results.append(dict(demo=demo, status=status, returncode=code,
+                            seconds=round(time.monotonic()-started, 2), log=str(log)))
+        (output / "results.json").write_text(json.dumps(results, indent=2))
+        print(f"{len(results)}/{len(demos)} {status}: {demo}", flush=True)
+    print("Report:", output / "results.json")
+    if any(r["status"] != "passed" for r in results):
+        raise SystemExit(1)
+    return True
 
 
 def get_all_demos() -> list[str]:
@@ -237,6 +210,7 @@ def get_all_demos() -> list[str]:
     for ext in (".py", ".ipynb"):
         demo_files.extend(
             str(path.relative_to(root)) for path in demos_dir.rglob(f"*{ext}")
+            if ".ipynb_checkpoints" not in path.parts and "__pycache__" not in path.parts
         )
     return sorted(demo_files)
 
@@ -244,6 +218,8 @@ def get_all_demos() -> list[str]:
 @task
 def bump_version(c, version: str, dry_run: bool = False) -> None:
     """Updates the version number in all relevant files."""
+    if not re.fullmatch(r"\d{2}\.\d{2}\.\d+", version):
+        raise SystemExit("Version must use YY.MM.patch")
     root = repo_root()
     for file, pattern, replacement in VERSION_FILES:
         if not (root / file).exists():
@@ -254,6 +230,8 @@ def bump_version(c, version: str, dry_run: bool = False) -> None:
             replacement.replace("{version}", version),
             dry_run=dry_run,
         )
+    replace_once(root / "conda-recipe/meta.yaml", r"git_tag:\s*[^\n]+",
+                 f"git_tag: v{version}", dry_run=dry_run)
 
 
 def replace_once(path: Path, pattern: str, replacement: str, *, dry_run: bool) -> None:
@@ -273,7 +251,7 @@ def replace_once(path: Path, pattern: str, replacement: str, *, dry_run: bool) -
 def commit_release(
     c,
     version: str,
-    message: str,
+    message: str = "",
     source_branch: str = SOURCE_BRANCH,
     dry_run: bool = False,
 ) -> None:
@@ -288,11 +266,15 @@ def commit_release(
             f"Current branch is '{current_branch}', but expected '{source_branch}'. Please checkout the correct branch first."
         )
 
-    # check if there are any changes (staged or not) to commit, if not, skip the commit step
+    allowed = {file for file, _, _ in VERSION_FILES} | {"CHANGELOG.md"}
+    staged = set(capture(["git", "diff", "--cached", "--name-only"], cwd=root).splitlines())
+    if staged - allowed:
+        raise SystemExit("Unrelated staged changes; commit them separately first")
+
+    # Skip when there are no changes to commit.
     comittable_changes = capture(["git", "status", "--porcelain"], cwd=root)
     if not comittable_changes:
         print("skip commit: nothing to commit")
-        promt_continue()
         return
 
     run(
@@ -301,17 +283,7 @@ def commit_release(
         env=env,
         dry_run=dry_run,
     )
-    run(
-        ["git", "commit", "-m", message or f"Prepare OCELOT {version} release"],
-        cwd=root,
-        env=env,
-        dry_run=True,
-    )
-
-    staged = run(
-        ["git", "diff", "--cached", "--quiet"], cwd=root, env=env, dry_run=dry_run
-    )
-    if staged.returncode == 0:
+    if not dry_run and not capture(["git", "diff", "--cached", "--name-only"], cwd=root):
         print("skip commit: no release metadata changes staged")
         return
 
@@ -341,42 +313,22 @@ def build(
     build_dir = Path(build_dir).expanduser()
     if not build_dir.is_absolute():
         build_dir = root / build_dir
-    build_dir.mkdir(parents=True, exist_ok=True)
+    if not dry_run:
+        build_dir.mkdir(parents=True, exist_ok=True)
 
-    if importlib.util.find_spec("build") is not None:
-        run(
-            [sys.executable, "-m", "build", "--outdir", str(build_dir)],
-            cwd=root,
-            dry_run=dry_run,
-            env=env,
-        )
-    else:
-        run(
-            [
-                sys.executable,
-                "setup.py",
-                "sdist",
-                "--dist-dir",
-                str(build_dir),
-                "bdist_wheel",
-                "--dist-dir",
-                str(build_dir),
-            ],
-            cwd=root,
-            dry_run=dry_run,
-            env=env,
-        )
-
-    artifacts = sorted(str(path) for path in build_dir.glob("*"))
-    if artifacts and importlib.util.find_spec("twine") is not None:
-        run(
-            [sys.executable, "-m", "twine", "check", *artifacts],
-            cwd=root,
-            dry_run=dry_run,
-            env=env,
-        )
-    elif artifacts:
-        print("skip twine check: twine is not installed")
+    # Keep old artifacts on disk, but never mix them with this build's output.
+    artifacts_dir = (build_dir / "build-DRY-RUN" if dry_run else
+                     Path(tempfile.mkdtemp(prefix="build-", dir=build_dir)))
+    run([sys.executable, "-m", "build", "--outdir", str(artifacts_dir)],
+        cwd=root, dry_run=dry_run, env=env)
+    artifacts = sorted(str(path) for pattern in ("*.whl", "*.tar.gz")
+                       for path in artifacts_dir.glob(pattern))
+    if not dry_run and not artifacts:
+        raise SystemExit("No Python artifacts built")
+    if artifacts:
+        run([sys.executable, "-m", "twine", "check", *artifacts],
+            cwd=root, dry_run=dry_run, env=env)
+    print("Build artifacts:", artifacts_dir)
 
 
 @task()
@@ -431,26 +383,70 @@ def push(
     source_branch: str = SOURCE_BRANCH,
     target_branch: str = TARGET_BRANCH,
     dry_run: bool = False,
+    version: str = "",
 ) -> None:
-    """Pushes the source and target branches and tags to the remote repository."""
+    """Push branches and, optionally, one specified release tag."""
     root = repo_root()
 
     run(
-        ["git", "push", "origin", source_branch, target_branch, "--tags"],
+        ["git", "push", "origin", source_branch, target_branch]
+        + ([f"refs/tags/v{version}"] if version else []),
         cwd=root,
         dry_run=dry_run,
     )
 
 
+def check_release(version):
+    """Require clean, tagged source and consistent Python/Conda metadata."""
+    root = repo_root()
+    if not is_clean_worktree():
+        raise SystemExit("Commit changes before publishing")
+    if capture(["git", "rev-parse", "HEAD"], cwd=root) != capture(
+            ["git", "rev-parse", f"v{version}^{{}}"], cwd=root):
+        raise SystemExit("HEAD must be the requested release tag")
+    metadata = tomllib.loads((root / "pyproject.toml").read_text())
+    recipe = (root / "conda-recipe/meta.yaml").read_text()
+    init = (root / "ocelot/__init__.py").read_text()
+    if (metadata["project"]["version"] != version
+            or not re.search(r"__version__\s*=\s*['\"]" + re.escape(version) + r"['\"]", init)
+            or f'version: "{version}"' not in recipe
+            or not re.search(r"git_tag:\s*v" + re.escape(version) + r"\s*$", recipe, re.M)):
+        raise SystemExit("Release versions and Conda source tag must agree")
+
+
 @task()
-def publish(c, dry_run: bool = False) -> None:
-    """Publishes the package (not implemented yet)."""
+def publish(c, version, upload_pypi=False, upload_conda=False,
+            conda=False, repository="pypi", dry_run=False):
+    """Build/check tagged release; upload only with explicit upload flags."""
+    check_release(version)
+    root = repo_root()
+    # Each build gets its own directory, preventing stale artifacts being uploaded.
+    output = root / "dist" / f"release-{version}"
     if dry_run:
-        print("Dry run: skipping publishing to PyPI & conda.")
+        print("Would build/check", version, "in a fresh directory under", output)
+        print("Uploads:", dict(pypi=upload_pypi, conda=upload_conda, repository=repository))
         return
-    raise NotImplementedError(
-        "Publishing is not implemented yet. Please continue manually or implement it here."
-    )
+    output.mkdir(parents=True, exist_ok=True)
+    artifacts_dir = Path(tempfile.mkdtemp(prefix="artifacts-", dir=output))
+    run([sys.executable, "-m", "build", "--outdir", str(artifacts_dir)], cwd=root, dry_run=False)
+    artifacts = sorted(str(p) for p in artifacts_dir.iterdir() if p.suffix == ".whl" or p.name.endswith(".tar.gz"))
+    if not artifacts:
+        raise SystemExit("No Python artifacts built")
+    run([sys.executable, "-m", "twine", "check", *artifacts], cwd=root, dry_run=False)
+    packages = []
+    if conda or upload_conda:
+        command = ["conda", "build", "--no-anaconda-upload", "--croot",
+                   str(artifacts_dir / "conda"), "-c", "conda-forge", "conda-recipe"]
+        run(command, cwd=root, dry_run=False)
+        packages = [str(p) for p in (artifacts_dir / "conda").rglob("*")
+                    if p.name.endswith((".conda", ".tar.bz2")) and p.parent.name in ("noarch", "linux-64", "osx-64", "osx-arm64", "win-64")]
+        if not packages:
+            raise SystemExit("No Conda artifacts built")
+    if upload_pypi:
+        run([sys.executable, "-m", "twine", "upload", "--repository", repository, *artifacts], cwd=root, dry_run=False)
+    if upload_conda:
+        run(["anaconda", "upload", *packages], cwd=root, dry_run=False)
+    print("Release artifacts:", artifacts_dir)
 
 
 @task()
@@ -467,22 +463,21 @@ def validate_for_commit(
 def do_full_release(
     c,
     version: str,
-    commit_message: str,
+    commit_message: str = "",
     source_branch: str = SOURCE_BRANCH,
     target_branch: str = TARGET_BRANCH,
     dist_dir: str = BUILD_DIR,
     dry_run: bool = False,
 ) -> None:
-    """Execute all tasks required for a full release."""
-    print("Did you remember to update the CHANGELOG.md file?")
-    promt_continue()
+    """Prepare locally, including merge and tag; never push or upload."""
+    print("Local release preparation only; update CHANGELOG.md first.")
     clean(c, dry_run=dry_run)
     if not run_tests(c, dry_run=dry_run):
         print("\nWARNING: Some tests failed.")
-        promt_continue()
+        raise SystemExit(1)
     if not run_demos(c, dry_run=dry_run):
         print("\nWARNING: Some demos failed.")
-        promt_continue()
+        raise SystemExit(1)
     bump_version(c, version=version, dry_run=dry_run)
     commit_release(
         c,
@@ -500,5 +495,4 @@ def do_full_release(
         dry_run=dry_run,
     )
     tag(c, version=version, dry_run=dry_run)
-    push(c, dry_run=dry_run)
-    publish(c, dry_run=dry_run)
+    print("Local release prepared. Push and publish explicitly; see RELEASE.md.")

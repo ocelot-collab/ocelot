@@ -54,7 +54,7 @@ def chicane_RTU(yoke_len, dip_dist, r, type):
 
 
 def bunching(p_array, lambda_mod, smooth_sigma=None):
-    """
+    r"""
     Function calculates bunching factor for wavelength lambda_mod
 
     $b(\lambda) = \frac{1}{N_0}\left| \langle e^{- i\frac{ 2 \pi}{\lambda} s} N(s)\rangle \right|$
@@ -75,7 +75,7 @@ def bunching(p_array, lambda_mod, smooth_sigma=None):
 
 
 def slice_bunching(tau, charge, lambda_mod, smooth_sigma=None):
-    """
+    r"""
     Function calculates bunching factor for wavelength lambda_mod
 
     $b(\lambda) = \frac{1}{N_0}\left| \langle e^{- i\frac{ 2 \pi}{\lambda} s} N(s)\rangle \right|$

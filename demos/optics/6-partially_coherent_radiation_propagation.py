@@ -13,7 +13,7 @@ import ocelot
 from copy import deepcopy
 from ocelot.common.globals import hr_eV_s, speed_of_light
 from ocelot.gui.dfl_plot import plot_dfl
-from ocelot.optics.wave import RadiationField, dfl_ap_rect, dfl_gen_undulator_serval
+from ocelot.optics.wave import dfl_ap_rect, dfl_gen_undulator_serval
 
 ocelot.ocelog.setLevel(logging.INFO)
 _logger = logging.getLogger(__name__)
@@ -48,23 +48,16 @@ e_beam_param = 'N_x = {}, '.format(round((ebeam_sigma_x)**2/xlamds/L_w, 3)) + 'N
 print(e_beam_param)
 
 Lz, Ly, Lx = ebeam_sigma_z, 300e-6, 400e-6 #size of realspace grid [m]
-dx, dy, dz = Lx / Nx, Ly / Ny, Lz / Nz
-
-# create radiation field
-dfl_SERVAL = RadiationField((N_b, Ny, Nx))  
-dfl_SERVAL.dx, dfl_SERVAL.dy, dfl_SERVAL.dz = dx, dy, dz
-dfl_SERVAL.xlamds = xlamds # SVEA carrieer frequency
-
-dfl_SERVAL.fld = np.random.randn(dfl_SERVAL.Nz(), dfl_SERVAL.Ny(), dfl_SERVAL.Nx()) + 1j * np.random.randn(dfl_SERVAL.Nz(), dfl_SERVAL.Ny(), dfl_SERVAL.Nx()) # Gaussian noise
-
-filePath = 'SERVAL_field'
-dfl_SERVAL.filePath = filePath+'.dfl'
-
+# The generator creates the field and Gaussian noise internally.
+# Its grid arguments use (x, y, z) order; RadiationField stores (z, y, x).
+dfl_SERVAL = dfl_gen_undulator_serval(
+    E_ph=E_ph, L_w=L_w, shape=(Nx, Ny, Nz), dgrid=(Lx, Ly, Lz),
+    sig_x=ebeam_sigma_x, sig_y=ebeam_sigma_y,
+    sig_xp=ebeam_sigma_xp, sig_yp=ebeam_sigma_yp,
+    k_support='intensity', s_support='intensity', showfig=False,
+)
+dfl_SERVAL.filePath = 'SERVAL_field.dfl'
 fieldname_SERVAL = '0-at_source_SERVAL'
-dfl_SERVAL = dfl_gen_undulator_serval(dfl_SERVAL, L_w=L_w,
-                                      sig_x=ebeam_sigma_x, sig_y=ebeam_sigma_y,
-                                      sig_xp=ebeam_sigma_xp, sig_yp=ebeam_sigma_yp,
-                                      k_support = 'intensity', s_support='intensity', showfig=False)
 
 plot_dfl(dfl_SERVAL, domains='sf', phase=True, fig_name = fieldname_SERVAL)
 plot_dfl(dfl_SERVAL, domains='kf', phase=True, fig_name = fieldname_SERVAL)

@@ -13,10 +13,10 @@ from ocelot.optics.new_wave import imitate_1d_sase_like
 from ocelot.common.globals import h_eV_s, speed_of_light
 from ocelot.gui.dfl_plot import plot_wigner
 from ocelot.gui.settings_plot import def_cmap
-from ocelot.optics.wave import WignerDistribution
+from ocelot.optics.wave import WignerDistributionLongitudinal
 
 fntsz = 6
-params = {'image.cmap': def_cmap, 'backend': 'ps', 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
+params = {'image.cmap': def_cmap, 'axes.labelsize': 3 * fntsz, 'font.size': 3 * fntsz, 'legend.fontsize': 4 * fntsz, 'xtick.labelsize': 4 * fntsz,  'ytick.labelsize': 4 * fntsz, 'text.usetex': False}
 rcParams.update(params)
 
 #%% two pulses
@@ -114,7 +114,7 @@ plt.show()
 #%% Wigner averaging
 
 for idx, tdi in enumerate(td.T):
-    wig = WignerDistribution()
+    wig = WignerDistributionLongitudinal()
     wig.field = tdi
     wig.s = td_scale
     wig.xlamds = (speed_of_light * h_eV_s) / np.mean(fd_scale)

@@ -11,7 +11,6 @@ from ocelot.cpbd.response_matrix import ResponseMatrix, RingRM
 from ocelot.cpbd.track import lattice_track
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 from ocelot.gui.accelerator import plot_API, plot_opt_func
-import seaborn as sns
 import logging
 logging.basicConfig(level=logging.INFO)
 
@@ -134,8 +133,17 @@ bpm_names_ref = orb.response_matrix.bpm_names
 orb.response_matrix.dump("test.p")
 orb.response_matrix.load("test.p")
 
-ax = sns.heatmap(orb.response_matrix.df, annot=True)
+df = orb.response_matrix.df
+fig, ax = plt.subplots()
+image = ax.imshow(df.to_numpy(), aspect="auto", cmap="viridis")
+ax.set_xticks(np.arange(len(df.columns)), labels=df.columns, rotation=90)
+ax.set_yticks(np.arange(len(df.index)), labels=df.index)
+for (row, col), value in np.ndenumerate(df.to_numpy()):
+    ax.text(col, row, f"{value:.2g}", ha="center", va="center",
+            color="black" if image.norm(value) > 0.5 else "white")
+fig.colorbar(image, ax=ax)
 ax.set_title("Orbit response matrix")
+fig.tight_layout()
 plt.show()
 
 s_bpm_b = np.array([p.s for p in orb.bpms])

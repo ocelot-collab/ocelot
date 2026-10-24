@@ -1,6 +1,5 @@
 import numpy as np
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
-import plotly.graph_objects as go
 
 
 class MachineLayout:

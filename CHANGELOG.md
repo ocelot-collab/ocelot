@@ -7,8 +7,31 @@ Versioning is date based: `YY.MM.patch`.
 
 ## [Unreleased]
 
+### Added
+
+- Analytical XYQuadrupole transfer maps and survey support, with CSR reference
+  trajectories and physics regression tests.
+- ExactDriftTM for finite-angle, finite-energy drift tracking.
+- Matcher phase-advance targets and explicit lattice-occurrence resolution for
+  repeated element instances.
+- Release commands in `tasks.py` with explicit PyPI/Anaconda upload flags,
+  clean tagged-source checks, and a restored release checklist.
+- Demo execution reports, per-example logs, copied input trees and timeouts.
+
 ### Changed
 
+- Separate `periodic_twiss()` from propagation with `twiss()`; unstable periodic
+  solutions raise `UnstableLatticeError`. Update callers that relied on implicit
+  periodic initialization.
+- Use lazy public imports to reduce startup costs.
+- RK tracking uses mechanical normalized momenta, corrected finite-beta rigidity
+  and flight time, and a common entrance reference for curvilinear slices.
+  Global tau is relative to the straight Cartesian Z axis.
+- Global RK tracking retains only the current state and path, avoiding full
+  trajectory storage for large bunches; SR keeps its sampled trajectories.
+- Update RK tutorials, coordinate documentation and affected regression references.
+- Development/release scripts are consolidated in `tasks.py`. Local preparation
+  no longer pushes or uploads automatically, and failed checks stop the command.
 - Raised the minimum supported Python version from 3.10 to 3.11 in the Python
   package and conda recipe, matching the pandas 3 and scikit-learn 1.9 minimums.
 - Added scikit-learn and TFS-Pandas dependencies and synchronized their conda
@@ -22,6 +45,16 @@ Versioning is date based: `YY.MM.patch`.
 
 ### Fixed
 
+- Keep Genesis beam-rematching Twiss parameters real when NumPy returns complex
+  eigenpair arrays with zero imaginary parts, preventing CPBD phase errors on
+  subsequent propagation.
+- SR momentum/slope conversion, endpoint timing and restoration, trajectory
+  sampling, and normalization when radiation energy loss changes beam energy.
+- MAD second-order map integrals and singular limits; Twiss phase advances
+  between pi and 2*pi; cumulative particle propagation in `trace_z`.
+- Matcher matrix energies after acceleration and success reporting when targets
+  remain unmet; preserve metadata and loss tracking when extracting particles.
+- Release commits with staged differences and Conda source-tag version updates.
 - Kept extracted and loaded response matrices writable with pandas 3 so callers
   can continue editing and injecting response-matrix values.
 - Corrected the longitudinal-coordinate sign when importing PMD particle groups,

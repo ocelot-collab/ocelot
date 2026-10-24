@@ -35,7 +35,9 @@ mpi = ["mpi4py"]
 openpmd = ["openpmd-api", "openpmd-viewer"]
 pmd = ["openpmd-api", "openpmd-viewer", "openpmd-beamphysics>=0.16"]
 moga = ["deap"]
-dev = ["invoke", "build", "pytest", "ipykernel", "ipywidgets", "nbconvert", "sympy", "imageio", "seaborn", "plotly"]
+plotly = ["plotly"]
+tutorials = ["ocelot-collab[plotly]", "ipykernel", "ipywidgets", "nbconvert", "nbformat>=4.2", "sympy", "imageio"]
+dev = ["ocelot-collab[tutorials]", "invoke", "build", "twine", "pytest"]
 
 [tool.setuptools]
 include-package-data = false

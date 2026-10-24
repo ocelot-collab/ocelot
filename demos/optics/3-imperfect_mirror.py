@@ -9,8 +9,6 @@ __author__ = "Svitozar Serkez, Mykola Veremchuk"
 
 import logging
 import numpy as np
-import matplotlib
-matplotlib.use('qtagg')
 
 import ocelot
 from ocelot.optics.wave import generate_1d_profile, generate_gaussian_dfl, dfl_reflect_surface

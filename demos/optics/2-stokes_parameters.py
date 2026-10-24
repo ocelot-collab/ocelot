@@ -12,8 +12,6 @@ from ocelot.optics.wave import calc_stokes_dfl, generate_gaussian_dfl
 from ocelot.gui.dfl_plot import plot_stokes_3d, plot_dfl, plot_stokes_angles, plot_stokes_values
 ocelot.ocelog.setLevel(logging.DEBUG)
 
-import matplotlib
-matplotlib.use('qtagg')
 
 #%% Generation of Field and Stokes
 

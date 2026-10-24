@@ -1259,7 +1259,7 @@ class CSR(PhysProc):
 
 
 class SaferCSR(CSR):
-    """Run the CSR model but with checks on the sigma_min and the Derbenev criterion
+    r"""Run the CSR model but with checks on the sigma_min and the Derbenev criterion
     at every step.  All options applicable to CSR are also applicable to SaferCSR
     instances.
 

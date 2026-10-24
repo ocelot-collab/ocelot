@@ -15,7 +15,6 @@ from ocelot.cpbd.track import lattice_track
 from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.gui.accelerator import plot_API
 import dogleg_lattice as dl
-import seaborn as sns
 
 #logging.basicConfig(level=logging.INFO)
 
@@ -47,8 +46,17 @@ orb.response_matrix = ResponseMatrix(method=method)
 # in that case the initial Twiss is needed only for initial energy
 orb.response_matrix.calculate(tw_init=dl.tws0)
 
-ax = sns.heatmap(orb.response_matrix.df, annot=True)
+df = orb.response_matrix.df
+fig, ax = plt.subplots()
+image = ax.imshow(df.to_numpy(), aspect="auto", cmap="viridis")
+ax.set_xticks(np.arange(len(df.columns)), labels=df.columns, rotation=90)
+ax.set_yticks(np.arange(len(df.index)), labels=df.index)
+for (row, col), value in np.ndenumerate(df.to_numpy()):
+    ax.text(col, row, f"{value:.2g}", ha="center", va="center",
+            color="black" if image.norm(value) > 0.5 else "white")
+fig.colorbar(image, ax=ax)
 ax.set_title("Orbit response matrix")
+fig.tight_layout()
 plt.show()
 
 
@@ -97,8 +105,17 @@ print(rm)
 orb.response_matrix.inject(cor_list=['CIX.78.I1', 'CIY.80.I1'], bpm_list=['BPMA.85.I1', 'BPMA.87.I1'], inj_matrix=rm)
 rm_check = orb.response_matrix.extract(cor_list=['CIX.78.I1', 'CIY.80.I1'], bpm_list=['BPMA.85.I1', 'BPMA.87.I1'])
 print("is RMs equal: ", (np.equal(rm, rm_check)).all())
-ax = sns.heatmap(orb.response_matrix.df, annot=True)
+df = orb.response_matrix.df
+fig, ax = plt.subplots()
+image = ax.imshow(df.to_numpy(), aspect="auto", cmap="viridis")
+ax.set_xticks(np.arange(len(df.columns)), labels=df.columns, rotation=90)
+ax.set_yticks(np.arange(len(df.index)), labels=df.index)
+for (row, col), value in np.ndenumerate(df.to_numpy()):
+    ax.text(col, row, f"{value:.2g}", ha="center", va="center",
+            color="black" if image.norm(value) > 0.5 else "white")
+fig.colorbar(image, ax=ax)
 ax.set_title("Orbit response matrix")
+fig.tight_layout()
 plt.show()
 
 

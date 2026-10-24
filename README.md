@@ -207,7 +207,15 @@ pip install -e ".[openpmd]"  # openPMD file I/O and viewer
 pip install -e ".[pmd]"      # openPMD tools plus openpmd-beamphysics
 pip install -e ".[mpi]"      # MPI bindings (requires an MPI runtime)
 pip install -e ".[moga]"     # multi-objective optimization with DEAP
+pip install -e ".[plotly]"   # interactive 3D machine layouts
+pip install -e ".[tutorials]"  # notebook tools and optional tutorial dependencies
 ```
+
+Survey calculations and 2D plotting do not require Plotly. The `tutorials` extra
+includes Plotly, and `dev` includes the tutorial dependencies. Seaborn is not
+required: the example heatmaps use Matplotlib. For a non-editable installation,
+use `pip install "ocelot-collab[tutorials]"` (or `ocelot-collab[plotly]`).
+Specialized examples may also need the feature extras listed above.
 
 Extras can be combined, for example `pip install -e ".[dev,openpmd,moga]"`.
 The public documentation uses Docusaurus in the separate
@@ -239,6 +247,11 @@ Setting `KMP_DUPLICATE_LIB_OK=True` does not resolve the incompatible runtimes
 and can turn the initialization error into a crash.
 
 ### Tools
+
+See [development checks and release publishing](RELEASE.md) for the complete
+workflow. Checks do not prepare a release, and publishing requires explicit upload
+flags. Demo logs and execution reports are saved under `tmp/demo-check-*`.
+
 Useful tools for development can be found in the `tasks.py` script for automating common development tasks. Use `inv --list` to see available commands (requires `invoke` package automatically installed by the previous step).
 
 For example if you want to run the unit tests and demos, you can use the command:

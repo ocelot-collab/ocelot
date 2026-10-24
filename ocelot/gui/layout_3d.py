@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import numpy as np
-import plotly.graph_objects as go
 
 
 # -----------------------------
@@ -186,6 +185,16 @@ def plot_layout_3d(
     Returns:
       fig (plotly.graph_objects.Figure)
     """
+    try:
+        import plotly.graph_objects as go
+    except ModuleNotFoundError as exc:
+        if exc.name != "plotly":
+            raise
+        raise ImportError(
+            'Interactive 3D plotting requires Plotly. '
+            'Install it with: pip install "ocelot-collab[plotly]"'
+        ) from exc
+
     surveys = layout.survey()
     fig = go.Figure()
 

@@ -3065,10 +3065,10 @@ def transform_beam_twiss(beam, transform=None, s=None):
         else:
             idx = find_nearest_idx(beam.s, s)
 
-        g1x = np.matrix([[beam.beta_x[idx], beam.alpha_x[idx]],
+        g1x = np.array([[beam.beta_x[idx], beam.alpha_x[idx]],
                          [beam.alpha_x[idx], (1 + beam.alpha_x[idx]**2) / beam.beta_x[idx]]])
 
-        g1y = np.matrix([[beam.beta_y[idx], beam.alpha_y[idx]],
+        g1y = np.array([[beam.beta_y[idx], beam.alpha_y[idx]],
                          [beam.alpha_y[idx], (1 + beam.alpha_y[idx]**2) / beam.beta_y[idx]]])
         
         # temporary legacy support
@@ -3083,10 +3083,10 @@ def transform_beam_twiss(beam, transform=None, s=None):
             b2y = transform[1][0]
             a2y = transform[1][1]
 
-        g2x = np.matrix([[b2x, a2x],
+        g2x = np.array([[b2x, a2x],
                          [a2x, (1 + a2x**2) / b2x]])
 
-        g2y = np.matrix([[b2y, a2y],
+        g2y = np.array([[b2y, a2y],
                          [a2y, (1 + a2y**2) / b2y]])
 
         Mix, Mx = find_transform(g1x, g2x)
@@ -3100,15 +3100,15 @@ def transform_beam_twiss(beam, transform=None, s=None):
         alphay_new = []
 
         for i in range(beam.len()):
-            g1x = np.matrix([[beam.beta_x[i], beam.alpha_x[i]],
+            g1x = np.array([[beam.beta_x[i], beam.alpha_x[i]],
                              [beam.alpha_x[i], (1 + beam.alpha_x[i]**2) / beam.beta_x[i]]])
 
-            gx = Mix.T * g1x * Mix
+            gx = Mix.T @ g1x @ Mix
 
-            g1y = np.matrix([[beam.beta_y[i], beam.alpha_y[i]],
+            g1y = np.array([[beam.beta_y[i], beam.alpha_y[i]],
                              [beam.alpha_y[i], (1 + beam.alpha_y[i]**2) / beam.beta_y[i]]])
 
-            gy = Miy.T * g1y * Miy
+            gy = Miy.T @ g1y @ Miy
 
             # print i, gx[0,1], g1x[0,1]
 
@@ -3155,26 +3155,37 @@ def get_beam_peak(beam):
 
 def find_transform(g1, g2):
     '''
-    find transform from twiss matrix g1 to g2: x -> M x, g -> Mi.T g M
+    Find transforms between Twiss matrices g1 and g2.
+
+    Return (Mi, M) as ndarrays; use matrix multiplication with @:
+    x -> M @ x, g -> Mi.T @ g @ Mi.
     '''
+    g1, g2 = np.asarray(g1), np.asarray(g2)
     l1, u1 = np.linalg.eig(g1)
     l2, u2 = np.linalg.eig(g2)
 
-    M1 = np.matrix([[u1[0, 0], u1[1, 0]],
+    # Real symmetric Twiss matrices have real eigenpairs. Some NumPy versions
+    # return complex dtype even with zero imaginary parts; do not propagate
+    # that dtype into beam beta/alpha and subsequent real phase calculations.
+    # Keep the existing eigenpair ordering and transformation convention.
+    l1, u1 = np.real_if_close(l1), np.real_if_close(u1)
+    l2, u2 = np.real_if_close(l2), np.real_if_close(u2)
+
+    M1 = np.array([[u1[0, 0], u1[1, 0]],
                     [-u1[1, 0], u1[0, 0]]])
 
     d = np.sqrt(l1[0] / l2[0])
 
-    M2 = np.matrix([[d, 0],
+    M2 = np.array([[d, 0],
                     [0, 1.0 / d]])
 
-    M2d = np.matrix([[1. / d, 0],
+    M2d = np.array([[1. / d, 0],
                      [0, d]])
 
-    M3 = np.matrix([[u2[0, 0], -u2[1, 0]],
+    M3 = np.array([[u2[0, 0], -u2[1, 0]],
                     [u2[1, 0], u2[0, 0]]])
 
-    return np.linalg.inv(M3 * M2 * M1), M3 * M2d * M1
+    return np.linalg.inv(M3 @ M2 @ M1), M3 @ M2d @ M1
 
 
 def write_beam_file(filePath, beam, debug=0):
@@ -3576,10 +3587,10 @@ def transform_beam_file(beam_file=None, out_file='tmp.beam', s=None, transform=[
         # if 'alphax' not in beam.keys() or if 'alphay' not in beam.keys():
 
         print ('transforming')
-        g1x = np.matrix([[beam.betax[idx], beam.alphax[idx]],
+        g1x = np.array([[beam.betax[idx], beam.alphax[idx]],
                          [beam.alphax[idx], (1 + beam.alphax[idx]**2) / beam.betax[idx]]])
 
-        g1y = np.matrix([[beam.betay[idx], beam.alphay[idx]],
+        g1y = np.array([[beam.betay[idx], beam.alphay[idx]],
                          [beam.alphay[idx], (1 + beam.alphay[idx]**2) / beam.betay[idx]]])
 
         b2x = transform[0][0]
@@ -3588,10 +3599,10 @@ def transform_beam_file(beam_file=None, out_file='tmp.beam', s=None, transform=[
         b2y = transform[1][0]
         a2y = transform[1][1]
 
-        g2x = np.matrix([[b2x, a2x],
+        g2x = np.array([[b2x, a2x],
                          [a2x, (1 + a2x**2) / b2x]])
 
-        g2y = np.matrix([[b2y, a2y],
+        g2y = np.array([[b2y, a2y],
                          [a2y, (1 + a2y**2) / b2y]])
 
         Mix, Mx = find_transform(g1x, g2x)
@@ -3612,15 +3623,15 @@ def transform_beam_file(beam_file=None, out_file='tmp.beam', s=None, transform=[
         py_new = []
 
         for i in range(len(beam.z)):
-            g1x = np.matrix([[beam.betax[i], beam.alphax[i]],
+            g1x = np.array([[beam.betax[i], beam.alphax[i]],
                              [beam.alphax[i], (1 + beam.alphax[i]**2) / beam.betax[i]]])
 
-            gx = Mix.T * g1x * Mix
+            gx = Mix.T @ g1x @ Mix
 
-            g1y = np.matrix([[beam.betay[i], beam.alphay[i]],
+            g1y = np.array([[beam.betay[i], beam.alphay[i]],
                              [beam.alphay[i], (1 + beam.alphay[i]**2) / beam.betay[i]]])
 
-            gy = Miy.T * g1y * Miy
+            gy = Miy.T @ g1y @ Miy
 
             # print i, gx[0,1], g1x[0,1]
 
@@ -3631,13 +3642,13 @@ def transform_beam_file(beam_file=None, out_file='tmp.beam', s=None, transform=[
             alphay_new.append(gy[0, 1])
 
             '''
-            zx = np.matrix([beam.x[i], beam.px[i]])
-            zx = Mix * zx
+            zx = np.array([beam.x[i], beam.px[i]])
+            zx = Mix @ zx
             x_new.appned(zx[0]) 
             px_new.appned(zx[1])
 
-            zy = np.matrix([beam.y[i], beam.py[i]])
-            zy = Miy * zy
+            zy = np.array([beam.y[i], beam.py[i]])
+            zy = Miy @ zy
             y_new.appned(zy[0]) 
             py_new.appned(zy[1])
             '''
@@ -3722,15 +3733,15 @@ def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
 
     ex = 1.0
 
-    g1 = np.matrix([[beta1, alpha1],
+    g1 = np.array([[beta1, alpha1],
                     [alpha1, (1 + alpha1**2) / beta1]])
 
-    g2 = np.matrix([[beta2, alpha2],
+    g2 = np.array([[beta2, alpha2],
                     [alpha2, (1 + alpha2**2) / beta2]])
 
     Mi, M = find_transform(g1, g2)
 
-    g = Mi.T * g1 * Mi
+    g = Mi.T @ g1 @ Mi
 
     print ('g1=' + str(g1))
     print ('g2=' + str(g2))
@@ -3750,7 +3761,7 @@ def test_beam_transform(beta1=10.0, alpha1=-0.1, beta2=20, alpha2=2.2):
         x.append(x_)
         xp.append(xp_)
 
-        u = M * np.matrix([[x_, xp_]]).T
+        u = M @ np.array([[x_, xp_]]).T
 
         x3.append(u[0, 0])
         xp3.append(u[1, 0])

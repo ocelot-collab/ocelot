@@ -9,8 +9,6 @@ __author__ = "Mykola Veremchuk"
 
 import numpy as np
 
-import matplotlib
-matplotlib.use('qtagg')
 
 from ocelot.cpbd.elements import Undulator
 from ocelot.cpbd.magnetic_lattice import MagneticLattice

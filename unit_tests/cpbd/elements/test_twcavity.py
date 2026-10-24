@@ -55,13 +55,11 @@ def reference_R(z, v, energy, freq, phi_deg):
                                if g1 != g0 else z)
     body[1, 1] = body[3, 3] = p0 / p1
     body[4, 5] = -z / (g1 * g1 * g0 * b1) * (g1 + g0) / (b1 + b0)
-    # the zero-crossing limit in rf_maps carries no sin(phi) factor; that is a
-    # documented standing-wave limitation kept for bit-compatibility, so the
-    # reference reproduces it rather than the correct odd-in-phase form
+    # tau is c*delta_t, so the RF phase is phi-k*tau.
     if abs(g1 - g0) < 1e-8 * abs(g0) and abs(np.cos(phi)) < 1e-3:
-        body[4, 4] = 1. - k * z * v / (2. * m_e_GeV * g0 ** 3 * b0 ** 2)
+        body[4, 4] = 1. - k * z * v * np.sin(phi) / (2. * m_e_GeV * g0 ** 3 * b0 ** 3)
     else:
-        body[4, 4] = 1. + (k * z * b0 * v / m_e_GeV * np.sin(phi)
+        body[4, 4] = 1. + (k * z * v / m_e_GeV * np.sin(phi)
                            * (g0 * g1 * (b0 * b1 - 1.) + 1.) / (b1 * g1 * (g0 - g1) ** 2))
     body[5, 4] = k * np.sin(phi) * v / (g1 * b1 * m_e_GeV)
     body[5, 5] = g0 / g1 * b0 / b1
@@ -146,23 +144,13 @@ def test_twcavity_longitudinal_block_matches_standing_wave(phi):
     assert tw[4:6, 4:6] == pytest.approx(sw[4:6, 4:6], abs=0.)
 
 
-@pytest.mark.parametrize("phi", [0., 25., 90., 180.])
+@pytest.mark.parametrize("phi", [0., 25., 90., 180., 270.])
 def test_twcavity_tracking_linearises_to_the_r_matrix(phi):
     kwargs = dict(l=L, v=V, phi=phi, freq=FREQ)
     R = total_R(TWCavity(**kwargs), E0)
     num = jacobian(TWCavity(**kwargs), E0)
 
-    # R[5, 4] is a known, pre-existing inconsistency shared with the
-    # standing-wave cavity: the tracking map picks up an extra beta0**2 from
-    # the RF phase k*beta0*tau that the first-order matrix does not carry.
-    # It is O(1/gamma**2) and matters only at low energy. If r65 in
-    # ocelot.cpbd.rf_maps is ever made consistent, drop the special case here.
-    beta0_sq = 1. - (m_e_GeV / E0) ** 2
-    mask = np.ones((6, 6), dtype=bool)
-    mask[5, 4] = False
-    assert num[mask] == pytest.approx(R[mask], abs=1e-6)
-    # abs floor absorbs the second-order leak of the finite-difference step
-    assert num[5, 4] == pytest.approx(R[5, 4] * beta0_sq, rel=1e-6, abs=1e-6)
+    assert num == pytest.approx(R, abs=1e-6)
 
 
 @pytest.mark.parametrize("phi,expected", [(0., V), (60., 0.5 * V), (90., 0.), (180., -V)])

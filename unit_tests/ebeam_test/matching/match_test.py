@@ -1,6 +1,7 @@
 """Test of the demo file demos/ebeam/dba.py"""
 
 import numpy as np
+import pytest
 from ocelot.cpbd.beam.analysis import get_envelope
 from ocelot.cpbd.beam.core import Twiss
 from ocelot.cpbd.beam.generator import generate_parray
@@ -317,7 +318,9 @@ def test_beam_matching(lattice, lattice_inj, update_ref_values=False):
                                "alpha_x": alpha_x, "alpha_y": alpha_y}}
 
     navi = Navigator(lattice_inj)
-    res = match_beam(lattice_inj, constr, vars, p_array, navi, verbose=True, max_iter=15, method='simplex')
+    # This regression checks the result after 15 evaluations, before convergence.
+    with pytest.warns(RuntimeWarning, match="Maximum number of function evaluations has been exceeded"):
+        res = match_beam(lattice_inj, constr, vars, p_array, navi, verbose=True, max_iter=15, method='simplex')
     navi.reset_position()
     for i, q in enumerate(vars):
         q.k1 = res[i]

@@ -45,6 +45,11 @@ Versioning is date based: `YY.MM.patch`.
 
 ### Fixed
 
+- Cavity and TWCavity longitudinal maps now consistently use the time-like
+  coordinate `tau = c * (t - t_ref)`: corrected RF phase and energy-kick beta
+  factors, matched the tracking Jacobian to the linear map, and stabilized
+  first- and second-order flight-time coefficients at either zero crossing
+  and at vanishing voltage. Updated the R-matrix notebook derivation.
 - Keep Genesis beam-rematching Twiss parameters real when NumPy returns complex
   eigenpair arrays with zero imaginary parts, preventing CPBD phase errors on
   subsequent propagation.

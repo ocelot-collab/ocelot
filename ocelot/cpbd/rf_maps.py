@@ -1,181 +1,97 @@
-"""
-Longitudinal RF physics shared by the standing-wave and travelling-wave cavities.
+"""Longitudinal RF maps shared by standing- and travelling-wave cavities.
 
-Both structures ramp the reference energy linearly along the body,
-``gamma(z) = gamma0 + gamma' z``, and both damp the momentum deviation
-adiabatically, ``delta1 = delta0 * p0 / p1``. The longitudinal map therefore
-depends only on (z, V, E, freq, phi) and is identical for the two families -
-only the transverse block differs (ponderomotive focusing for the standing
-wave, edge lenses for the travelling wave). These helpers hold that common
-part so ``CavityAtom``/``CavityTM`` and ``TWCavityAtom``/``TWCavityTM`` cannot
-drift apart.
+The coordinates are tau = c * (t - t_ref) and delta = (E_particle - E) / (p*c).
+The entrance RF phase is phi - k*tau, with k = 2*pi*freq/c. Both cavity models
+hold this phase fixed while ramping each particle's energy linearly through
+the body. This is an effective cavity model, not integration through an RF
+field with evolving phase slip.
 
-Units: V in [GV], E in [GeV], z in [m], freq in [Hz], phi in [rad].
+The time-of-flight derivatives below are evaluated without differences of
+nearly equal energies. They remain finite at zero voltage and at either RF
+zero crossing. See demos/ipython_tutorials/R_matrices.ipynb for the derivation.
+
+Units: V [GV], E [GeV], z [m], freq [Hz], phi [rad].
 """
 
 import numpy as np
 
 from ocelot.common.globals import m_e_GeV, speed_of_light
 
-# Relative |dgamma| below which the general expressions lose their accuracy to
-# cancellation and the analytic small-energy-gain limits are used instead.
-SMALL_ENERGY_GAIN = 1e-8
+
+def _tof_derivatives(g0, g1):
+    """Momenta and derivatives of F = integral_0^1 du / beta(g0+(g1-g0)*u).
+
+    F = (g0+g1)/(p0+p1), where p_i = sqrt(g_i**2-1). Write
+    C = (1+g0*g1-p0*p1)/(p0+p1)**2, rationalizing the numerator to avoid
+    relativistic cancellation. Then F_i = -C/p_i and
+    F_ij = C*F/(p_i*p_j) + Kronecker_ij*C*g_i/p_i**3.
+    Both reference energies must be above the rest energy.
+    """
+    p0 = np.sqrt((g0 - 1.) * (g0 + 1.))
+    p1 = np.sqrt((g1 - 1.) * (g1 + 1.))
+    ps = p0 + p1
+    f = (g0 + g1) / ps
+    c = (1. + (g0 * g0 + g1 * g1 - 1.) / (g0 * g1 + p0 * p1)) / ps ** 2
+    f0, f1 = -c / p0, -c / p1
+    f00 = c * (f / p0 ** 2 + g0 / p0 ** 3)
+    f01 = c * f / (p0 * p1)
+    f11 = c * (f / p1 ** 2 + g1 / p1 ** 3)
+    return p0, p1, f0, f1, f00, f01, f11
 
 
 def rf_long_r_terms(z, V, E, freq, phi):
-    """
-    First-order longitudinal block of an RF structure.
+    """Return (R55 - 1, R56, R65, R66) for a cavity body or slice.
 
-    :param z: length of the (slice of the) structure [m]
-    :param V: voltage of the (slice of the) structure [GV]
-    :param E: reference energy at the entrance [GeV]
-    :param freq: RF frequency [Hz]
-    :param phi: RF phase [rad]
-    :return: (r55_cor, r56, r65, r66), where R[4, 4] = 1 + r55_cor
+    V and z are the slice voltage and length; E is its entrance total energy.
+    phi is in radians. The RF phase depends on the time-like coordinate tau,
+    without an additional beta factor.
     """
-    de = V * np.cos(phi)
+    if E == 0. and V == 0.:
+        return 0., 0., 0., 1.
     g0 = E / m_e_GeV
-    g1 = (E + de) / m_e_GeV
-
-    beta0 = 1.
-    beta1 = 1.
-    r56 = 0.
-    r55_cor = 0.
-    k = 2. * np.pi * freq / speed_of_light
-
-    if V != 0 and E != 0:
-        beta0 = np.sqrt(1. - 1. / (g0 * g0))
-        beta1 = np.sqrt(1. - 1. / (g1 * g1))
-
-        r56 = -z / (g1 * g1 * g0 * beta1) * (g1 + g0) / (beta1 + beta0)
-
-        # R55 differs from 1 because the RF kick couples back into the arrival
-        # time through the velocity dispersion of the ramp.
-        #
-        # Two known limitations are kept EXACTLY as they are so that this
-        # helper reproduces the standing-wave cavity bit for bit. Do not
-        # "tidy" either one without deciding to change Cavity's results:
-        #
-        #  1. The zero-crossing limit below has no sin(phi) factor, so it
-        #     returns the same value at phi = 90 and phi = 270 deg. R55 - 1 is
-        #     odd in the phase, so the sign is wrong at 270 deg (by 2.1e-5 for
-        #     1 m / 20 MV / 150 MeV). The correct limit is the expression
-        #     below times sin(phi).
-        #  2. The general branch is taken whenever |cos(phi)| >= 1e-3, even
-        #     for a vanishing voltage, where (g0 g1 (b0 b1 - 1) + 1) vanishes
-        #     as (g1 - g0)**2 and the ratio is a finite 0/0 that must not be
-        #     evaluated numerically. At V = 1e-12 GV it returns -1.8e-5 where
-        #     the limit is 0. Widening the guard to |dgamma| < 1e-8 |g0| fixes
-        #     it.
-        #
-        # Neither is reachable in normal on-crest or off-crest operation.
-        delta_gamma = g1 - g0
-        zero_energy_gain = abs(delta_gamma) < SMALL_ENERGY_GAIN * abs(g0)
-        if zero_energy_gain and abs(np.cos(phi)) < 1e-3:
-            r55_cor = -k * z * V / (2. * m_e_GeV * g0 ** 3 * beta0 ** 2)
-        else:
-            r55_cor = (k * z * beta0 * V / m_e_GeV * np.sin(phi)
-                       * (g0 * g1 * (beta0 * beta1 - 1.) + 1.)
-                       / (beta1 * g1 * (g0 - g1) ** 2))
-
-    r66 = g0 / g1 * beta0 / beta1
-    r65 = k * np.sin(phi) * V / (g1 * beta1 * m_e_GeV)
-    return r55_cor, r56, r65, r66
+    g1 = (E + V * np.cos(phi)) / m_e_GeV
+    p0, p1, f0, f1, _, _, _ = _tof_derivatives(g0, g1)
+    a = V / m_e_GeV * (2. * np.pi * freq / speed_of_light) * np.sin(phi)
+    return z * a * f1, z * p0 * (f0 + f1), a / p1, p0 / p1
 
 
 def rf_long_t_terms(z, V, E, freq, phi):
+    """Return (T566, T556, T555) in tau1 += T566*delta0**2
+    + T556*tau0*delta0 + T555*tau0**2.
+
+    These are polynomial coefficients: T556 includes the full mixed term,
+    and is twice the corresponding entry of a symmetric Taylor tensor.
+    Arguments use the same units and slice convention as rf_long_r_terms.
     """
-    Second-order longitudinal coefficients of an RF structure.
-
-    :param z: length of the (slice of the) structure [m]
-    :param V: voltage of the (slice of the) structure [GV]
-    :param E: reference energy at the entrance [GeV]
-    :param freq: RF frequency [Hz]
-    :param phi: RF phase [rad]
-    :return: (T566, T556, T555)
-    """
-    beta0 = 1.
-    igamma2 = 0.
-    g0 = 1e10  # large gamma if E == 0
-    if E != 0.:
-        g0 = E / m_e_GeV
-        igamma2 = 1. / (g0 * g0)
-        beta0 = np.sqrt(1. - igamma2)
-
-    # Default: drift-like second order (T566^drift, T555 = T556 = 0)
-    T566 = 1.5 * z * igamma2 / (beta0 ** 3)  # = 3L/(2 beta^3 gamma^2)
-    T556 = 0.
-    T555 = 0.
-
-    E1 = E + V * np.cos(phi)
-    if E1 <= 0.:
-        # Non-physical final energy: fall back to the drift map.
-        return T566, T556, T555
-
+    if E == 0. and V == 0.:
+        return 0., 0., 0.
+    g0 = E / m_e_GeV
+    g1 = (E + V * np.cos(phi)) / m_e_GeV
+    p0, _, _, f1, f00, f01, f11 = _tof_derivatives(g0, g1)
     k = 2. * np.pi * freq / speed_of_light
-    g1 = E1 / m_e_GeV
-    beta1 = np.sqrt(1. - 1. / (g1 * g1))
-
-    dgamma = V / m_e_GeV
-
-    if abs(g1 - g0) < SMALL_ENERGY_GAIN * abs(g0):
-        # --- Small dgamma limit (g1 ~ g0): T566 keeps its drift value ---
-        if abs(np.cos(phi)) < 1e-3:
-            # Zero-crossing cavity: analytic limits for T555 and T556
-            T556 = 1.5 * z * k * dgamma / (beta0 ** 3 * g0 ** 3)
-            T555 = 0.5 * z * k * k * dgamma * dgamma / (beta0 ** 3 * g0 ** 4)
-        # Away from the zero crossing a vanishing gradient means the structure
-        # behaves like a drift in second order, so T556 = T555 = 0.
-    else:
-        # --- General case: full RF formulas, valid for any sign of dE ---
-        T566 = (z * (beta0 ** 3 * g0 ** 3 - beta1 ** 3 * g1 ** 3)
-                / (2. * beta0 * beta1 ** 3 * g0 * (g0 - g1) * g1 ** 3))
-
-        T556 = (beta0 * k * z * dgamma * g0 * (beta1 ** 3 * g1 ** 3 + beta0 * (g0 - g1 ** 3)) * np.sin(phi) /
-                (beta1 ** 3 * g1 ** 3 * (g0 - g1) ** 2))
-
-        T555 = (beta0 ** 2 * k ** 2 * z * dgamma / 2.
-                * (dgamma * (2. * g0 * g1 ** 3 * (beta0 * beta1 ** 3 - 1.)
-                             + g0 ** 2 + 3. * g1 ** 2 - 2.) / (beta1 ** 3 * g1 ** 3 * (g0 - g1) ** 3) * np.sin(phi) ** 2
-                   - (g1 * g0 * (beta1 * beta0 - 1.) + 1.)
-                   / (beta1 * g1 * (g0 - g1) ** 2)
-                   * np.cos(phi)
-                   )
-                )
-
+    v = V / m_e_GeV
+    a = v * k * np.sin(phi)
+    T566 = 0.5 * z * p0 ** 2 * (f00 + 2. * f01 + f11)
+    T556 = z * p0 * a * (f01 + f11)
+    T555 = 0.5 * z * (a ** 2 * f11 - v * k ** 2 * np.cos(phi) * f1)
     return T566, T556, T555
 
 
 def rf_longitudinal_kick(X, X4, X5, E, V, z, freq, phi):
-    """
-    Apply the RF longitudinal map to particles whose linear (R, B) part has
-    already been applied.
+    """Apply the nonlinear longitudinal map after the linear (R, B) map.
 
-    :param X: rparticles, modified in place
-    :param X4: copy of X[4] (tau) before the linear map
-    :param X5: copy of X[5] (delta) before the linear map
-    :param E: reference energy at the entrance [GeV]
-    :param V: voltage of the (slice of the) structure [GV]
-    :param z: length of the (slice of the) structure [m]
-    :param freq: RF frequency [Hz]
-    :param phi: RF phase [rad]
-    :return: X
+    X is modified in place. X4 and X5 are copies of entrance tau and delta,
+    before application of the linear map. Other arguments follow rf_long_r_terms.
     """
-    beta0 = 1.
-    if E != 0.:
-        beta0 = np.sqrt(1. - (m_e_GeV / E) ** 2)
-
+    if E == 0. and V == 0.:
+        return X
     E1 = E + V * np.cos(phi)
+    pc0 = np.sqrt((E - m_e_GeV) * (E + m_e_GeV))
+    pc1 = np.sqrt((E1 - m_e_GeV) * (E1 + m_e_GeV))
+    phase_shift = X4 * (2. * np.pi * freq / speed_of_light)
+    # Stable form of cos(phi - phase_shift) - cos(phi), including tiny tau.
+    cos_difference = 2. * np.sin(phi - phase_shift / 2.) * np.sin(phase_shift / 2.)
+    X[5] = X5 * pc0 / pc1 + V / pc1 * cos_difference
     T566, T556, T555 = rf_long_t_terms(z, V, E, freq, phi)
-
-    if E1 > 0.:
-        k = 2. * np.pi * freq / speed_of_light
-        g1 = E1 / m_e_GeV
-        beta1 = np.sqrt(1. - 1. / (g1 * g1))
-
-        # delta1 = E0 b0 / (E1 b1) delta0 + V b0 / (E1 b1) [cos(phi - k b0 tau0) - cos phi]
-        X[5] = (X5 * E * beta0 / (E1 * beta1)
-                + V * beta0 / (E1 * beta1) * (np.cos(-X4 * beta0 * k + phi) - np.cos(phi)))
-
     X[4] += T566 * X5 * X5 + T556 * X4 * X5 + T555 * X4 * X4
     return X

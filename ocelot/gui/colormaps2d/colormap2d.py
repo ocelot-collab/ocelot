@@ -8,7 +8,7 @@ https://github.com/MMesch/cmap_builder
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.ndimage.interpolation import map_coordinates
+from scipy.ndimage import map_coordinates
 
 def data2d_to_rgb(data, cmap2d='brightwheel', huenorm=None, huevmin=None,
                   huevmax=None, fill_value=(1., 1., 1.),

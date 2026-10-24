@@ -14,8 +14,7 @@ import functools
 _logger = logging.getLogger(__name__)
 
 # my_viridis = deepcopy(matplotlib.pyplot.get_cmap('viridis')) 
-my_viridis = copy(matplotlib.colormaps["viridis"])
-my_viridis.set_under('w')
+my_viridis = matplotlib.colormaps["viridis"].with_extremes(under='w')
 def_cmap = my_viridis
 
 #serval colormap (diverging

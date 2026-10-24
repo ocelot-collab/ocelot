@@ -290,7 +290,8 @@ def obj2dict(object, unpack=None):
 
 
 def json_read(filename):
-    return json.load(open(filename))
+    with open(filename) as stream:
+        return json.load(stream)
     
     
 def json_save(data, filename):

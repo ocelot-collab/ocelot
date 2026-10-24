@@ -14,30 +14,28 @@ def length_array(xyz_array):
 
 def read_flat_file(field_file, sCom = "#"):
     # File must have 3 cols, else will be error
-    f = open(field_file, 'r')
-    f.readline() #1st line: just pass
-    x_start = float(f.readline().split(sCom, 2)[1]) #2nd line: initial X position [m]; it will not actually be used
-    x_step = float(f.readline().split(sCom, 2)[1]) #3rd line: step vs X [m]
-    x_np = int(f.readline().split(sCom, 2)[1]) #4th line: number of points vs X
-    y_start = float(f.readline().split(sCom, 2)[1]) #5th line: initial Y position [m]; it will not actually be used
-    y_step = float(f.readline().split(sCom, 2)[1]) #6th line: step vs Y [m]
-    y_np = int(f.readline().split(sCom, 2)[1]) #7th line: number of points vs Y
-    z_start = float(f.readline().split(sCom, 2)[1]) #8th line: initial Z position [m]; it will not actually be used
-    z_step = float(f.readline().split(sCom, 2)[1]) #9th line: step vs Z [m]
-    z_np = int(f.readline().split(sCom, 2)[1]) #10th line: number of points vs Z
-    tot_np = x_np*y_np*z_np
+    with open(field_file, 'r') as f:
+        f.readline() #1st line: just pass
+        x_start = float(f.readline().split(sCom, 2)[1]) #2nd line: initial X position [m]; it will not actually be used
+        x_step = float(f.readline().split(sCom, 2)[1]) #3rd line: step vs X [m]
+        x_np = int(f.readline().split(sCom, 2)[1]) #4th line: number of points vs X
+        y_start = float(f.readline().split(sCom, 2)[1]) #5th line: initial Y position [m]; it will not actually be used
+        y_step = float(f.readline().split(sCom, 2)[1]) #6th line: step vs Y [m]
+        y_np = int(f.readline().split(sCom, 2)[1]) #7th line: number of points vs Y
+        z_start = float(f.readline().split(sCom, 2)[1]) #8th line: initial Z position [m]; it will not actually be used
+        z_step = float(f.readline().split(sCom, 2)[1]) #9th line: step vs Z [m]
+        z_np = int(f.readline().split(sCom, 2)[1]) #10th line: number of points vs Z
+        tot_np = x_np*y_np*z_np
 
-    Bx_array = np.zeros([tot_np])
-    By_array = np.zeros([tot_np])
-    Bz_array = np.zeros([tot_np])
+        Bx_array = np.zeros([tot_np])
+        By_array = np.zeros([tot_np])
+        Bz_array = np.zeros([tot_np])
 
-    for i in range(tot_np):
-        curLineParts = f.readline().split('\t')
-        Bx_array[i] = float(curLineParts[0])
-        By_array[i] = float(curLineParts[1])
-        Bz_array[i] = float(curLineParts[2])
-
-    f.close()
+        for i in range(tot_np):
+            curLineParts = f.readline().split('\t')
+            Bx_array[i] = float(curLineParts[0])
+            By_array[i] = float(curLineParts[1])
+            Bz_array[i] = float(curLineParts[2])
 
     x_array = np.linspace(x_start, x_start + x_step*x_np, num=x_np, endpoint=False)
     y_array = np.linspace(y_start, y_start + y_step*y_np, num=y_np, endpoint=False)

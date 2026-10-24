@@ -831,7 +831,7 @@ def plot_wigner_z(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,
         power_scale = W.s
         p_label_txt = 's [m]'
         spec_scale = W.theta()
-        f_label_txt = '$\{theta}$ [rad]'
+        f_label_txt = r'$\{theta}$ [rad]'
     
     elif isinstance(W, WignerDistributionLongitudinal): #legacy support
         if x_units == 'fs':
@@ -841,7 +841,7 @@ def plot_wigner_z(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,
                 group_delay = -group_delay / speed_of_light * 1e15
         else:
             power_scale = W.s * 1e6
-            p_label_txt = 's [$\mu$m]'
+            p_label_txt = r's [$\mu$m]'
             if plot_moments:
                 group_delay = group_delay * 1e6
 
@@ -852,7 +852,7 @@ def plot_wigner_z(wig_or_out, z=np.inf, x_units='um', y_units='ev', x_lim=(None,
                 inst_freq = inst_freq
         else:
             spec_scale = W.freq_lamd
-            f_label_txt = '$\lambda$ [nm]'
+            f_label_txt = r'$\lambda$ [nm]'
             if plot_moments:
                 inst_freq = h_eV_s * speed_of_light * 1e9 / inst_freq
 
@@ -1534,7 +1534,7 @@ def plot_stokes_values(S, fig=None, d_pol=0, norm=0, showfig=True, gw=1, directi
     else:
         mult = 1
         plt.ylabel('$S_0$ [W]')
-    plt.xlabel('s [$\mu$m]')
+    plt.xlabel(r's [$\mu$m]')
 
     kwargs = {'linewidth': 2}
 
@@ -1637,8 +1637,8 @@ def plot_stokes_angles(S, fig=None, showfig=True, direction='z', plot_func='scat
     # else:
     #     plt.step(sc, Scp.chi(), linewidth=2, where='mid', color='g')
     #     plt.step(sc, Scp.psi(), linewidth=2, where='mid', color='b')
-    plt.legend(['$\chi$', '$\psi$'])  # ,loc='best')
-    plt.xlabel('s [$\mu$m]')
+    plt.legend([r'$\chi$', r'$\psi$'])  # ,loc='best')
+    plt.xlabel(r's [$\mu$m]')
     plt.ylabel('[rad]')
     plt.ylim([-np.pi / 2, np.pi / 2])
     plt.xlim([np.amin(sc), np.amax(sc)])
@@ -1743,16 +1743,16 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
             imshow2d(np.array([ph, I]), ax=cbax1, cmap2d=cmap_lin, huevmin=-1, huevmax=1, lightvmin=0, lightvmax=1,
                      extent=[0, 1, np.pi / 2, -np.pi / 2], aspect='auto')
             plt.yticks(np.linspace(np.pi / 2, -np.pi / 2, 3),
-                       ['$-\pi/2$', '0', '$\pi/2$'])  # ['0','$\pi/2$','$\pi$','$3\pi/2$','$2\pi$']
+                       [r'$-\pi/2$', '0', r'$\pi/2$'])  # ['0','$\pi/2$','$\pi$','$3\pi/2$','$2\pi$']
             cbax1.yaxis.set_label_position("right")
             cbax1.yaxis.tick_right()
-            cbax1.set_ylabel('$\psi$')
+            cbax1.set_ylabel(r'$\psi$')
             if normalization == 's0':
-                cbax1.set_xlabel('$ \sqrt{S_1^2+S_2^2} / S_0$')
+                cbax1.set_xlabel(r'$ \sqrt{S_1^2+S_2^2} / S_0$')
             elif normalization == 's0_max':
-                cbax1.set_xlabel('$ \sqrt{S_1^2+S_2^2} / max(S_0)$')
+                cbax1.set_xlabel(r'$ \sqrt{S_1^2+S_2^2} / max(S_0)$')
             else:
-                cbax1.set_xlabel('$ \sqrt{S_1^2+S_2^2}$')
+                cbax1.set_xlabel(r'$ \sqrt{S_1^2+S_2^2}$')
             cbax1.tick_params(axis='both', which='major', labelsize=10)
 
         else:
@@ -1761,16 +1761,16 @@ def plot_stokes_3d(stk_params, x_plane='max_slice', y_plane='max_slice', z_plane
             imshow2d(np.array([ph, I]), ax=cbax1, cmap2d=cmap_lin, huevmin=-1, huevmax=1, lightvmin=0, lightvmax=1,
                      extent=[np.pi / 2, -np.pi / 2, 1, 0], aspect='auto')
             plt.xticks(np.linspace(-np.pi / 2, np.pi / 2, 3),
-                       ['$-\pi/2$', '0', '$\pi/2$'])  # ['0','$\pi/2$','$\pi$','$3\pi/2$','$2\pi$']
+                       [r'$-\pi/2$', '0', r'$\pi/2$'])  # ['0','$\pi/2$','$\pi$','$3\pi/2$','$2\pi$']
             cbax1.yaxis.set_label_position("right")
             cbax1.yaxis.tick_right()
-            cbax1.set_xlabel('$\psi$')
+            cbax1.set_xlabel(r'$\psi$')
             if normalization == 's0':
-                cbax1.set_ylabel('$ \sqrt{S_1^2+S_2^2} / S_0$')
+                cbax1.set_ylabel(r'$ \sqrt{S_1^2+S_2^2} / S_0$')
             elif normalization == 's0_max':
-                cbax1.set_ylabel('$ \sqrt{S_1^2+S_2^2} / max(S_0)$')
+                cbax1.set_ylabel(r'$ \sqrt{S_1^2+S_2^2} / max(S_0)$')
             else:
-                cbax1.set_ylabel('$ \sqrt{S_1^2+S_2^2}$')
+                cbax1.set_ylabel(r'$ \sqrt{S_1^2+S_2^2}$')
             cbax1.tick_params(axis='both', which='major', labelsize=10)
 
         cbax2 = fig.add_axes([0.91, 0.11, 0.04, 0.321])  # This is the position for the colorbar [x, y, width, height]
@@ -1901,12 +1901,12 @@ def plot_stokes_sbfg_lin(ax, stk_params, slice, plane, cmap2d='brightwheel', plo
                           origin='lower', **kwargs)
     if plot_title is not None:
         ax.set_title(plot_title, fontsize=15)
-    ax.set_xlabel(x_label + ' [$\mu$m]')
-    ax.set_ylabel(y_label + ' [$\mu$m]')
+    ax.set_xlabel(x_label + r' [$\mu$m]')
+    ax.set_ylabel(y_label + r' [$\mu$m]')
     if text_present:
         # print(plane, slice_pos*1e6)
-        dic = {'proj': 'projection', 'max_slice': 'slice at {:}={:.3f} $\mu$m'}
-        ax.text(0.97, 0.97, dic.get(slice, 'slice at {:}={:.3f} $\mu$m (max int)').format(plane, slice_pos * 1e6),
+        dic = {'proj': 'projection', 'max_slice': r'slice at {:}={:.3f} $\mu$m'}
+        ax.text(0.97, 0.97, dic.get(slice, r'slice at {:}={:.3f} $\mu$m (max int)').format(plane, slice_pos * 1e6),
                 horizontalalignment='right',
                 verticalalignment='top', transform=ax.transAxes, fontsize=10)
     if result:
@@ -2007,11 +2007,11 @@ def plot_stokes_sbfg_circ(ax, stk_params, slice, plane, cmap='seismic', plot_tit
                              extent=extent, origin='lower', **kwargs)
     if plot_title is not None:
         ax.set_title(plot_title, fontsize=15)
-    ax.set_xlabel(x_label + ' [$\mu$m]')
-    ax.set_ylabel(y_label + ' [$\mu$m]')
+    ax.set_xlabel(x_label + r' [$\mu$m]')
+    ax.set_ylabel(y_label + r' [$\mu$m]')
     if text_present:
-        dic = {'proj': 'projection', 'max_slice': 'slice at {:}={:.3f} $\mu$m (max int)'}
-        ax.text(0.97, 0.97, dic.get(slice, 'slice at {:}={:.3f} $\mu$m').format(plane, slice_pos * 1e6),
+        dic = {'proj': 'projection', 'max_slice': r'slice at {:}={:.3f} $\mu$m (max int)'}
+        ax.text(0.97, 0.97, dic.get(slice, r'slice at {:}={:.3f} $\mu$m').format(plane, slice_pos * 1e6),
                 horizontalalignment='right',
                 verticalalignment='top', transform=ax.transAxes, fontsize=10)
     if result:

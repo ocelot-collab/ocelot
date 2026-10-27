@@ -10,7 +10,9 @@ Versioning is date based: `YY.MM.patch`.
 ### Added
 
 - Analytical XYQuadrupole transfer maps and survey support, with CSR reference
-  trajectories and physics regression tests.
+  trajectories and physics regression tests. Entrance directions `x_angle`
+  and `y_angle` extend the map, arrival time, survey and CSR field geometry
+  according to the updated paper; both default to zero for compatibility.
 - ExactDriftTM for finite-angle, finite-energy drift tracking.
 - Matcher phase-advance targets and explicit lattice-occurrence resolution for
   repeated element instances.

@@ -21,8 +21,8 @@ from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 
-def _integrated_map(k1, a, b, length, energy, start=0.0):
-    """Integrate Eq. (29), with tau=-sigma, along the paraxial reference."""
+def _integrated_map(k1, a, b, length, energy, start=0.0, x_angle=0.0, y_angle=0.0):
+    """Integrate Eq. (28), with tau=-sigma, along the paraxial reference."""
     igamma2 = (m_e_GeV / energy)**2 if energy else 0.0
     beta2 = 1.0 - igamma2
     beta = np.sqrt(beta2)
@@ -38,7 +38,7 @@ def _integrated_map(k1, a, b, length, energy, start=0.0):
         return np.r_[px, -k1 * x, py, k1 * y,
                      (generator @ state[4:].reshape(6, 6)).ravel()]
 
-    initial = np.r_[a, 0.0, b, 0.0, np.eye(6).ravel()]
+    initial = np.r_[a, x_angle, b, y_angle, np.eye(6).ravel()]
     if start:
         before = solve_ivp(rhs, (0, start), initial, method="DOP853", rtol=2e-13, atol=2e-15)
         assert before.success
@@ -51,16 +51,20 @@ def _integrated_map(k1, a, b, length, energy, start=0.0):
 
 @pytest.mark.parametrize("k1", [-2.0, -0.1, 0.0, 0.1, 2.0])
 @pytest.mark.parametrize("energy", [0.0, 0.001, 0.13])
-def test_map_matches_independent_hamilton_equations(k1, energy):
-    element = XYQuadrupole(l=1.2, k1=k1, x_offs=0.02, y_offs=-0.03)
-    expected = _integrated_map(k1, element.x_offs, element.y_offs, element.l, energy)
+@pytest.mark.parametrize("angles", [(0.0, 0.0), (0.013, -0.017), (0.0, 0.02)])
+def test_map_matches_independent_hamilton_equations(k1, energy, angles):
+    element = XYQuadrupole(l=1.2, k1=k1, x_offs=0.02, y_offs=-0.03,
+                          x_angle=angles[0], y_angle=angles[1])
+    expected = _integrated_map(k1, element.x_offs, element.y_offs, element.l, energy,
+                               x_angle=angles[0], y_angle=angles[1])
     np.testing.assert_allclose(element.R(energy)[0], expected, rtol=3e-12, atol=3e-14)
 
 
 @pytest.mark.parametrize("k1", [-1.3, 0.0, 1.3])
 @pytest.mark.parametrize("tilt", [0.0, 0.37])
 def test_map_is_symplectic_in_ocelot_coordinates(k1, tilt):
-    element = XYQuadrupole(l=0.9, k1=k1, x_offs=0.02, y_offs=0.03, tilt=tilt)
+    element = XYQuadrupole(l=0.9, k1=k1, x_offs=0.02, y_offs=0.03, tilt=tilt,
+                          x_angle=-0.014, y_angle=0.023)
     r = element.R(0.002)[0]
     j = np.kron(np.eye(3), [[0.0, 1.0], [-1.0, 0.0]])
     j[4:, 4:] *= -1  # Ocelot uses tau=-sigma and the same energy deviation.
@@ -77,7 +81,7 @@ def test_zero_offsets_reduce_to_ordinary_quadrupole(k1, energy):
 
 
 def test_zero_gradient_is_drift_and_zero_length_is_identity():
-    xy = XYQuadrupole(l=0.7, x_offs=0.02, y_offs=0.03)
+    xy = XYQuadrupole(l=0.7, x_offs=0.02, y_offs=0.03, x_angle=0.03, y_angle=-0.02)
     np.testing.assert_allclose(xy.R(0.001), Drift(l=xy.l).R(0.001), atol=1e-15)
     xy.l, xy.k1 = 0.0, 3.0
     np.testing.assert_array_equal(xy.R(0.001)[0], np.eye(6))
@@ -116,9 +120,10 @@ def test_arrival_term_matches_quadrature_including_weak_gradient(k1):
 @pytest.mark.parametrize("k1", [-1.2, 1.2])
 @pytest.mark.parametrize("first_order_only", [False, True])
 def test_interior_slice_matches_hamilton_equations(k1, first_order_only):
-    xy = XYQuadrupole(l=1.3, k1=k1, x_offs=0.02, y_offs=-0.03)
+    xy = XYQuadrupole(l=1.3, k1=k1, x_offs=0.02, y_offs=-0.03, x_angle=-0.012, y_angle=0.018)
     tm = xy.get_section_tms(0.4, start_l=0.6, first_order_only=first_order_only)[0]
-    expected = _integrated_map(k1, xy.x_offs, xy.y_offs, 0.4, 0.002, start=0.6)
+    expected = _integrated_map(k1, xy.x_offs, xy.y_offs, 0.4, 0.002, start=0.6,
+                               x_angle=xy.x_angle, y_angle=xy.y_angle)
     np.testing.assert_allclose(tm.get_params(0.002).get_rotated_R(), expected, rtol=3e-12, atol=3e-14)
     assert tm.delta_length == 0.4
     assert tm.get_delta_e() == 0.0
@@ -128,6 +133,7 @@ def test_interior_slice_matches_hamilton_equations(k1, first_order_only):
 @pytest.mark.parametrize("aligned", [False, True])
 def test_slice_composition_preserves_full_affine_map(tilt, aligned):
     xy = XYQuadrupole(l=1.1, k1=1.3, x_offs=0.02, y_offs=-0.03, tilt=tilt,
+                      x_angle=0.01, y_angle=-0.015,
                       dx=1e-3 if aligned else 0.0, dy=-2e-3 if aligned else 0.0)
     r, b = np.eye(6), np.zeros((6, 1))
     positions = [0.0, 0.07, 0.31, 0.72, xy.l]
@@ -150,7 +156,8 @@ def test_tilt_and_alignment_translate_the_rolled_map():
 
 @pytest.mark.parametrize("steps", [1, 7, 50])
 def test_navigator_particle_array_tracking_is_independent_of_step_size(steps):
-    xy = XYQuadrupole(l=1.1, k1=-1.2, x_offs=0.02, y_offs=-0.03, tilt=0.27)
+    xy = XYQuadrupole(l=1.1, k1=-1.2, x_offs=0.02, y_offs=-0.03, tilt=0.27,
+                      x_angle=-0.01, y_angle=0.02)
     lattice = MagneticLattice([xy], method={"global": SecondTM})
     particles = ParticleArray(n=8)
     particles.E = 0.13
@@ -200,7 +207,8 @@ def test_particle_trace_and_twiss_use_the_same_reference_at_each_position():
     np.testing.assert_allclose([end.Dx, end.Dxp, end.Dy, end.Dyp], r[:4, 5], atol=2e-15)
 
 
-@pytest.mark.parametrize("name,value", [("k1", -0.7), ("x_offs", 0.04), ("y_offs", 0.05), ("l", 0.6), ("tilt", 0.2)])
+@pytest.mark.parametrize("name,value", [("k1", -0.7), ("x_offs", 0.04), ("y_offs", 0.05),
+                                       ("x_angle", 0.01), ("y_angle", -0.02), ("l", 0.6), ("tilt", 0.2)])
 def test_parameter_changes_invalidate_maps(name, value):
     xy = XYQuadrupole(l=0.9, k1=1.0, x_offs=0.02, y_offs=-0.03)
     before = xy.R(0.13)[0].copy()
@@ -224,14 +232,16 @@ def test_map_cache_depends_on_energy_and_second_order_is_not_fabricated():
 
 
 @pytest.mark.parametrize("k1", [-1.2, 1.2])
-def test_planar_survey_matches_integrated_varying_curvature(k1):
-    xy = XYQuadrupole(l=1.1, k1=k1, x_offs=0.02)
+@pytest.mark.parametrize("x_angle", [0.0, 0.015])
+def test_planar_survey_matches_integrated_varying_curvature(k1, x_angle):
+    xy = XYQuadrupole(l=1.1, k1=k1, x_offs=0.02, x_angle=x_angle)
     end, frame_end, mid, frame_mid = xy.get_transfer_geometry()
 
     def angle(s):
         w = np.sqrt(abs(k1))
         sine = np.sin(w*s) if k1 > 0 else np.sinh(w*s)
-        return k1 * xy.x_offs * sine / w
+        cosine = np.cos(w*s) if k1 > 0 else np.cosh(w*s)
+        return k1 * xy.x_offs * sine / w + x_angle * (1 - cosine)
 
     for length, position, frame in [(xy.l, end, frame_end), (xy.l/2, mid, frame_mid)]:
         expected_position = [quad(lambda s: -np.sin(angle(s)), 0, length)[0], 0,
@@ -245,7 +255,7 @@ def test_planar_survey_matches_integrated_varying_curvature(k1):
 def test_survey_preserves_bishop_frame_and_rolls_the_reference():
     from ocelot.common.geometry import get_tilt_matrix
 
-    xy = XYQuadrupole(l=1.3, k1=1.2, x_offs=0.02, y_offs=-0.03)
+    xy = XYQuadrupole(l=1.3, k1=1.2, x_offs=0.02, y_offs=-0.03, x_angle=0.01, y_angle=-0.02)
     end, frame_end, mid, frame_mid = xy.get_transfer_geometry()
     for frame in (frame_end, frame_mid):
         np.testing.assert_allclose(frame.T @ frame, np.eye(3), atol=2e-12)
@@ -261,7 +271,7 @@ def test_survey_preserves_bishop_frame_and_rolls_the_reference():
 
 
 @pytest.mark.parametrize("kwargs", [{"l": 0.0, "k1": 1.0, "x_offs": 0.02},
-                                    {"l": 1.0, "k1": 0.0, "x_offs": 0.02},
+                                    {"l": 1.0, "k1": 0.0, "x_offs": 0.02, "x_angle": 0.1, "y_angle": 0.05},
                                     {"l": 1.0, "k1": 1.0}])
 def test_degenerate_survey_is_straight(kwargs):
     xy = XYQuadrupole(**kwargs)
@@ -279,3 +289,93 @@ def test_slice_boundaries_and_overlong_final_request():
     for start, length in [(-0.1, 0.2), (1.1, 0.2), (0.1, -0.2)]:
         with pytest.raises(ValueError, match="slice requires"):
             xy.get_section_tms(length, start_l=start)
+
+
+@pytest.mark.parametrize("k", [-1., -.100001, -.099999, -1e-14, 1e-14, .099999, .100001, 1.])
+@pytest.mark.parametrize("offset,angle", [(0.02, -0.013), (0.0, 0.02)])
+def test_angle_dispersion_and_timing_match_green_function_quadrature(k, offset, angle):
+    """Independent convolution avoids cancellation even for k approaching zero."""
+    xy = XYQuadrupole(l=1., k1=k, x_offs=offset, x_angle=angle)
+    w = np.sqrt(abs(k))
+
+    def c(z):
+        return np.cos(w*z) if k > 0 else np.cosh(w*z)
+
+    def s(z):
+        return np.sin(w*z)/w if k > 0 else np.sinh(w*z)/w
+
+    def h(z):
+        return k * (offset*c(z) + angle*s(z))
+
+    def dispersion(z):
+        return quad(lambda u: s(z-u)*h(u), 0, z, epsabs=1e-45, epsrel=2e-13)[0]
+
+    timing = quad(lambda z: h(z)*dispersion(z), 0, xy.l, epsabs=1e-45, epsrel=2e-13)[0]
+    r = xy.R(0)[0]
+    assert r[0, 5] == pytest.approx(dispersion(xy.l), rel=3e-12, abs=0)
+    assert r[4, 5] == pytest.approx(timing, rel=3e-12, abs=0)
+    np.testing.assert_array_equal(r[[2, 3], 5], 0.)
+
+
+@pytest.mark.parametrize("k1", [-1.2, 1.2])
+def test_survey_matches_magnet_frame_integration_with_angled_entrance(k1):
+    """Appendix B's initial frame and entrance-relative output, in both planes."""
+    from scipy.spatial.transform import Rotation
+    from ocelot.common.geometry import get_tilt_matrix
+
+    # Zero offsets ensure an angle alone cannot accidentally take the straight shortcut.
+    xy = XYQuadrupole(l=0.8, k1=k1, x_angle=.023, y_angle=-.017, tilt=.31)
+    transverse = np.hypot(xy.x_angle, xy.y_angle)
+    axis = np.array([-xy.y_angle, xy.x_angle, 0.]) / transverse
+    entrance = Rotation.from_rotvec(np.arcsin(transverse)*axis).as_matrix()
+
+    def rhs(s, state):
+        x, px, y, py = state[:4]
+        frame = state[7:].reshape(3, 3)
+        hx, hy = k1*x, -k1*y
+        ex, ey, tangent = frame.T
+        frame_prime = np.column_stack((hx*tangent, hy*tangent, -hx*ex-hy*ey))
+        return np.r_[px, -k1*x, py, k1*y, tangent, frame_prime.ravel()]
+
+    initial = np.r_[xy.x_offs, xy.x_angle, xy.y_offs, xy.y_angle,
+                     xy.x_offs, xy.y_offs, 0., entrance.ravel()]
+    integrated = solve_ivp(rhs, (0, xy.l), initial, t_eval=[xy.l/2, xy.l],
+                           method="DOP853", rtol=2e-13, atol=2e-15)
+    assert integrated.success
+    end, frame_end, mid, frame_mid = xy.get_transfer_geometry()
+    roll = get_tilt_matrix(xy.tilt)
+    for i, (position, frame) in enumerate([(mid, frame_mid), (end, frame_end)]):
+        displacement = integrated.y[4:7, i] - initial[4:7]
+        magnet_frame = integrated.y[7:, i].reshape(3, 3)
+        np.testing.assert_allclose(position, roll @ entrance.T @ displacement, atol=3e-13)
+        np.testing.assert_allclose(frame, roll @ entrance.T @ magnet_frame @ roll.T, atol=3e-13)
+    assert np.linalg.norm(end[:2]) > 1e-4
+
+
+def test_angles_survive_lattice_serialization_and_old_positional_constructor():
+    from ocelot.cpbd.latticeIO import LatticeIO
+
+    xy = XYQuadrupole(.8, .02, -.03, 1.2, .3, "Q", TransferMap, x_angle=.012, y_angle=-.017)
+    xy.name = "xyq"
+    namespace = {"XYQuadrupole": XYQuadrupole}
+    exec(LatticeIO.element_def_string(xy), namespace)
+    restored = namespace["xyq"]
+    for name in ("l", "k1", "x_offs", "y_offs", "x_angle", "y_angle", "tilt", "id"):
+        assert getattr(restored, name) == getattr(xy, name)
+    np.testing.assert_array_equal(restored.R(.13), xy.R(.13))
+
+
+@pytest.mark.parametrize("angles", [(1., 0.), (.8, .8), (np.nan, 0.), (0., np.inf)])
+def test_invalid_entrance_tangent_is_rejected(angles):
+    with pytest.raises(ValueError, match="x_angle.*y_angle"):
+        XYQuadrupole(x_angle=angles[0], y_angle=angles[1])
+
+
+def test_invalid_angle_after_mutation_is_rejected():
+    xy = XYQuadrupole(l=1, k1=1)
+    xy.R(.13)
+    xy.x_angle = 1.
+    with pytest.raises(ValueError, match="x_angle.*y_angle"):
+        xy.R(.13)
+    with pytest.raises(ValueError, match="x_angle.*y_angle"):
+        xy.get_transfer_geometry()

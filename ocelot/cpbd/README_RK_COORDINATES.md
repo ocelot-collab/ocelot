@@ -91,7 +91,11 @@ interfaces retain N samples over their requested Cartesian interval.
 - Without RK it samples the same varying-curvature analytical reference as the
   XYQuadrupole survey; it no longer falls through to a straight line.
 - With RK it follows the actual ideal quadrupole field, including entrance
-  offsets and roll, using the specified CSR energy.
+  offsets, entrance directions (`x_angle`, `y_angle`) and roll, using the
+  specified CSR energy. Positions and all three field components are
+  transformed with the minimal-rotation entrance frame from Appendix B of
+  the updated paper. The analytical branch includes these angles in its
+  varying curvatures as well.
 
 The segment is joined to the preceding reference position and transported axes.
 CSR's existing `(s,X,Y,Z,tx,ty,tz)` format and wake calculation are retained.

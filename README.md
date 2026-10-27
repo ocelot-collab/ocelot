@@ -139,7 +139,8 @@ Ocelot's core functionality is organized into key modules:
   - `Cavity`, `TDCavity`, `Undulator`, `Marker`, `Monitor`, `Aperture`
 
 `XYQuadrupole` provides first-order transport and survey about a reference
-trajectory entering a quadrupole with offsets in both transverse planes.
+trajectory entering a quadrupole with offsets and entrance angles in both
+transverse planes (`x_offs`, `y_offs`, `x_angle`, `y_angle`).
 Its weak-curvature model retains the varying reference curvature, and slices
 preserve that same trajectory. See
 [XYQuadrupole physics and slices](./ocelot/cpbd/elements/README.md#xyquadrupole-physics-and-slices)

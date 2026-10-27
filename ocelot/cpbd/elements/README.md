@@ -550,33 +550,54 @@ The columns below deliberately separate:
 
 `XYQuadrupole` implements the analytical linear model from S. Tomin,
 *Beam Transport Through a Quadrupole with Offsets in Both Transverse Planes*,
-revised v4, Eqs. (37), (41), (43)-(44) and Appendices C-D.
+revised v4 (October 2026 update), Eqs. (37)-(42) and Appendices A-B.
 
 - `x_offs=a` and `y_offs=b` are reference entrance offsets from the magnetic
-  axis, measured in the unrolled magnet frame, with parallel entry.
+  axis, measured in the unrolled magnet frame. `x_angle=theta_x0` and
+  `y_angle=theta_y0` are the entrance unit-tangent components `dX/ds` and
+  `dY/ds`, approximately angles in radians. They are not `dX/dZ`, `dY/dZ`.
+  Both default to zero, preserving parallel entry and existing lattices.
 - `l` is reference arc length. Maps act between planes normal to that
   reference, not the fixed laboratory magnet faces.
 - Particles are deviations from the moving reference. The offsets generate
   dispersion, not an affine orbit kick; separate `dx`/`dy` translations still
   use `B = (I - R_rotated) d`.
-- The reference curvatures vary as `hx(s)=k1*a*Cx(s)` and
-  `hy(s)=-k1*b*Cy(s)`. The transverse focusing remains the ordinary quadrupole
+- The reference curvatures vary as `hx(s)=k1*(a*Cx(s)+theta_x0*Sx(s))` and
+  `hy(s)=-k1*(b*Cy(s)+theta_y0*Sy(s))`. The transverse focusing remains the ordinary quadrupole
   focusing; curvature-squared focusing is omitted. The geometric terms
-  quadratic in offsets in `R56` are retained, as required by the Hamiltonian.
+  quadratic in offsets and entrance angles in `R56`, including their cross
+  terms, are retained as required by the Hamiltonian.
 - The fifth coordinate is Ocelot's `tau=-sigma`; the paper's longitudinal
   row changes sign. `energy=0` selects the usual ultrarelativistic convention.
-- The weak-gradient arrival integral uses the regular Appendix C series.
+- Dispersion and arrival integrals use regular power series at weak gradient
+  to avoid cancellation in `S-L*C` and the angle-squared timing term.
 - `get_section_tms(delta_l, start_l)` builds
   `R(start_l + delta_l) @ inv(R(start_l))` for both tracking and optics.
   Reusing the entrance map at every slice would reset the reference and give
   step-dependent dispersion and timing.
 - `get_transfer_geometry()` integrates the Bishop position/frame equations
   with the same varying curvatures, returning midpoint and exit geometry.
+  It returns `d=W_in.T @ (r-r_in)` and `Q=W_in.T @ W` as in Appendix B.
+  Thus the initial frame is identity in these incoming-reference coordinates;
+  the entrance rotation must not be applied a second time. `tilt` rolls these
+  relative positions and frames about the incoming tangent.
   SciPy is loaded only when a curved survey is requested.
+- CSR's analytical trajectory uses these same curvatures. Its RK trajectory
+  instead follows the ideal magnet field, transformed with the paper's
+  minimal-rotation entrance frame. This includes the field's longitudinal
+  component in incoming-reference coordinates for angled entry.
+
+For example, `XYQuadrupole(l=1, k1=1, x_offs=0.02, y_offs=0.03,
+x_angle=0.01, y_angle=-0.005)` has both entrance offsets and directions.
+See `demos/ebeam/xyquadrupole.py` for a runnable optics and survey example.
 
 The model requires small reference angles and `abs(k1)*X0(s)**2 << 1` and
 `abs(k1)*Y0(s)**2 << 1` along the magnet. It is a first-order body model;
 fringe fields and the paper's cubic-Hamiltonian extension are not implemented.
+The mechanical face length `L_Z` is not an alternative constructor length:
+stopping at `Z=L_Z` and projecting particles onto that face remain separate
+operations. Survey here follows the analytical reference, not the exact
+ideal-field Lorentz reference used when CSR's RK option is enabled.
 `SecondTM` remains unsupported. Focused physics and integration tests live in
 `unit_tests/cpbd/elements/test_xyquadrupole.py`.
 

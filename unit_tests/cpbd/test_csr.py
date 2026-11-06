@@ -81,6 +81,34 @@ def test_gaussian_sampler_includes_upper_endpoint(smoothing):
         assert actual[-1] > 0
 
 
+@pytest.mark.parametrize("edges", [[0., .25, .5, .75, 1.],
+                                   [0., 0., .5, .5, 1., 1.], [0., 1.]])
+def test_sorted_bin_counts_include_repeated_boundary_particles(sub_binning, edges):
+    s = np.array([0., 0., .2, .5, .5, 1., 1.])
+    edges = np.array(edges)
+    expected, _ = np.histogram(s, bins=edges)
+    actual = sub_binning.p_per_subbins(s, edges, len(edges) - 1)
+    np.testing.assert_array_equal(actual, expected)
+
+
+@pytest.mark.parametrize("method", [0, 1, 2])
+@pytest.mark.parametrize("scalar_charge", [False, True])
+def test_smoothing_empty_bins_match_aggregated_charges(smoothing, method, scalar_charge):
+    counts = np.array([0, 2, 0, 1, 0, 0, 3, 0])
+    edges = np.linspace(-1e-3, 1e-3, len(counts) + 1)
+    if scalar_charge:
+        q = 1e-12
+        charges_per_bin = counts * q
+    else:
+        q = np.array([1., 2., 4., 8., 16., 32.]) * 1e-12
+        charges_per_bin = np.array([0., 3., 0., 4., 0., 0., 56., 0.]) * 1e-12
+    params = [0, len(counts), 1, method, .5, 1e-5]
+    actual = smoothing.Q2EQUI(q, params, edges, counts)[3]
+    expected = smoothing.Q2EQUI(charges_per_bin, params, edges, np.ones(len(counts)))[3]
+    np.testing.assert_allclose(actual, expected, rtol=2e-13, atol=1e-27)
+    np.testing.assert_allclose(actual.sum(), charges_per_bin.sum(), rtol=2e-13)
+
+
 @pytest.mark.parametrize("x_qbin", [0, .5, 1])
 def test_weighted_sub_bins_are_symmetric_under_reversal(sub_binning, x_qbin):
     s = np.array([-3., -1., 0., 2., 4.])
@@ -92,7 +120,7 @@ def test_weighted_sub_bins_are_symmetric_under_reversal(sub_binning, x_qbin):
 
 @pytest.mark.parametrize("x_qbin", [0, .5, 1])
 def test_weighted_kick_does_not_depend_on_particle_order(csr, particles, monkeypatch, x_qbin):
-    monkeypatch.setattr(csr, "x_qbin", x_qbin)
+    monkeypatch.setattr(csr, "charge_binning_fraction", x_qbin)
     perm = np.random.default_rng(13).permutation(particles.n)
     shuffled = deepcopy(particles)
     shuffled.rparticles = shuffled.rparticles[:, perm].copy()
@@ -103,7 +131,7 @@ def test_weighted_kick_does_not_depend_on_particle_order(csr, particles, monkeyp
     assert np.linalg.norm(particles.p()) > 0
 
 
-def test_step_unit_controls_actual_wake_mesh(csr, particles, monkeypatch):
+def test_mesh_step_quantum_controls_actual_wake_mesh(csr, particles, monkeypatch):
     spacings = []
     original = csr.CSR_K1
 
@@ -112,11 +140,36 @@ def test_step_unit_controls_actual_wake_mesh(csr, particles, monkeypatch):
         return original(i, traj, ndw, gamma)
 
     monkeypatch.setattr(csr, "CSR_K1", record_mesh)
-    monkeypatch.setattr(csr, "step_unit", 3e-6)
+    monkeypatch.setattr(csr, "mesh_step_quantum", 3e-6)
     csr.apply(particles, .02)
     assert spacings
-    np.testing.assert_allclose(np.array(spacings) / csr.step_unit,
-                               np.round(np.array(spacings) / csr.step_unit), atol=1e-13)
+    np.testing.assert_allclose(np.array(spacings) / csr.mesh_step_quantum,
+                               np.round(np.array(spacings) / csr.mesh_step_quantum), atol=1e-13)
+
+
+@pytest.mark.parametrize("process_type", [CSR, SaferCSR])
+@pytest.mark.parametrize("name,alias,value", [("charge_binning_fraction", "x_qbin", .5),
+                                             ("mesh_step_quantum", "step_unit", 2e-6)])
+def test_renamed_parameters_require_new_names(process_type, name, alias, value):
+    process = process_type(**{name: value})
+    assert getattr(process, name) == value
+    assert not hasattr(process, alias)
+    with pytest.raises(TypeError, match=name):
+        process_type(**{alias: value})
+    with pytest.raises(AttributeError, match=name):
+        setattr(process, alias, value)
+
+
+@pytest.mark.parametrize("extent,sigma,expected_step", [(1e-4, 21.2e-6, 6e-6),
+                                                       (1e-5, 2.8e-6, 2e-6)])
+def test_mesh_step_quantum_documented_examples(smoothing, extent, sigma, expected_step):
+    edges = np.linspace(-extent, extent, 51)
+    z1, z2, nz, _ = smoothing.Q2EQUI(1e-12, [0, 10, 5, 2, .5, sigma, 2e-6],
+                                     edges, np.ones(50))
+    step = (z2 - z1) / nz
+    np.testing.assert_allclose(step, expected_step, rtol=1e-14)
+    np.testing.assert_allclose(np.array([z1, z2]) / step,
+                               np.round(np.array([z1, z2]) / step), atol=1e-13)
 
 
 def test_kernel_interpolates_sorted_distinct_retarded_coordinates(csr, monkeypatch):
@@ -150,10 +203,10 @@ def test_analytic_extension_selects_branch_from_first_sample(csr):
 
 
 @pytest.mark.parametrize("method", [0, 1, 2])
-@pytest.mark.parametrize("step_unit", [0, 3e-6])
-def test_mesh_only_helper_matches_deposition(smoothing, method, step_unit):
+@pytest.mark.parametrize("mesh_step_quantum", [0, 3e-6])
+def test_mesh_only_helper_matches_deposition(smoothing, method, mesh_step_quantum):
     edges = np.linspace(-1e-3, 1e-3, 101)
-    params = [0, 20, 5, method, .5, 1e-5, step_unit]
+    params = [0, 20, 5, method, .5, 1e-5, mesh_step_quantum]
     result = smoothing.Q2EQUI(1e-12, params, edges, np.ones(100))
     assert smoothing.Q2EQUI_modified(params, edges) == result[:3]
 

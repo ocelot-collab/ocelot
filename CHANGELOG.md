@@ -22,6 +22,13 @@ Versioning is date based: `YY.MM.patch`.
 
 ### Changed
 
+- Renamed CSR `x_qbin` to `charge_binning_fraction` and `step_unit` to
+  `mesh_step_quantum`. The old constructor arguments and attribute assignments
+  now raise errors naming the replacements. Documented the binning blend,
+  mesh-spacing rounding and units.
+- Reduced CSR binning and kernel allocation overhead without changing the mesh,
+  smoothing or integration settings. Added a reproducible timing benchmark
+  with optional comparison against an earlier CSR implementation.
 - Separate `periodic_twiss()` from propagation with `twiss()`; unstable periodic
   solutions raise `UnstableLatticeError`. Update callers that relied on implicit
   periodic initialization.

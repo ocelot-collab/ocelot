@@ -6,7 +6,7 @@ import pytest
 from ocelot.cpbd.beam import Twiss
 from ocelot.cpbd.elements import Cavity, Drift, Marker, Quadrupole
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
-from ocelot.cpbd.matcher import FloquetPhaseTarget, MatchProblem, PhaseAdvanceTarget
+from ocelot.cpbd.matcher import MatchProblem, PhaseAdvanceTarget
 from ocelot.cpbd.optics import twiss
 
 
@@ -69,7 +69,7 @@ def test_phase_target_preserves_positional_options_and_normalizes_plane():
     ({"periodicity": np.complex128(1 + 1j)}, "finite and positive real"),
     ({"value": np.nan}, "finite"),
     ({"value": np.inf}, "finite"),
-    ({"value": 1j}, "target_floquet_phase"),
+    ({"value": 1j}, "finite real value"),
     ({"plane": "z"}, "Unsupported plane"),
 ])
 def test_phase_target_rejects_invalid_inputs(kwargs, message):
@@ -133,14 +133,3 @@ def test_phase_target_default_boundaries_and_twiss_delta_convention():
     assert merit == 0.0
     assert all(report.met for report in reports)
     assert expected > 0.0
-
-
-def test_floquet_class_remains_public_and_includes_single_element():
-    q = Quadrupole(l=1.0, k1=1.0)
-    problem = MatchProblem(MagneticLattice([q]), _seed())
-    target = problem.target_floquet_phase(q, q, "x", 1.0, tol=1e-12)
-    assert isinstance(target, FloquetPhaseTarget)
-    problem.add_target(FloquetPhaseTarget(q, q, "y", 1j, tol=1e-12))
-    merit, reports, _, _ = problem.evaluate()
-    assert merit == 0.0
-    assert all(report.met for report in reports)

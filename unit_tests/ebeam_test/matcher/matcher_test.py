@@ -309,16 +309,15 @@ def test_twiss_delta_wrap_phase_equivalence():
     target_equiv = dmu_actual - 2.0 * np.pi
 
     problem_wrapped = MatchProblem(lat, _twiss_seed())
-    with pytest.warns(DeprecationWarning, match="target_phase_advance"):
-        problem_wrapped.target_twiss_delta(
-            start,
-            end,
-            "mux",
-            value=target_equiv,
-            relation="==",
-            wrap_phase=True,
-            weight=1.0,
-        )
+    problem_wrapped.target_twiss_delta(
+        start,
+        end,
+        "mux",
+        value=target_equiv,
+        relation="==",
+        wrap_phase=True,
+        weight=1.0,
+    )
     _m_wrap, reports_wrap, _o_wrap, _s_wrap = problem_wrapped.evaluate()
 
     problem_raw = MatchProblem(lat, _twiss_seed())
@@ -573,6 +572,71 @@ def test_phase_advance_target_phase_edge_cases_and_periodicity():
     do(2/3 * np.pi + 1 * np.pi)
     do(2/3 * np.pi + 2 * np.pi)
     do(2/3 * np.pi + 3 * np.pi)
+
+def test_floquet_phase_target_stable_and_unstable_planes():
+    lat, start, _quad, end = _single_quad_lattice(k1=1.0, length=1.0)
+
+    problem = MatchProblem(lat, _twiss_seed())
+    problem.target_floquet_phase(start, end, "x", value=1.0, weight=1.0, tol=1.0e-12)
+    problem.target_floquet_phase(start, end, "y", value=1j, weight=1.0, tol=1.0e-12)
+
+    merit, reports, _objectives, _state = problem.evaluate()
+
+    assert np.isclose(merit, 0.0, atol=1.0e-20)
+    assert all(report.met for report in reports)
+    assert reports[0].details["type"] == "floquet_phase"
+    assert reports[0].details["plane"] == "x"
+    assert np.isclose(reports[0].details["actual_re"], 1.0, atol=1.0e-12)
+    assert np.isclose(reports[0].details["actual_im"], 0.0, atol=1.0e-12)
+    assert reports[1].details["plane"] == "y"
+    assert np.isclose(reports[1].details["actual_re"], 0.0, atol=1.0e-12)
+    assert np.isclose(reports[1].details["actual_im"], 1.0, atol=1.0e-12)
+
+
+def test_floquet_phase_target_is_independent_of_initial_twiss():
+    lat, start, _quad, end = _single_quad_lattice(k1=1.0, length=1.0)
+
+    tw_a = _twiss_seed()
+    tw_b = _twiss_seed()
+    tw_b.beta_x = 3.0
+    tw_b.alpha_x = -2.0
+
+    reports = []
+    tracked_phase_deltas = []
+    for tw0 in (tw_a, tw_b):
+        problem = MatchProblem(lat, tw0)
+        problem.target_floquet_phase(start, end, "x", value=1.0, weight=1.0, tol=1.0e-12)
+        _merit, target_reports, _objectives, state = problem.evaluate()
+        reports.append(target_reports[0])
+        tracked_phase_deltas.append(state.twiss_at(end).mux - state.twiss_at(start).mux)
+
+    assert all(np.isclose(report.residual_norm, 0.0, atol=1.0e-12) for report in reports)
+    assert not np.isclose(tracked_phase_deltas[0], tracked_phase_deltas[1], atol=1.0e-6)
+
+
+def test_floquet_phase_target_can_match_quadrupole_strength():
+    lat, start, quad, end = _single_quad_lattice(k1=0.64, length=1.0)
+
+    problem = MatchProblem(lat, _twiss_seed())
+    problem.vary_element(quad, "k1", limits=(0.01, 4.0), name="Q.k1")
+    problem.target_floquet_phase(start, end, "x", value=1.2, weight=1.0e6, tol=0.0)
+
+    result = problem.solve(solver="ls_trf", max_iter=120, tol=1.0e-12)
+
+    assert result.success
+    assert np.isclose(quad.k1, 1.44, atol=1.0e-5)
+
+
+def test_floquet_phase_target_rejects_invalid_target_values():
+    lat, start, _quad, end = _single_quad_lattice(k1=1.0, length=1.0)
+    problem = MatchProblem(lat, _twiss_seed())
+
+    with pytest.raises(ValueError, match="non-negative"):
+        problem.target_floquet_phase(start, end, "x", value=-0.1)
+
+    with pytest.raises(ValueError, match="purely imaginary"):
+        problem.target_floquet_phase(start, end, "x", value=0.1 + 1j)
+
 
 def test_power_supply_linked_variable():
     start = Marker(eid="S")

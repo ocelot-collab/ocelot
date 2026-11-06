@@ -54,6 +54,15 @@ Versioning is date based: `YY.MM.patch`.
 
 ### Fixed
 
+- CSR reference trajectories now join analytical arcs and RK field orbits in
+  transported element frames, including bends in different planes. RK bends
+  stop at the specified arc length without duplicate endpoint samples.
+- Map Navigator distance to physical CSR trajectory arc length for undulators,
+  use the physical kick length, normalize sampled tangents, honor field-map
+  lengths and exclude the process stop element from preparation.
+- Honor undulator phase and vertical strength in CSR fields. Preserve all
+  magnetic-field components in line and rectangular field maps, including
+  repeated maps and unordered six-column grids.
 - CSR density reconstruction now preserves total charge at overlapping-bin
   boundaries and normalizes sampled Gaussian contributions. Fixed rectangular
   and triangular smoothing indices, endpoint sampling, and charge binning for

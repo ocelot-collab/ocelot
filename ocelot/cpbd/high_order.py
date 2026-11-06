@@ -1127,12 +1127,14 @@ def rk_field(rparticles, s_start, s_stop, N, energy, mag_field, long_dynamics=Tr
     return rparticles
 
 
-def _rk_reference(s_values, max_step, energy, mag_field):
+def _rk_reference(s_values, max_step, energy, mag_field, *, require_forward_z=True):
     """Cartesian reference positions and Bishop frames at entrance-based arc s.
 
     The reference starts at the origin along +Z, with horizontal axis +X.
     Recomputing from that same entrance makes independent slice calls agree;
     no mutable reference is cached on an element reused in a lattice.
+    Cartesian-Z particle tracking requires a forward reference. CSR only needs
+    the arc-parametrized orbit and can disable that restriction.
     """
     beta0, _, _ = _rk_energy(energy, 0.)
     field_scale = speed_of_light / (energy * 1e9 * beta0)
@@ -1162,7 +1164,7 @@ def _rk_reference(s_values, max_step, energy, mag_field):
             ex = state[6:9]
             ex -= tangent * np.dot(tangent, ex)
             ex /= np.linalg.norm(ex)
-            if tangent[2] <= 0:
+            if require_forward_z and tangent[2] <= 0:
                 raise ValueError("RK reference must move forward in Cartesian Z")
         s = target
         positions.append(state[:3].copy())

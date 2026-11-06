@@ -8,11 +8,10 @@ import logging
 import time
 
 import numpy as np
-from scipy.integrate import cumulative_trapezoid
 
 from ocelot.common import math_op
 from ocelot.common.globals import m_e_GeV, pi, speed_of_light
-from ocelot.cpbd.beam import Particle, s_to_cur
+from ocelot.cpbd.beam import s_to_cur
 from ocelot.cpbd.elements.bend import Bend
 from ocelot.cpbd.elements.rbend import RBend
 from ocelot.cpbd.elements.sbend import SBend
@@ -992,16 +991,49 @@ class CSR(PhysProc):
 
         return K1
 
+    def _undulator_trajectory(self, elem):
+        """Sample a field orbit to the local Cartesian exit plane Z=elem.l."""
+        from scipy.interpolate import CubicHermiteSpline
+
+        field = elem.element.get_csr_mag_field(self.energy, use_end_poles=self.end_poles)
+        count = max(1, int(np.ceil(elem.l / self.traj_step)))
+        tracked, paths = rk_track_in_field(np.zeros((6, 1)), s_stop=elem.l, N=count + 1,
+                                           energy=self.energy, mag_field=field, return_path=True)
+        tracked = tracked.reshape(-1, 9)
+        positions = tracked[:, [0, 2, 4]]
+        tangents = np.column_stack((tracked[:, 1], tracked[:, 3], np.ones(count + 1)))
+        tangents /= np.linalg.norm(tangents, axis=1)[:, None]
+        path = paths[:, 0]
+        count = max(1, int(np.ceil(path[-1] / self.traj_step)))
+        arc = np.linspace(0., path[-1], count + 1)
+        # Positions and their derivatives describe one smooth curve. Linear
+        # interpolation would introduce chord errors into the retarded kernel.
+        curve = CubicHermiteSpline(path, positions, tangents, axis=0)
+        positions = curve(arc)
+        tangents = curve(arc, 1)
+        tangents /= np.linalg.norm(tangents, axis=1)[:, None]
+        return arc, positions, tangents, positions[:, 2]
+
+    def _lattice_to_trajectory_s(self, lattice_s):
+        """Convert distance from the CSR entrance to physical orbit arc length."""
+        return np.interp(lattice_s, self._trajectory_lattice_s, self.csr_traj[0])
+
     def prepare(self, lat):
         """
-        Calculates the trajectory in rectangular coordinates and determines the starting point for CSR calculations.
+        Build the reference orbit used by the CSR kernel in one Cartesian frame.
+
+        The origin and +Z tangent are at the CSR entrance. X/Y are the initial
+        horizontal/vertical axes; subsequent elements use transported local
+        axes. Positive untilted bend angles turn towards -X. Row 0 is physical
+        arc length in metres, not Cartesian Z or Navigator lattice distance.
+        The latter differ inside undulators and are mapped separately.
 
         Args:
             lat (MagneticLattice): The magnetic lattice for which the calculations are performed.
 
         Returns:
             ndarray: The CSR trajectory with the following components:
-                - `traj[0, :]`: Longitudinal coordinates.
+                - `traj[0, :]`: Physical arc length from the CSR entrance.
                 - `traj[1, :]`, `traj[2, :]`, `traj[3, :]`: Rectangular coordinates.
                 - `traj[4, :]`, `traj[5, :]`, `traj[6, :]`: Tangential unit vectors.
         """
@@ -1019,137 +1051,83 @@ class CSR(PhysProc):
             self.total_wake = 0
 
 
-        self.z_csr_start = sum([p.l for p in lat.sequence[:self.indx0]])
-        p = Particle()
-        self.csr_traj = np.transpose([[0, p.x, p.y, p.s, p.px, p.py, 1.]])
-        if Undulator in [elem.__class__ for elem in lat.sequence[self.indx0:self.indx1+1]] and not self.rk_traj:
+        self.z_csr_start = sum(p.l for p in lat.sequence[:self.indx0])
+        # Navigator stops at the entrance of indx1. Preserve the historical
+        # inclusive range for direct prepare() calls that only set indices.
+        stop = self.indx1 if self.s_stop is not None else self.indx1 + 1
+        elements = lat.sequence[self.indx0:stop]
+        if any(isinstance(elem, Undulator) for elem in elements) and not self.rk_traj:
             self.rk_traj = True
             logger.warning("CSR: Undulator element is in CSR section --> rk_traj = True")
+        if self.rk_traj and (self.energy is None or not np.isfinite(self.energy)
+                             or self.energy <= m_e_GeV):
+            raise CSRConfigurationError("RK trajectory requires CSR.energy above the electron rest energy")
 
-        if self.energy is None and self.rk_traj:
-            raise CSRConfigurationError(
-                "RK trajectory calc set but CSR.energy left unset."
-            )
-
-        needs_frame = any(isinstance(el, XYQuadrupole) for el in lat.sequence[self.indx0:self.indx1+1])
+        entrance = np.array([0., 0., 0., 0., 0., 0., 1.])
+        segments = [entrance[:, None]]
+        lattice_samples = [np.array([0.])]
+        lattice_s = 0.
         trajectory_frame = np.eye(3)
-        for elem in lat.sequence[self.indx0:self.indx1+1]:
-
+        for elem in elements:
+            if not np.isfinite(elem.l) or elem.l < 0:
+                raise CSRConfigurationError("CSR element lengths must be nonnegative and finite")
             if elem.l == 0:
                 continue
-            delta_s = elem.l
-            step = self.traj_step
-            first_new_point = self.csr_traj.shape[1]
-            if elem.__class__ in [Bend, RBend, SBend] and not self.rk_traj:
-                if elem.angle != 0:
-                    R = -elem.l/elem.angle
-                else:
-                    R = 0
-                Rx = R * np.cos(elem.tilt)
-                Ry = R * np.sin(elem.tilt)
-                #B = energy*1e9*beta/(R*speed_of_light)
-                R_vect = [-Ry, Rx, 0]
-                self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect)
-
-            elif elem.__class__ is XYQuadrupole:
-                # Sample the same reference as the analytical model, or the
-                # actual quadrupole Lorentz orbit when RK is explicitly chosen.
-                count = max(1, int(np.ceil(delta_s / step)))
-                arc = np.linspace(0., delta_s, count + 1)
-                if self.rk_traj:
-                    field = elem.element.get_mag_field(self.energy)
-                    positions, frames = _rk_reference(arc, step, self.energy, field)
-                else:
-                    positions, frames = elem.element._reference_geometry(arc)
-                entrance = self.csr_traj[:, -1]
-                xyz = entrance[1:4, None] + trajectory_frame @ positions.T
-                tangents = trajectory_frame @ frames[:, :, 2].T
-                segment = np.vstack((entrance[0] + arc, xyz, tangents))
-                self.csr_traj = np.column_stack((self.csr_traj, segment[:, 1:]))
-                trajectory_frame = trajectory_frame @ frames[-1]
-                continue
-
-            elif elem.__class__ in [Bend, RBend, SBend, Undulator] and self.energy is not None and self.rk_traj:
-                """
-                RK input uses Cartesian slopes (X, Xprime, Y, Yprime, unused, delta).
-                CSR stores positions and unit tangent vectors instead.
-                """
-
-                if elem.l < 1e-10:
-                    continue
-                delta_z = delta_s
-                if elem.__class__ == Undulator:
-                    print("ENERGY = ",self.energy)
-                    gamma = self.energy/m_e_GeV
-                    delta_z = elem.lperiod * elem.nperiods
-                    # delta_s += 0.5* delta_z / (gamma ) ** 2 * (1 + 0.5 * (elem.Kx ) ** 2)
-
-                    delta_s = delta_z * (1 + 0.25*(elem.Kx/gamma) ** 2)
-
-                    mag_field = elem.element.get_csr_mag_field(self.energy, use_end_poles=self.end_poles)
-
-                else:
-                    delta_z = delta_s * np.sin(elem.angle) / elem.angle if elem.angle != 0 else delta_s
-                    mag_field = elem.element.create_runge_kutta_main_params(self.energy).mag_field
-
-                sre0 = self.csr_traj[:, -1]
-                N = int(max(1, np.round(delta_s / step)))
-                SRE2 = np.zeros((7, N))
-
-                rparticle0 = np.array([[self.csr_traj[1, -1]], [self.csr_traj[4, -1] / self.csr_traj[6, -1]],
-                                       [self.csr_traj[2, -1]], [self.csr_traj[5, -1] / self.csr_traj[6, -1]], [0], [0]])
-                traj = rk_track_in_field(rparticle0, s_stop=delta_z, N=N + 1, energy=self.energy, mag_field=mag_field,
-                                         s_start=0)
-
-                x = traj[0::9].flatten()
-                y = traj[2::9].flatten()
-                xp = traj[1::9].flatten()
-                yp = traj[3::9].flatten()
-                z = traj[4::9].flatten()
-                xp2 = xp * xp
-                yp2 = yp * yp
-                zp = np.sqrt(1./(1. + xp2 + yp2))
-
-                s = cumulative_trapezoid(np.sqrt(1. + xp2 + yp2), z, initial=0)
-                if elem.__class__ == Undulator:
-                    delta_s = s[-1]
-
-                dS = float(delta_s) / N
-
-                s_unif = np.arange(0, N + 1) * dS
-
-                z_s = np.interp(s_unif, s, z)
-
-                x = np.interp(z_s, z, x)
-                y = np.interp(z_s, z, y)
-                zp_s = np.interp(z_s, z, zp)
-
-                xp = np.interp(z_s, z, xp*zp)
-                yp = np.interp(z_s, z, yp*zp)
-
-                SRE2[0, :] = sre0[0] + s_unif[1:]
-                SRE2[1, :] = x[1:]
-                SRE2[2, :] = y[1:]
-                SRE2[3, :] = sre0[3] + z_s[1:]
-                SRE2[4, :] = xp[1:]
-                SRE2[5, :] = yp[1:]
-                SRE2[6, :] = zp_s[1:]
-                self.csr_traj = np.append(self.csr_traj, SRE2, axis=1)
+            count = max(1, int(np.round(elem.l / self.traj_step)))
+            arc = np.linspace(0., elem.l, count + 1)
+            local_lattice_s = arc
+            exit_frame = np.eye(3)
+            if isinstance(elem, Undulator):
+                arc, positions, tangents, local_lattice_s = self._undulator_trajectory(elem)
+                # Parallel transport the transverse axes without imposing a
+                # rotation about the tangent (the same Bishop convention as RK).
+                for direction in tangents[1:]:
+                    axis = np.cross(exit_frame[:, 2], direction)
+                    cosine = np.dot(exit_frame[:, 2], direction)
+                    cross = np.array([[0., -axis[2], axis[1]],
+                                      [axis[2], 0., -axis[0]],
+                                      [-axis[1], axis[0], 0.]])
+                    exit_frame = (np.eye(3) + cross + cross @ cross / (1. + cosine)) @ exit_frame
+            elif self.rk_traj and hasattr(elem.element, "get_mag_field"):
+                # Fields are evaluated in this element's entrance frame. Arc
+                # integration reaches exactly elem.l, independent of bend angle.
+                field = elem.element.get_mag_field(self.energy)
+                positions, frames = _rk_reference(arc, self.traj_step, self.energy, field,
+                                                  require_forward_z=False)
+                tangents = frames[:, :, 2]
+                exit_frame = frames[-1]
+            elif isinstance(elem, XYQuadrupole):
+                positions, frames = elem.element._reference_geometry(arc)
+                tangents = frames[:, :, 2]
+                exit_frame = frames[-1]
             else:
-                R_vect = [0, 0, 0.]
-                self.csr_traj = arcline(self.csr_traj, delta_s, step, R_vect)
-            # Carry the transverse axes through preceding arcs as well, so a
-            # following XYQuadrupole starts in the continuous reference frame.
-            directions = self.csr_traj[4:7, first_new_point:].T if needs_frame else ()
-            for direction in directions:
-                direction = direction / np.linalg.norm(direction)
-                old_t = trajectory_frame[:, 2]
-                axis = np.cross(old_t, direction)
-                cosine = np.dot(old_t, direction)
-                cross = np.array([[0., -axis[2], axis[1]],
-                                  [axis[2], 0., -axis[0]],
-                                  [-axis[1], axis[0], 0.]])
-                trajectory_frame = (np.eye(3) + cross + cross @ cross / (1. + cosine)) @ trajectory_frame
+                radius_vector = np.zeros(3)
+                if isinstance(elem, (Bend, RBend, SBend)) and elem.angle != 0:
+                    radius = -elem.l / elem.angle
+                    radius_vector = radius * np.array([-np.sin(elem.tilt), np.cos(elem.tilt), 0.])
+                    axis = radius_vector / np.linalg.norm(radius_vector)
+                    cross = np.array([[0., -axis[2], axis[1]],
+                                      [axis[2], 0., -axis[0]],
+                                      [-axis[1], axis[0], 0.]])
+                    angle = abs(elem.angle)
+                    exit_frame = np.eye(3) + np.sin(angle) * cross + 2 * np.sin(angle / 2)**2 * (cross @ cross)
+                local = arcline(np.array([[0., 0., 0., 0., 0., 0., 1.]]).T,
+                                elem.l, self.traj_step, radius_vector)
+                arc, positions, tangents = local[0], local[1:4].T, local[4:7].T
+                local_lattice_s = arc
+
+            xyz = entrance[1:4, None] + trajectory_frame @ positions.T
+            directions = trajectory_frame @ tangents.T
+            directions /= np.linalg.norm(directions, axis=0)
+            segment = np.vstack((entrance[0] + arc, xyz, directions))
+            segments.append(segment[:, 1:])
+            lattice_samples.append(lattice_s + local_lattice_s[1:])
+            lattice_s += elem.l
+            entrance = segment[:, -1]
+            trajectory_frame = trajectory_frame @ exit_frame
+        self.csr_traj = np.column_stack(segments)
+        # Same samples as csr_traj, but measured in Navigator lattice distance.
+        self._trajectory_lattice_s = np.concatenate(lattice_samples)
 
         # plot trajectory of the refernece particle
         if self.pict_debug:
@@ -1179,7 +1157,9 @@ class CSR(PhysProc):
             raise CSRConfigurationError("CSR kick length must be nonnegative and finite")
         if not np.isfinite(p_array.E) or p_array.E <= m_e_GeV:
             raise CSRConfigurationError("CSR requires a beam energy above the electron rest energy")
-        s_cur = self.z0 - self.z_csr_start
+        lattice_s = self.z0 - self.z_csr_start
+        s_prev, s_cur = self._lattice_to_trajectory_s([lattice_s - delta_s, lattice_s])
+        path_length = s_cur - s_prev
         z = -p_array.tau()
 
         ind_z_sort = np.argsort(z)
@@ -1200,7 +1180,7 @@ class CSR(PhysProc):
         #plt.show()
         s_array = self.csr_traj[0, :]
         indx = (np.abs(s_array - s_cur)).argmin()
-        indx_prev = (np.abs(s_array - (s_cur - delta_s))).argmin()
+        indx_prev = (np.abs(s_array - s_prev)).argmin()
         gamma = p_array.E/m_e_GeV
         h = max(1., self.apply_step/self.traj_step)
 
@@ -1226,7 +1206,7 @@ class CSR(PhysProc):
         #    K1 += K1 #self.CSR_K1(it, self.csr_traj, Ndw, gamma=gamma)
         K1 /= len(itr_ra)
 
-        lam_K1 = csr_convolution(lam_ds, K1[::-1]) / st * delta_s
+        lam_K1 = csr_convolution(lam_ds, K1[::-1]) / st * path_length
 
         dE = np.interp(z_sort*(1./st)+(0. - sa/st), np.arange(len(lam_K1)), lam_K1)
 
@@ -1380,7 +1360,7 @@ class SaferCSR(CSR):
         s = self.csr_traj[0]
         if len(s) < 2:
             return
-        csr_traj_index = np.clip(np.searchsorted(s, self.z0 - self.z_csr_start), 1, len(s) - 1)
+        csr_traj_index = np.clip(np.searchsorted(s, self._lattice_to_trajectory_s(self.z0 - self.z_csr_start)), 1, len(s) - 1)
 
         # The points and tangents before and after the step takes place
         # pre_step = self.csr_traj[..., csr_traj_index-1][1:4]

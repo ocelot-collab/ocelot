@@ -269,10 +269,20 @@ class UndulatorAtom(Element):
             return field_map_to_field_func(self.field_map)
 
         field_end_poles = self.end_poles if end_poles is None else end_poles
-        return lambda x, y, z: und_field(
+        def field(x, y, z):
+            bx, by, bz = und_field(
                 x, y, z, self.lperiod, self.Kx,
                 nperiods=self.nperiods, phase=self.phase, end_poles=field_end_poles
             )
+            if self.Ky != 0:
+                # A second planar field, rotated by -pi/2 about local Z.
+                bx_y, by_y, bz_y = und_field(
+                    -y, x, z, self.lperiod, self.Ky,
+                    nperiods=self.nperiods, phase=self.phase, end_poles=field_end_poles
+                )
+                bx, by, bz = bx + by_y, by - bx_y, bz + bz_y
+            return bx, by, bz
+        return field
 
     def get_csr_mag_field(self, energy=None, use_end_poles=False):
         if self.mag_field is not None:
@@ -284,7 +294,11 @@ class UndulatorAtom(Element):
 
         ku = 2. * pi / self.lperiod
         by0 = self.Kx * m_e_eV * ku / speed_of_light
-        return lambda x, y, z: (0, -by0 * np.cos(ku * z), 0)
+        bx0 = self.Ky * m_e_eV * ku / speed_of_light
+        # Retain the historical CSR cosine-field polarity. Both amplitudes
+        # use phase; a relative phase or other field shape uses mag_field.
+        return lambda x, y, z: (-bx0 * np.cos(ku * z + self.phase),
+                               -by0 * np.cos(ku * z + self.phase), 0)
 
     def create_runge_kutta_main_params(self, energy):
         return RungeKuttaParams(mag_field=self.get_mag_field(energy))

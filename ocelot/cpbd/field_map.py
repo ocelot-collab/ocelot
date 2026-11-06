@@ -82,16 +82,14 @@ def read_tabular_file(field_file):
         Bx_array = field_data[3, :]
         By_array = field_data[4, :]
         Bz_array = field_data[5, :]
-        nx_t = length_array(x_array)
-        ny_t = length_array(y_array)
-        nz_t = length_array(z_array)
-        if nz_t > ny_t and ny_t > nx_t:
-            x_array = x_array[:nx_t]
-            y_array = y_array[:ny_t:nx_t]
-            ny = len(y_array)
-            z_array = z_array[:nz_t:ny*nx_t]
-        else:
-            print("wrong coordinates order in the field file (field_map.py)")
+        # Normalize tabular rows to the flat-file convention: X fastest.
+        order = np.lexsort((x_array, y_array, z_array))
+        points = np.column_stack((x_array, y_array, z_array))
+        x_array, y_array, z_array = (np.unique(axis) for axis in (x_array, y_array, z_array))
+        expected = len(x_array) * len(y_array) * len(z_array)
+        if len(points) != expected or len(np.unique(points, axis=0)) != expected:
+            raise ValueError("Field map coordinates must form a complete rectangular grid")
+        Bx_array, By_array, Bz_array = (component[order] for component in (Bx_array, By_array, Bz_array))
     return x_array, y_array, z_array, Bx_array, By_array, Bz_array
 
 
@@ -137,9 +135,46 @@ def field_map2field_func(z, By):
 
 
 def field_map_to_field_func(field_map):
+    """Return all field components in local Cartesian coordinates (metres).
+
+    Tabular line maps are interpolated along Z; rectangular 3D maps use their
+    X/Y/Z grid. Z=0 denotes the start of the map. Missing components are zero.
+    """
     unit_coef = 0.001 if field_map.units == "mm" else 1.
     z_array = (field_map.z_arr - field_map.z_arr[0]) * unit_coef
-    return field_map2field_func(z=z_array, By=field_map.By_arr)
+    components = (field_map.Bx_arr, field_map.By_arr, field_map.Bz_arr)
+    nx, ny, nz = max(1, len(field_map.x_arr)), max(1, len(field_map.y_arr)), len(z_array)
+    if nz < 2 or np.any(np.diff(z_array) <= 0):
+        raise ValueError("Field map requires at least two strictly increasing Z coordinates")
+    if nx == ny == 1:
+        splines = [splrep(z_array, values, k=min(3, nz - 1)) if len(values) else None
+                   for values in components]
+
+        def interpolate(x, y, z):
+            return tuple(splev(z, spline) if spline is not None else np.zeros_like(z)
+                         for spline in splines)
+    else:
+        from scipy.interpolate import RegularGridInterpolator
+
+        x_array = field_map.x_arr * unit_coef
+        y_array = field_map.y_arr * unit_coef
+        values = np.column_stack([v if len(v) else np.zeros(nx * ny * nz) for v in components])
+        # Flat files enumerate X fastest, then Y, then Z.
+        values = values.reshape(nz, ny, nx, 3).transpose(2, 1, 0, 3)
+        grid = RegularGridInterpolator((x_array, y_array, z_array), values,
+                                       bounds_error=False, fill_value=None)
+
+        def interpolate(x, y, z):
+            points = np.stack(np.broadcast_arrays(x, y, z), axis=-1)
+            values = grid(points).reshape(points.shape[:-1] + (3,))
+            return tuple(values[..., i] for i in range(3))
+
+    def field(x, y, z):
+        if field_map.field_file_rep > 1:
+            z = np.where(np.asarray(z) == z_array[-1] * field_map.field_file_rep,
+                         z_array[-1], np.mod(z, z_array[-1]))
+        return interpolate(x, y, z)
+    return field
 
 """
 

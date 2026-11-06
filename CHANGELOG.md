@@ -47,6 +47,17 @@ Versioning is date based: `YY.MM.patch`.
 
 ### Fixed
 
+- CSR density reconstruction now preserves total charge at overlapping-bin
+  boundaries and normalizes sampled Gaussian contributions. Fixed rectangular
+  and triangular smoothing indices, endpoint sampling, and charge binning for
+  unequal particle weights.
+- Corrected CSR kernel interpolation on repeated or nonmonotonic retarded
+  coordinates, analytic branch selection, and the final convolution sample.
+  CSR now honors `step_unit` and applies kicks shorter than `traj_step`.
+  Added focused regression tests and updated affected tracking references.
+- SaferCSR now uses the CSR region's local origin and actual trajectory spacing
+  for curvature checks, handles boundary indices and tiny-width warnings, and
+  accepts CSR constructor keyword arguments.
 - Cavity and TWCavity longitudinal maps now consistently use the time-like
   coordinate `tau = c * (t - t_ref)`: corrected RF phase and energy-kick beta
   factors, matched the tracking Jacobian to the linear map, and stabilized
@@ -74,6 +85,9 @@ Versioning is date based: `YY.MM.patch`.
 
 ### Removed
 
+- Removed the inactive CSR options `filter_order`, `n_mesh`, and `debug`.
+  Passing them to the constructor now raises `TypeError`; use `pict_debug`
+  for wake plots and Python logging for diagnostic messages.
 - Removed the unused `docs` extra and Sphinx dependencies. Public documentation
   is built with Docusaurus in the website repository.
 

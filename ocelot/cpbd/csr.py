@@ -74,7 +74,7 @@ def csr_convolution(a, b):
     a_pad = np.pad(a, (0, K - P), 'constant', constant_values=(0))
     b_pad = np.pad(b, (0, K - Q), 'constant', constant_values=(0))
     c = ifft(fft(a_pad)*fft(b_pad))
-    c = c[0:L-1].real
+    c = c[:L].real
     return c
 
 
@@ -101,6 +101,14 @@ class CSRConfigurationError(RuntimeError):
     pass
 
 
+def _validate_binning(x_qbin, n_bin, m_bin):
+    if not np.isfinite(x_qbin) or not 0 <= x_qbin <= 1:
+        raise CSRConfigurationError("x_qbin must be between 0 and 1")
+    for name, value in (("n_bin", n_bin), ("m_bin", m_bin)):
+        if not isinstance(value, (int, np.integer)) or value < 1:
+            raise CSRConfigurationError(f"{name} must be a positive integer")
+
+
 class Smoothing:
     def __init__(self):
         self.print_log = False
@@ -115,6 +123,7 @@ class Smoothing:
     def q_per_step_ip2_py(N_BIN, Q_BIN, BIN0, BIN1, NSIG, RMS, step, Nz, z1):
         Nz = int(Nz)
         charge_per_step = np.zeros(Nz)
+        weights = np.empty(Nz)
 
         for nb in range(N_BIN):
             qbin = Q_BIN[nb]
@@ -128,11 +137,17 @@ class Smoothing:
             k1 = int(min(Nz, max(1, np.floor(a))))
             b = bb / step + 1
             k2 = int(min(Nz, max(1, np.ceil(b))))
-            fact = step / (np.sqrt(2 * pi) * sigma)
-            for k in range(k1, k2):
+            # Normalize the truncated, sampled Gaussian so that each window
+            # deposits its full charge, including on a quantized mesh.
+            normalization = 0.
+            for k in range(k1, k2 + 1):
                 xx = (k - 1) * step
-                yy = fact * np.exp(-0.5 * ((xx - mitte) / sigma) ** 2)
-                charge_per_step[int(k - 1)] += yy * qbin
+                weights[k - 1] = np.exp(-0.5 * ((xx - mitte) / sigma) ** 2)
+                normalization += weights[k - 1]
+            if normalization == 0:
+                raise ValueError("CSR mesh does not resolve a Gaussian bin; reduce step_unit")
+            for k in range(k1, k2 + 1):
+                charge_per_step[k - 1] += weights[k - 1] * (qbin / normalization)
         return charge_per_step
 
     def Q2EQUI(self, q, BS_params, SBINB, NBIN):
@@ -148,7 +163,7 @@ class Smoothing:
         M_BIN = multiple binning(with shifted bins)
         smoothing.....................
         IP_method = 0 / 1 / 2 for rectangular / triangular / gauss
-        SP = ? parameter for gauss
+        SP = Gaussian RMS width divided by the full bin width
         sigma_min = minimal sigma, if IP_method == 2
         step_unit = if positive --> step=integer * step_unit
         output
@@ -157,6 +172,7 @@ class Smoothing:
         bins might overlapp!
         """
 
+        _validate_binning(*BS_params[:3])
         N_BIN = BS_params[1]
         M_BIN = BS_params[2]
         K_BIN = N_BIN * M_BIN  # number of sub - bins
@@ -177,15 +193,20 @@ class Smoothing:
                     n2 = n2 + NBIN[k]
                     Q_BIN[k] = np.sum(q[int(n1-1):int(n2)])
 
-        # put sub - bins to bins
-        qsum = np.append([0], np.cumsum(Q_BIN))
+        # Share each sub-bin's charge between the windows that contain it.
+        # Interior sub-bins occur in M_BIN windows; edge sub-bins occur in fewer.
+        coverage = np.minimum(np.arange(1, K_BIN + 1), np.arange(K_BIN, 0, -1))
+        coverage = np.minimum(coverage, min(M_BIN, I_BIN))
+        qsum = np.append([0], np.cumsum(Q_BIN / coverage))
         BIN = [SBINB[0:I_BIN], SBINB[M_BIN + np.arange(I_BIN)]]
-        Q_BIN = (qsum[M_BIN + np.arange(I_BIN)] - qsum[0:I_BIN])/M_BIN
+        Q_BIN = qsum[M_BIN + np.arange(I_BIN)] - qsum[0:I_BIN]
 
         # ......................................................................
 
         # interpolation parameters
         IP_method = BS_params[3]
+        if IP_method not in (0, 1, 2):
+            raise CSRConfigurationError("ip_method must be 0, 1 or 2")
         SP = BS_params[4]
         if SP <= 0:
             SP = 0.5
@@ -219,27 +240,38 @@ class Smoothing:
             z1 = np.min(BIN[0][:])
             z2 = np.max(BIN[1][:])
             step = 0.5 * min(BIN[1][:] - BIN[0][:])
+            # Include complete sampling cells at both rectangular edges.
+            z1 -= step
+            z2 += step
+
+        if not np.isfinite(step) or step <= 0:
+            raise CSRConfigurationError(
+                "CSR smoothing requires positive bin widths or a positive Gaussian sigma_min"
+            )
 
         if step_unit > 0:
             step = step_unit * max(1, np.round(step / step_unit))
+            if IP_method != 2:
+                z1 -= step
+                z2 += step
             z1 = step * np.floor(z1 / step)
             z2 = step * np.ceil(z2 / step)
-            Nz = np.round((z2 - z1) / step)
+            Nz = max(1, int(np.round((z2 - z1) / step)))
         else:
-            Nz = np.round((z2 - z1) / step)
+            Nz = max(1, int(np.round((z2 - z1) / step)))
             step = (z2 - z1) / Nz
         charge_per_step = np.zeros(int(Nz))
         if IP_method == 1:
             for nb in range(N_BIN):
                 aa = BIN[0][nb] - z1
                 bb = BIN[1][nb] - z1
-                qps = step * Q_BIN(nb) / (bb - aa)
+                qps = step * Q_BIN[nb] / (bb - aa)
                 a = ((3. * aa - bb) / 2.) / step + 1.
-                k1 = min(Nz, max(1, np.floor(a)))
+                k1 = int(min(Nz, max(1, np.floor(a))))
                 b = ((aa + bb) / 2.) / step + 1.
                 c = ((3. * bb - aa) / 2.) / step + 1.
-                k2 = min(Nz, max(1, np.ceil(c)))
-                for k in range(k1, k2):
+                k2 = int(min(Nz, max(1, np.ceil(c))))
+                for k in range(k1, k2 + 1):
                     w = sample_1(k, a, b, c)
                     charge_per_step[k-1] += w * qps
 
@@ -252,10 +284,10 @@ class Smoothing:
                 bb = BIN[1][nb] - z1
                 qps = step * Q_BIN[nb] / (bb - aa)
                 a = aa / step + 1
-                k1 = min(Nz, max(1, np.floor(a)))
+                k1 = int(min(Nz, max(1, np.floor(a))))
                 b = bb / step + 1
-                k2 = min(Nz, max(1, np.ceil(b)))
-                for k in range(k1, k2):
+                k2 = int(min(Nz, max(1, np.ceil(b))))
+                for k in range(k1, k2 + 1):
                     w = sample_0(k, a, b)
                     charge_per_step[k-1] += w * qps
         return z1, z2, Nz, charge_per_step
@@ -273,7 +305,7 @@ class Smoothing:
         M_BIN = multiple binning(with shifted bins)
         smoothing.....................
         IP_method = 0 / 1 / 2 for rectangular / triangular / gauss
-        SP = ? parameter for gauss
+        SP = Gaussian RMS width divided by the full bin width
         sigma_min = minimal sigma, if IP_method == 2
         step_unit = if positive --> step=integer * step_unit
         output
@@ -281,6 +313,7 @@ class Smoothing:
         bins might overlap!
         """
 
+        _validate_binning(*BS_params[:3])
         N_BIN = BS_params[1]
         M_BIN = BS_params[2]
         K_BIN = N_BIN * M_BIN  # number of sub - bins
@@ -291,6 +324,8 @@ class Smoothing:
 
         # interpolation parameters
         IP_method = BS_params[3]
+        if IP_method not in (0, 1, 2):
+            raise CSRConfigurationError("ip_method must be 0, 1 or 2")
         SP = BS_params[4]
         if SP <= 0:
             SP = 0.5
@@ -321,14 +356,24 @@ class Smoothing:
             z1 = np.min(BIN[0][:])
             z2 = np.max(BIN[1][:])
             step = 0.5 * min(BIN[1][:] - BIN[0][:])
+            z1 -= step
+            z2 += step
+
+        if not np.isfinite(step) or step <= 0:
+            raise CSRConfigurationError(
+                "CSR smoothing requires positive bin widths or a positive Gaussian sigma_min"
+            )
 
         if step_unit > 0:
             step = step_unit * max(1, np.round(step / step_unit))
+            if IP_method != 2:
+                z1 -= step
+                z2 += step
             z1 = step * np.floor(z1 / step)
             z2 = step * np.ceil(z2 / step)
-            Nz = np.round((z2 - z1) / step)
+            Nz = max(1, int(np.round((z2 - z1) / step)))
         else:
-            Nz = np.round((z2 - z1) / step)
+            Nz = max(1, int(np.round((z2 - z1) / step)))
 
         return z1, z2, Nz
 
@@ -382,6 +427,11 @@ class SubBinning:
         particles are sorted!
         all particles are valid
         """
+        _validate_binning(x_qbin, n_bin, m_bin)
+        if len(s) < 2 or not np.all(np.isfinite(s)) or s[-1] <= s[0]:
+            raise CSRConfigurationError(
+                "CSR requires at least two particles with a finite, nonzero longitudinal extent"
+            )
         X_QBIN = x_qbin
         N_BIN = n_bin
         M_BIN = m_bin
@@ -392,15 +442,18 @@ class SubBinning:
         # aa=monoton "charge" vector
 
         if np.size(q) != 1:
-            q_cumsum = np.cumsum(q)
-            q_cumsum_r = q_cumsum - q_cumsum[0]
-            aa = 0.5 * q_cumsum + 0.5 * np.append([0], q_cumsum_r[1:])
-            # aa = 0.5 * np.cumsum(q) + 0.5 * np.append([0], np.cumsum(q[1:]))
+            # Locate each particle at the midpoint of its cumulative charge.
+            # This also makes the binning symmetric under bunch reversal.
+            aa = np.cumsum(q) - 0.5 * q
         else:
             # % aa(1)=q/2; for n=2:Ns, aa(n)=aa(n-1)+q; end
             aa = q * (np.arange(1, Ns + 1) - 0.5)
 
-        if ne_flag:
+        if X_QBIN == 0:
+            aa = (s - s[0]) / (s[-1] - s[0])
+        elif not np.isfinite(aa[-1] - aa[0]) or aa[-1] == aa[0]:
+            raise CSRConfigurationError("Charge binning requires a nonzero finite charge extent")
+        elif ne_flag:
             aa0 = aa[0]
             aaNs = aa[Ns - 1]
             s0 = s[0]
@@ -691,27 +744,27 @@ class CSR(PhysProc):
         step (int): Step size for applying the CSR kick to the beam (ParticleArray). Default is 1 [in Navigator.unit_step].
         sigma_min (float): Minimal sigma used in Gaussian filtering. Default is 1.e-4.
         traj_step (float): Trajectory step, or integration step for CSR-wake calculation. Default is 0.0002 [m].
-        apply_step (float): Step size for calculating the CSR kick. Default is 0.0005 [m].
+        apply_step (float): Spacing of kernel evaluations within a kick, in metres.
+            Zero samples every trajectory point. Default is 0.0005.
 
         x_qbin (float): length or charge binning; 0... 1 = length...charge. Default is 0.
         n_bin (int): Number of bins used for binning. Default is 100.
         m_bin (int): Multiple binning factor with shifted bins. Default is 5.
 
         ip_method (int): Method for smoothing (0: rectangular, 1: triangular, 2: Gaussian). Default is 2 (Gaussian).
-        sp (float): Smoothing parameter for the Gaussian method. Default is 0.5.
-        step_unit (int): Step unit for the CSR kick. If positive, `step` is multiplied by `step_unit`. Default is 0.
+        sp (float): Gaussian RMS width divided by the full bin width, subject to
+            sigma_min. Nonpositive values use 0.5. Default is 0.5.
+        step_unit (float): If positive, quantize the longitudinal density-mesh
+            spacing to multiples of this length in metres. Default is 0.
 
-        energy (float or None): The beam energy in [GeV]. If None, assumes `beta = 1` and the trajectory is calculated without the Runge-Kutta method.
+        energy (float or None): Reference energy in GeV, required for an RK
+            trajectory. CSR kicks always use the finite energy p_array.E.
 
         z_csr_start (float): Position of the start element in the trajectory in [m]. Default is 0.
         z0 (float): Position in the navigator for the starting point in the track. Default is 0.
 
         end_poles (bool): If True, magnetic field configuration will be applied (1/4, -3/4, 1, ...). Default is False.
         rk_traj (bool): If True, the trajectory of the reference particle is calculated using the Runge-Kutta method. Default is False.
-
-        debug (bool): If True, enables debugging output. Default is False.
-        filter_order (int): The order of the filter for CSR calculations. Default is 10.
-        n_mesh (int): Number of mesh points for the CSR wakefield calculations. Default is 345.
 
         pict_debug (bool): If True, the trajectory of the reference particle and CSR wakes will be saved for each step in the working folder. Default is False.
 
@@ -721,6 +774,9 @@ class CSR(PhysProc):
     """
 
     def __init__(self, **kw):
+        removed = sorted({"filter_order", "n_mesh", "debug"}.intersection(kw))
+        if removed:
+            raise TypeError("Unused CSR parameters have been removed: " + ", ".join(removed))
         PhysProc.__init__(self)
         # binning parameters
         self.x_qbin = kw.get("x_qbin", 0) # length or charge binning; 0... 1 = length...charge
@@ -729,13 +785,13 @@ class CSR(PhysProc):
 
         # smoothing
         self.ip_method = kw.get("ip_method", 2)     # = 0 / 1 / 2 for rectangular / triangular / gauss
-        self.sp = kw.get("sp", 0.5)                 # ? parameter for gauss
+        self.sp = kw.get("sp", 0.5)                 # Gaussian RMS / bin width
         self.sigma_min = kw.get("sigma_min", 1.e-4) # minimal sigma, if ip_method == 2
         self.step_unit = kw.get("step_unit", 0)     # if positive --> step=integer * step_unit
 
         # trajectory
         self.traj_step = kw.get("traj_step", 0.0002)  # [m] step of the trajectory
-        self.energy = kw.get("energy", None)          # [GeV], if None, beta = 1 and calculation of the trajectory with RK is not possible
+        self.energy = kw.get("energy", None)          # [GeV], required for RK trajectory
 
         # CSR kick
         self.apply_step = kw.get("apply_step", 0.0005) # [m] step of the calculation CSR kick: csr_kick += csr(apply_step)
@@ -747,11 +803,6 @@ class CSR(PhysProc):
 
         self.end_poles = kw.get("end_poles", False) # if True magnetic field configuration 1/4, -3/4, 1, ...
         self.rk_traj = kw.get("rk_traj", False)     # calculate trajectory of the reference particle with RK method
-
-        self.debug = kw.get("debug", False)
-        # another filter
-        self.filter_order = kw.get("filter_order", 10)
-        self.n_mesh = kw.get("n_mesh", 345)
 
         # if True trajectory of the reference particle will be produced
         # and CSR wakes will be saved in the working folder on each step
@@ -841,7 +892,7 @@ class CSR(PhysProc):
         s = winf + gamma*(gamma*(w_range - winf)-beta*np.sqrt(g2*(w_range-winf)**2+a2))
         R = (w_range-s)/beta
 
-        if a2/R[1]**2 > 1e-7:
+        if a2/R[0]**2 > 1e-7:
             KS = (beta*(1. - np.dot(ev1, evo))*np.log(R[0]/R) - beta*np.dot(uup, evo)*(np.arctan((s[0] - winf)/a) - np.arctan((s-winf)/a))
                   - (b2*np.dot(ev1, evo) - 1)*np.log((winf - s + R)/(winf-s[0] + R[0]))
                   + g2i*np.log(w_range[0]/w_range))
@@ -896,6 +947,8 @@ class CSR(PhysProc):
         :return:
         """
 
+        if i == 0:
+            return np.zeros(int(NdW[0]) + 1)
         if gamma is not None:
             L_fin = True
         else:
@@ -907,18 +960,14 @@ class CSR(PhysProc):
         else:
             w, KS = self.K0_inf_anf(i, traj, w_range[0])
 
-        try:
-            KS1 = KS[0]
-        except IndexError:
-            KS = [KS]
-            KS1 = KS[0]
-
-        # w, idx = np.unique(w, return_index=True)
-        # KS = KS[idx]
-        # sort and unique takes time, but is required to avoid numerical trouble
-
-        # Use w_min instead of unique and w[0]
-        w_min = np.min(w)
+        # Cancellation in s + beta*R can make the retarded grid repeat or
+        # decrease. Interpolation requires a strictly increasing grid.
+        KS = np.atleast_1d(KS)
+        if np.any(np.diff(w) <= 0):
+            w, indices = np.unique(w, return_index=True)
+            KS = KS[indices]
+        KS1 = KS[0]
+        w_min = w[0]
         if w_range[0] < w_min:
             m = np.where(w_range < w_min)[0][-1]
             if L_fin:
@@ -950,6 +999,11 @@ class CSR(PhysProc):
                 - `traj[4, :]`, `traj[5, :]`, `traj[6, :]`: Tangential unit vectors.
         """
         self.check_step()
+        _validate_binning(self.x_qbin, self.n_bin, self.m_bin)
+        if not np.isfinite(self.traj_step) or self.traj_step <= 0:
+            raise CSRConfigurationError("traj_step must be positive and finite")
+        if not np.isfinite(self.apply_step) or self.apply_step < 0:
+            raise CSRConfigurationError("apply_step must be nonnegative and finite")
 
         # if pict_debug = True import matplotlib
         if self.pict_debug:
@@ -1112,21 +1166,22 @@ class CSR(PhysProc):
         return self.csr_traj
 
     def apply(self, p_array, delta_s):
-        import matplotlib.pyplot as plt
-        if delta_s < self.traj_step:
-            logger.debug("CSR delta_s < self.traj_step")
+        if p_array.n == 0 or delta_s == 0:
             return
+        if not np.isfinite(delta_s) or delta_s < 0:
+            raise CSRConfigurationError("CSR kick length must be nonnegative and finite")
+        if not np.isfinite(p_array.E) or p_array.E <= m_e_GeV:
+            raise CSRConfigurationError("CSR requires a beam energy above the electron rest energy")
         s_cur = self.z0 - self.z_csr_start
         z = -p_array.tau()
 
         ind_z_sort = np.argsort(z)
-        #SBINB, NBIN = subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
-        #B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
-        #s1, s2, Ns, lam_ds = Q2EQUI(p_array.q_array[ind_z_sort], B_params, SBINB, NBIN)
-        SBINB, NBIN = self.sub_bin.subbin_bound(p_array.q_array, z[ind_z_sort], self.x_qbin, self.n_bin, self.m_bin)
+        z_sort = z[ind_z_sort]
+        q_sort = p_array.q_array[ind_z_sort]
+        SBINB, NBIN = self.sub_bin.subbin_bound(q_sort, z_sort, self.x_qbin, self.n_bin, self.m_bin)
 
-        B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min]
-        s1, s2, Ns, lam_ds = self.bin_smoth.Q2EQUI(p_array.q_array[ind_z_sort], B_params, SBINB, NBIN)
+        B_params = [self.x_qbin, self.n_bin, self.m_bin, self.ip_method, self.sp, self.sigma_min, self.step_unit]
+        s1, s2, Ns, lam_ds = self.bin_smoth.Q2EQUI(q_sort, B_params, SBINB, NBIN)
 
         st = (s2 - s1) / Ns
         sa = s1 + st / 2.
@@ -1142,6 +1197,10 @@ class CSR(PhysProc):
         h = max(1., self.apply_step/self.traj_step)
 
         itr_ra = np.unique(-np.round(np.arange(-indx, -indx_prev, h))).astype(int)
+        if len(itr_ra) == 0:
+            # A navigator step can be shorter than the trajectory spacing.
+            # Still integrate its full length using the nearest kernel sample.
+            itr_ra = np.array([indx])
         #print(s1, s2, Ns, Ndw, itr_ra)
         K1 = 0
         for it in itr_ra:
@@ -1161,7 +1220,6 @@ class CSR(PhysProc):
 
         lam_K1 = csr_convolution(lam_ds, K1[::-1]) / st * delta_s
 
-        z_sort = z[ind_z_sort]
         dE = np.interp(z_sort*(1./st)+(0. - sa/st), np.arange(len(lam_K1)), lam_K1)
 
         pc_ref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
@@ -1282,9 +1340,10 @@ class SaferCSR(CSR):
     def __init__(self,
                  derbenev_criterion=0.5,
                  sigma_min_factor=9.9,
-                 apply_kick=True
+                 apply_kick=True,
+                 **kw
                  ):
-        super().__init__()
+        super().__init__(**kw)
         self.derbenev_criterion = derbenev_criterion
         # If bunch become shorter than sigma_min_factor*sigma_min, raise a warning.
         self.sigma_min_factor = sigma_min_factor
@@ -1294,9 +1353,9 @@ class SaferCSR(CSR):
     def query_bunch_length(self, bunch_length):
         minimum_permissable_bunch_length = self.sigma_min_factor * self.sigma_min
         if bunch_length < minimum_permissable_bunch_length:
+            ratio = bunch_length / self.sigma_min
             bunch_length = round(bunch_length*1e6, 6)
             sigma_min = round(self.sigma_min*1e6, 6)
-            ratio = bunch_length / sigma_min
             logger.warning(
                 f"Bunch is too small relative to sigma_min at s={self.z0}m: "
                 f" bunch_length = {bunch_length}um;"
@@ -1311,20 +1370,24 @@ class SaferCSR(CSR):
 
     def query_derbenev_criterion(self, bunch_x, bunch_y, bunch_length):
         s = self.csr_traj[0]
-        csr_traj_index = np.searchsorted(s, self.z0)
+        if len(s) < 2:
+            return
+        csr_traj_index = np.clip(np.searchsorted(s, self.z0 - self.z_csr_start), 1, len(s) - 1)
 
         # The points and tangents before and after the step takes place
         # pre_step = self.csr_traj[..., csr_traj_index-1][1:4]
         # post_step = self.csr_traj[..., csr_traj_index][1:4]
         tangent_pre_step = self.csr_traj[..., csr_traj_index-1][4:]
         tangent_post_step = self.csr_traj[..., csr_traj_index][4:]
+        tangent_pre_step = tangent_pre_step / np.linalg.norm(tangent_pre_step)
+        tangent_post_step = tangent_post_step / np.linalg.norm(tangent_post_step)
 
-        if np.isclose(tangent_pre_step, tangent_post_step).all():
-            # In a non-bending element I guess (e.g. a drift)
+        angle = np.arctan2(np.linalg.norm(np.cross(tangent_pre_step, tangent_post_step)),
+                           np.dot(tangent_post_step, tangent_pre_step))
+        if angle == 0:
             return
 
-        angle = np.arccos(np.dot(tangent_post_step, tangent_pre_step))
-        bending_radius = self.traj_step / angle
+        bending_radius = (s[csr_traj_index] - s[csr_traj_index-1]) / angle
 
         # Get index of coordinate that changes the most and basically just assume
         # we're bending in that plane.
@@ -1350,6 +1413,8 @@ class SaferCSR(CSR):
             )
 
     def apply(self, parray, ds):
+        if parray.n == 0:
+            return
         bunch_length = parray.tau().std()
         bunch_x = parray.x().std()
         bunch_y = parray.y().std()

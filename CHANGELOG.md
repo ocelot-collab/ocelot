@@ -54,6 +54,9 @@ Versioning is date based: `YY.MM.patch`.
 
 ### Fixed
 
+- Preserve particle energies and transverse momenta in
+  `recalculate_ref_particle()` by rescaling normalized momentum coordinates
+  when the reference energy changes.
 - CSR reference trajectories now join analytical arcs and RK field orbits in
   transported element frames, including bends in different planes. RK bends
   stop at the specified arc length without duplicate endpoint samples.

@@ -74,10 +74,20 @@ class BeamFormFactor:
 
 
 def recalculate_ref_particle(p_array):
+    """Use the first particle as the energy and longitudinal reference in place.
+
+    Preserve particle energies and physical momenta by rescaling all normalized
+    momentum coordinates to the new reference momentum. The first particle's
+    energy deviation and ``tau`` become zero. Return the updated ParticleArray.
+    """
     pref = np.sqrt(p_array.E ** 2 / glb.m_e_GeV ** 2 - 1) * glb.m_e_GeV
     Enew = p_array.p()[0] * pref + p_array.E
+    pref_new = np.sqrt(Enew ** 2 / glb.m_e_GeV ** 2 - 1) * glb.m_e_GeV
     s_new = p_array.s - p_array.tau()[0]
     p_array.rparticles[5, :] -= p_array.p()[0]
+    momentum_scale = pref / pref_new
+    for index in (1, 3, 5):
+        p_array.rparticles[index, :] *= momentum_scale
     p_array.rparticles[4, :] -= p_array.tau()[0]
     p_array.E = Enew
     p_array.s = s_new

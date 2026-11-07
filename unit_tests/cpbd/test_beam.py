@@ -10,6 +10,7 @@ from ocelot.cpbd.beam import (cov_matrix_from_twiss,
                               Twiss,
                               twiss_iterable_to_df,
                               generate_parray,
+                              recalculate_ref_particle,
                               s_to_cur,
                               slice_analysis,
                               )
@@ -147,6 +148,58 @@ def test_particle_array_total_charge():
     parray.q_array[1] = charge1
 
     assert parray.total_charge == charge0 + charge1
+
+
+@pytest.mark.parametrize("energy", [0.001, 0.130, 2.4])
+@pytest.mark.parametrize("first_energy_offset", [-0.035, 0.0, 0.025])
+def test_recalculate_ref_particle_preserves_physical_beam(energy, first_energy_offset):
+    parray = ParticleArray(4)
+    parray.E = energy
+    parray.s = 2.0
+    parray.rparticles[:] = [
+        [1e-4, -2e-4, 3e-4, 0.0],
+        [2e-3, -1e-3, 0.0, 3e-3],
+        [-2e-4, 3e-4, 0.0, 1e-4],
+        [-1e-3, 0.0, 2e-3, -3e-3],
+        [3e-4, -1e-4, 0.0, 4e-4],
+        [first_energy_offset, -0.01, 0.015, 0.04],
+    ]
+    parray.q_array[:] = [1e-12, 2e-12, 3e-12, 4e-12]
+    original_coordinates = parray.rparticles.copy()
+    original_charges = parray.q_array.copy()
+    pc_before = np.sqrt(energy**2 - m_e_GeV**2)
+    energies_before = energy + pc_before * parray.p()
+    transverse_momenta_before = pc_before * parray.rparticles[[1, 3]]
+    longitudinal_positions_before = parray.s - parray.tau()
+
+    assert recalculate_ref_particle(parray) is parray
+
+    # A change of reference must not change physical energies or momenta,
+    # including at low energy where momentum is appreciably different from E/c.
+    pc_after = np.sqrt(parray.E**2 - m_e_GeV**2)
+    np.testing.assert_allclose(
+        parray.E + pc_after * parray.p(), energies_before, rtol=2e-15, atol=0,
+    )
+    np.testing.assert_allclose(
+        pc_after * parray.rparticles[[1, 3]], transverse_momenta_before,
+        rtol=2e-15, atol=0,
+    )
+    np.testing.assert_allclose(
+        parray.s - parray.tau(), longitudinal_positions_before, rtol=0, atol=5e-16,
+    )
+    np.testing.assert_array_equal(parray.rparticles[[0, 2]], original_coordinates[[0, 2]])
+    np.testing.assert_array_equal(parray.q_array, original_charges)
+    np.testing.assert_allclose(parray.E, energies_before[0], rtol=2e-15, atol=0)
+    assert parray.p()[0] == 0.0
+    assert parray.tau()[0] == 0.0
+
+    # Repeating the operation on an already referenced beam is a no-op.
+    referenced_coordinates = parray.rparticles.copy()
+    referenced_energy, referenced_s = parray.E, parray.s
+    recalculate_ref_particle(parray)
+    np.testing.assert_array_equal(parray.rparticles, referenced_coordinates)
+    assert parray.E == referenced_energy
+    assert parray.s == referenced_s
 
 
 def test_get_twiss_from_slice():

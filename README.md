@@ -164,6 +164,62 @@ limits](./ocelot/cpbd/README_RK_COORDINATES.md) and the executed
 [Runge–Kutta tutorial](./demos/docs/18_runge_kutta_tracking.ipynb), including
 synchrotron-radiation use of the Cartesian integrator.
 
+### Orbit and dispersion response matrices
+
+For a linac, `LinacRmatrixRM` calculates the orbit response
+$R_{ij}=\partial u_i/\partial\theta_j$, where $u_i$ is the horizontal or vertical
+position at a BPM centre and $\theta_j$ is a corrector angle in radians.
+The dispersion response matrix (DRM) gives the change in BPM dispersion per
+radian of corrector kick. Choose the excitation to match the measurement.
+
+| Excitation | Ocelot method | Definition |
+| --- | --- | --- |
+| Energy offset at the lattice entrance | `LinacDisperseTmatrixRM` | $\partial R_{ij}/\partial\delta_0$ at $\delta_0=0$, with $\delta_0=(E_{\rm particle}-E_0)/(p_0 c)$. The method differentiates the active tracking maps directly. |
+| Voltage change at one cavity or an RF station | `LinacCavityScanRM` | $[R_{ij}(V+\Delta V)-R_{ij}(V)]/\eta$, with $\eta=\Delta V/E_{\rm norm}$ for electrons using GV and GeV. The corresponding BPM dispersion is $[u_i(V+\Delta V)-u_i(V)]/\eta$. |
+
+Pass the reference energy **at the lattice entrance** in `Twiss(E=...)`.
+Ocelot applies the cavity gains along the line. For a voltage scan,
+`normalization_energy` is the energy used to normalize the measured voltage
+span, for example the nominal section energy. Each selected cavity receives
+its weight times the signed end-to-end voltage change. Its RF phase determines
+the actual energy gain. BPMs upstream of the first scanned cavity have zero
+scan response. Magnets keep their nominal calibration at both voltage settings.
+
+```python
+from functools import partial
+import ocelot as ocl
+from ocelot.cpbd.orbit_correction import Orbit
+from ocelot.cpbd.response_matrix import LinacCavityScanRM, LinacRmatrixRM
+
+rf1 = ocl.Cavity(l=1.0, v=0.285, eid="RF1")
+rf2 = ocl.Cavity(l=1.0, v=0.285, eid="RF2")
+h = ocl.Hcor(angle=0.0002, eid="H")
+v = ocl.Vcor(eid="V")
+bpm = ocl.Monitor(eid="B")
+lat = ocl.MagneticLattice((rf1, rf2, h, v, ocl.Drift(l=2), bpm),
+                          method={"global": ocl.SecondTM})
+
+scan = partial(LinacCavityScanRM, cavity_weights={rf1: 0.5, rf2: 0.5},
+               voltage_step=0.001, normalization_energy=0.700)
+orbit = Orbit(lat, rm_method=LinacRmatrixRM, disp_rm_method=scan)
+entrance = ocl.Twiss(E=0.130)
+orbit.response_matrix.calculate(entrance)
+orbit.disp_response_matrix.calculate(entrance)
+drm = orbit.disp_response_matrix.get_matrix()  # rows X then Y, columns H then V
+dispersion = orbit.get_dispersion()            # model minus design, in metres
+```
+
+To calculate just the scan dispersion, call
+`dx, dy = orbit.disp_response_matrix.method.read_virtual_dispersion(E0=entrance.E)`.
+Here a 1 MV station scan adds 0.5 MV per cavity. For a single cavity use
+`cavity_weights={rf1: 1.0}`. For entrance dispersion, pass
+`disp_rm_method=LinacDisperseTmatrixRM` from the same module. Use chromatic
+tracking maps such as `SecondTM` for the magnets and drifts when calculating
+a DRM. A linear `TransferMap` omits their second-order dependence on energy.
+`LinacSimRM` and `LinacDisperseSimRM` provide corrector-step tracking checks
+for the orbit and entrance-dispersion responses, respectively. The latter
+uses a finite entrance offset of 0.01, which can matter in a nonlinear line.
+
 ### ⚡ Physics Processes
 - [**Space Charge**](./ocelot/cpbd/sc.py) - Space charge effects
 - [**CSR**](./ocelot/cpbd/csr.py) - Coherent synchrotron radiation

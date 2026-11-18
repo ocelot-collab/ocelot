@@ -133,14 +133,15 @@ def test_correction(lattice, update_ref_values=False):
     hcors_angle = np.array([cor.angle for cor in orb.hcors])
 
     if update_ref_values:
-        return numpy2json([x_bpm_b, y_bpm_b, x_bpm, y_bpm, hcors_angle, vcors_angle])
+        # BPM readings and corrector angles have different row lengths.
+        return [numpy2json([row])[0] for row in (x_bpm_b, y_bpm_b, x_bpm, y_bpm, hcors_angle, vcors_angle)]
 
     bpm_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
 
     result1 = check_matrix(x_bpm_b, bpm_ref[0], TOL, assert_info=' x_bpm_before_correction - ')
     result2 = check_matrix(y_bpm_b, bpm_ref[1], TOL, assert_info=' y_bpm_before_correction - ')
-    result3 = check_matrix(x_bpm, bpm_ref[2], TOL, assert_info=' x_bpm - ')
-    result4 = check_matrix(y_bpm, bpm_ref[3], TOL, assert_info=' y_bpm - ')
+    result3 = check_matrix(x_bpm, bpm_ref[2], TOL, absolute_tolerance=1e-12, assert_info=' x_bpm - ')
+    result4 = check_matrix(y_bpm, bpm_ref[3], TOL, absolute_tolerance=1e-12, assert_info=' y_bpm - ')
     result5 = check_matrix(hcors_angle, bpm_ref[4], TOL, assert_info=' hor corrector - ')
     result6 = check_matrix(vcors_angle, bpm_ref[5], TOL, assert_info=' ver corrector - ')
     assert check_result(result1+result2+result3+result4 + result5 + result6)
@@ -169,14 +170,15 @@ def test_correction_micado(lattice, update_ref_values=False):
     vcors_angle = np.array([cor.angle for cor in orb.vcors])
     hcors_angle = np.array([cor.angle for cor in orb.hcors])
     if update_ref_values:
-        return numpy2json([x_bpm_b, y_bpm_b, x_bpm, y_bpm, hcors_angle, vcors_angle])
+        # BPM readings and corrector angles have different row lengths.
+        return [numpy2json([row])[0] for row in (x_bpm_b, y_bpm_b, x_bpm, y_bpm, hcors_angle, vcors_angle)]
 
     bpm_ref = json2numpy(json_read(REF_RES_DIR + sys._getframe().f_code.co_name + '.json'))
 
     result1 = check_matrix(x_bpm_b, bpm_ref[0], TOL, assert_info=' x_bpm_before_correction - ')
     result2 = check_matrix(y_bpm_b, bpm_ref[1], TOL, assert_info=' y_bpm_before_correction - ')
-    result3 = check_matrix(x_bpm, bpm_ref[2], TOL, assert_info=' x_bpm - ')
-    result4 = check_matrix(y_bpm, bpm_ref[3], TOL, assert_info=' y_bpm - ')
+    result3 = check_matrix(x_bpm, bpm_ref[2], TOL, absolute_tolerance=1e-12, assert_info=' x_bpm - ')
+    result4 = check_matrix(y_bpm, bpm_ref[3], TOL, absolute_tolerance=1e-12, assert_info=' y_bpm - ')
     result5 = check_matrix(hcors_angle, bpm_ref[4], TOL, assert_info=' hor corrector - ')
     result6 = check_matrix(vcors_angle, bpm_ref[5], TOL, assert_info=' ver corrector - ')
     assert check_result(result1+result2+result3+result4 + result5 + result6)

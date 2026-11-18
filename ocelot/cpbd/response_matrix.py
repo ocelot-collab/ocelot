@@ -2,19 +2,18 @@
 from ocelot.cpbd.elements import Quadrupole as Quadrupole
 
 from ocelot.cpbd.navi import Navigator
-from ocelot.cpbd.optics import periodic_twiss, twiss
 from ocelot.cpbd.beam import Twiss
 from ocelot.cpbd.match import closed_orbit
 from ocelot.cpbd.track import tracking_step
-from ocelot.cpbd.elements import Hcor
+from ocelot.cpbd.elements import Cavity, Hcor, TWCavity
 from ocelot.cpbd.beam import Particle
-from ocelot.cpbd.tm_utils import transfer_maps_mult
+from ocelot.common.globals import m_e_GeV, speed_of_light
+from ocelot.cpbd.rf_maps import rf_long_t_terms
+from ocelot.cpbd.transformations import CavityTM, SecondTM, TMTypes, TransferMap, TWCavityTM
 import copy
 import os
 import numpy as np
-from scipy.interpolate import splrep, splev
 import json
-import time
 import pandas as pd
 
 import logging
@@ -33,191 +32,206 @@ class MeasureResponseMatrix:
         pass
 
     def read_virtual_orbit(self, p_init=None, write2bpms=True):
-        """
-        searching closed orbit by function closed_orbit(lattice) and searching coordinates of beam at the bpm positions
-
-        :param lattice: class MagneticLattice
-        :return: orbit.bpms
-        """
-        particles = []
-        X = []
-        Y = []
-        if p_init == None:
-            self.particle0 = closed_orbit(self.lat)
-        else:
-            self.particle0 = p_init
+        """Track to BPM positions and return X and Y arrays in the requested BPM order."""
+        self.particle0 = closed_orbit(self.lat) if p_init is None else p_init
         p = copy.copy(self.particle0)
         navi = Navigator(self.lat)
-        L = 0.
+        positions = []
         for bpm in self.bpms:
-            # print("energy = ", p.E)
-            dz = bpm.s - L
-            tracking_step(self.lat, [p], dz, navi)
+            # Standalone position probes may supply s without belonging to
+            # the lattice. A reused physical monitor has no unique reading.
+            if hasattr(bpm, "s") and len(self.lat.find_element_indices(bpm)) < 2:
+                positions.append(bpm.s)
+            else:
+                i = self.lat.resolve_element_index(bpm)
+                positions.append(sum(e.l for e in self.lat.sequence[:i]) + bpm.l / 2.)
+        X = np.empty(len(positions))
+        Y = np.empty(len(positions))
+        previous = 0.
+        for i in np.argsort(positions, kind="stable"):
+            bpm = self.bpms[i]
+            tracking_step(self.lat, [p], positions[i] - previous, navi)
+            previous = positions[i]
             if write2bpms:
                 bpm.x = p.x
                 bpm.y = p.y
                 bpm.E = p.E
                 bpm.p = p.p
-            L = bpm.s
-            X.append(p.x)
-            Y.append(p.y)
+            X[i], Y[i] = p.x, p.y
+        return X, Y
 
-            particles.append(copy.copy(p))
-        # print("energy = ", p.E)
-        return np.array(X), np.array(Y),
+    def read_virtual_dispersion(self, E0, write2bpms=True):
+        """Track BPM dispersion using entrance Particle.p values of 0 and 0.01.
 
-    def read_virtual_dispersion(self, E0):
-        X0, Y0 = self.read_virtual_orbit(p_init=Particle(p=0.000, E=E0))
-        X1, Y1 = self.read_virtual_orbit(p_init=Particle(p=0.01, E=E0), write2bpms=False)
-        # p = np.array([bpm.p for bpm in self.bpms])
-        Dx0 = (X1 - X0) / 0.01
-        Dy0 = (Y1 - Y0) / 0.01
-        for i, bpm in enumerate(self.bpms):
-            bpm.Dx = Dx0[i]
-            bpm.Dy = Dy0[i]
-        return Dx0, Dy0
+        Both particles use the same entrance reference energy E0 [GeV].
+        The denominator is the entrance offset, including in accelerating lines.
+        """
+        dp = 0.01
+        X0, Y0 = self.read_virtual_orbit(p_init=Particle(E=E0), write2bpms=write2bpms)
+        X1, Y1 = self.read_virtual_orbit(p_init=Particle(p=dp, E=E0), write2bpms=False)
+        Dx = (X1 - X0) / dp
+        Dy = (Y1 - Y0) / dp
+        if write2bpms:
+            for bpm, dx, dy in zip(self.bpms, Dx, Dy):
+                bpm.Dx = dx
+                bpm.Dy = dy
+        return Dx, Dy
+
+    def _calculate_kick_response(self, read_bpms, angle_step):
+        """Forward differences around the current settings. Only baseline readings are saved."""
+        correctors = [*self.hcors, *self.vcors]
+        self._device_indices(correctors)
+        baseline = np.concatenate(read_bpms(write2bpms=True))
+        response = np.empty((baseline.size, len(correctors)))
+        for j, cor in enumerate(correctors):
+            original_angle = cor.angle
+            try:
+                cor.angle = original_angle + angle_step
+                measured = np.concatenate(read_bpms(write2bpms=False))
+                response[:, j] = (measured - baseline) / angle_step
+            finally:
+                cor.angle = original_angle
+        self.resp = response
+        return response
+
+    def _device_indices(self, devices):
+        """Map unique lattice occurrence indices to their requested row or column."""
+        indices = {self.lat.resolve_element_index(device): i for i, device in enumerate(devices)}
+        if len(indices) != len(devices):
+            raise ValueError("A response matrix device was selected more than once")
+        return indices
+
+    def _response_sections(self, first_order_only):
+        """Yield occurrence index, maps, unit kick at corrector exit and BPM row at centre."""
+        correctors = [*self.hcors, *self.vcors]
+        columns = self._device_indices(correctors)
+        rows = self._device_indices(self.bpms)
+        for i, elem in enumerate(self.lat.sequence):
+            row = rows.get(i)
+            if row is not None and elem.l:
+                half = elem.l / 2.
+                yield i, elem.get_section_tms(half, first_order_only=first_order_only), None, row
+                yield i, elem.get_section_tms(half, start_l=half, first_order_only=first_order_only), None, None
+            else:
+                kick = None
+                if i in columns:
+                    unit_kick = elem.element.kick_b(elem.l, elem.l, 1., elem.tilt)
+                    kick = (columns[i], unit_kick[:, 0])
+                maps = elem.first_order_tms if first_order_only else elem.tms
+                yield i, maps, kick, row
+
+    def _linear_response(self, energy, periodic=False):
+        """Transport all unit kicks. For a ring also transport four launch coordinates."""
+        ncor = len(self.hcors) + len(self.vcors)
+        nbpm = len(self.bpms)
+        nlaunch = 4 if periodic else 0
+        sensitivities = np.zeros((6, nlaunch + ncor))
+        sensitivities[:nlaunch, :nlaunch] = np.eye(nlaunch)
+        readings = np.zeros((2 * nbpm, nlaunch + ncor))
+        for _, maps, kick, row in self._response_sections(first_order_only=True):
+            for tm in maps:
+                R = tm.get_params(energy).get_rotated_R()
+                sensitivities = R @ sensitivities
+                energy += tm.get_delta_e()
+            if kick is not None:
+                column, unit_kick = kick
+                sensitivities[:, nlaunch + column] += unit_kick
+            if row is not None:
+                readings[[row, row + nbpm]] = sensitivities[[0, 2]]
+
+        if periodic:
+            # Fixed entrance tau and delta, as in closed_orbit(). The same
+            # transverse launch coordinates must recur after one turn.
+            one_turn = sensitivities[:4, :4]
+            if np.max(abs(np.linalg.eigvals(one_turn))) > 1. + 1.e-7:
+                raise ValueError("Unstable one-turn transverse map")
+            try:
+                closed = np.linalg.solve(np.eye(4) - one_turn, sensitivities[:4, 4:])
+            except np.linalg.LinAlgError as exc:
+                raise ValueError("No unique periodic orbit response") from exc
+            readings = readings[:, 4:] + readings[:, :4] @ closed
+        return readings
+
+    def _optics_coupling(self, energy):
+        """Check when independent, constant-energy Courant-Snyder planes suffice."""
+        longitudinal = False
+        for elem in self.lat.sequence:
+            for tm in elem.first_order_tms:
+                R = tm.get_params(energy).get_rotated_R()
+                if np.any(abs(R[:2, 2:4]) > 1.e-14) or np.any(abs(R[2:4, :2]) > 1.e-14):
+                    return True, longitudinal
+                gain = tm.get_delta_e()
+                longitudinal = longitudinal or gain != 0. or np.any(R[:4, 4:])
+                energy += gain
+        return False, longitudinal
 
     def optical_func_params(self, tw_init=None):
-        """
-        Optical function parameters for correctors and bpms. It is needed for calculation of ideal response matrix:
-        defining beta functions on the azimuth of correctors and bpms: beta_x, beta_y;
-        defining phase shift between origin of lattice and element: mu_x, mu_y;
-        defining tunes of beta functions of whole lattice: nu_x, nu_y = mu(totalLen)/(2*pi)
-
-        :param lattice: class MagneticLattice
-        :return:
-        """
-        if tw_init == None:
-            tws = periodic_twiss(self.lat, nPoints=int(self.lat.totalLen / 0.05))
-        else:
-            tws = twiss(self.lat, tw_init, nPoints=int(self.lat.totalLen / 0.05))
-        s = np.array([tw.s for tw in tws])
-        tck_mux = splrep(s, np.array([tw.mux for tw in tws]))
-        tck_muy = splrep(s, np.array([tw.muy for tw in tws]))
-
-        beta_x = np.array([tw.beta_x for tw in tws])
-        beta_y = np.array([tw.beta_y for tw in tws])
-        self.nu_x = tws[-1].mux / 2. / np.pi
-        self.nu_y = tws[-1].muy / 2. / np.pi
-
-        tck_bx = splrep(s, beta_x)
-        tck_by = splrep(s, beta_y)
-        energy_s = [tw.E for tw in tws]
-        tck_E = splrep(s, energy_s)
-        # s_bpm = [bpm.s for bpm in self.bpms]
-
-        for bpm in self.bpms:
-            bpm.phi_x = splev([0, bpm.s], tck_mux)[1]
-            bpm.phi_y = splev([0, bpm.s], tck_muy)[1]
-
-            bpm.beta_x = splev([0, bpm.s], tck_bx)[1]
-            bpm.beta_y = splev([0, bpm.s], tck_by)[1]
-            bpm.E = splev([0, bpm.s], tck_E)[1]
-
-        for hcor in self.hcors:
-            hcor.phi_x = splev([0, hcor.s], tck_mux)[1]
-            hcor.phi_y = splev([0, hcor.s], tck_muy)[1]
-
-            hcor.beta_x = splev([0, hcor.s], tck_bx)[1]
-            hcor.beta_y = splev([0, hcor.s], tck_by)[1]
-            hcor.E = splev([0, hcor.s], tck_E)[1]
-
-        for vcor in self.vcors:
-            vcor.phi_x = splev([0, vcor.s], tck_mux)[1]
-            vcor.phi_y = splev([0, vcor.s], tck_muy)[1]
-
-            vcor.beta_x = splev([0, vcor.s], tck_bx)[1]
-            vcor.beta_y = splev([0, vcor.s], tck_by)[1]
-            vcor.E = splev([0, vcor.s], tck_E)[1]
+        """Attach uncoupled Twiss parameters at the device centres and store the tunes."""
+        optics = self.lat.periodic_twiss() if tw_init is None else tw_init
+        if optics.beta_x <= 0 or optics.beta_y <= 0:
+            raise ValueError("Optical functions require positive beta_x and beta_y")
+        start_s, start_mux, start_muy = optics.s, optics.mux, optics.muy
+        devices = self._device_indices([*self.hcors, *self.vcors, *self.bpms])
+        for i, elem in enumerate(self.lat.sequence):
+            if i in devices:
+                centre = optics
+                if elem.l:
+                    for tm in elem.get_section_tms(elem.l / 2., first_order_only=True):
+                        centre = tm * centre
+                elem.phi_x, elem.phi_y = centre.mux, centre.muy
+                elem.beta_x, elem.beta_y = centre.beta_x, centre.beta_y
+                elem.E = centre.E
+                elem.s = centre.s - start_s
+                elem.lat_inx = i
+            for tm in elem.first_order_tms:
+                optics = tm * optics
+        self.nu_x = (optics.mux - start_mux) / (2. * np.pi)
+        self.nu_y = (optics.muy - start_muy) / (2. * np.pi)
 
 
 class RingRM(MeasureResponseMatrix):
-
-    def __init__(self, lattice, hcors, vcors, bpms):
-        super(RingRM, self).__init__(lattice, hcors, vcors, bpms)
+    """Linear closed-orbit response at fixed entrance tau and delta, including coupling."""
 
     def calculate(self, tw_init=None):
-        """
-        calculation of ideal response matrix
-
-        :param lattice: class MagneticLattice
-        :param tw_init: if tw_init == None, function tries to find periodical solution
-        :return: orbit.resp
-        """
-        self.optical_func_params(tw_init=tw_init)
-        m = len(self.bpms)
-        nx = len(self.hcors)
-        ny = len(self.vcors)
-        h_resp = np.zeros((m, nx))
-        v_resp = np.zeros((m, ny))
-        sin_pnu_x = np.sin(np.pi * self.nu_x)
-        sin_pnu_y = np.sin(np.pi * self.nu_y)
-        for i, bpm in enumerate(self.bpms):
-            kx = np.sqrt(bpm.beta_x) / (2. * sin_pnu_x)
-            ky = np.sqrt(bpm.beta_y) / (2. * sin_pnu_y)
-            for j, hcor in enumerate(self.hcors):
-                mu_x = abs(bpm.phi_x - hcor.phi_x)
-                h_resp[i, j] = kx * np.sqrt(hcor.beta_x) * np.cos(mu_x - np.pi * self.nu_x)
-            for n, vcor in enumerate(self.vcors):
-                mu_y = abs(bpm.phi_y - vcor.phi_y)
-                v_resp[i, n] = ky * np.sqrt(vcor.beta_y) * np.cos(mu_y - np.pi * self.nu_y)
-        m = len(self.bpms)
-        kx = len(self.hcors)
-        ky = len(self.vcors)
-        self.resp = np.zeros((2 * m, kx + ky))
-        self.resp[:m, :kx] = h_resp[:, :]
-        self.resp[m:, kx:] = v_resp[:, :]
-        # print "shape = ", shape(self.resp)
+        energy = tw_init.E if tw_init is not None else 0.
+        coupled, _ = self._optics_coupling(energy)
+        if not coupled:
+            self.optical_func_params(self.lat.periodic_twiss(tw_init))
+        self.resp = self._linear_response(energy, periodic=True)
         return self.resp
 
 
 class LinacOpticalRM(MeasureResponseMatrix):
+    """Linear optics response, with beta and phase at devices for uncoupled lattices.
 
-    def __init__(self, lattice, hcors, vcors, bpms):
-        super(LinacOpticalRM, self).__init__(lattice, hcors, vcors, bpms)
+    The full optics matrices also cover coupling and RF damping. In an
+    uncoupled line at constant energy this gives sqrt(beta_i beta_j) sin(dmu).
+    """
 
     def calculate(self, tw_init=None):
-        """
-        calculation of ideal response matrix
+        energy = tw_init.E if tw_init is not None else 0.
+        coupled, longitudinal = self._optics_coupling(energy)
+        if not coupled:
+            seed = tw_init
+            if seed is None or (seed.beta_x == 0 and seed.beta_y == 0):
+                seed = Twiss(E=energy, beta_x=1., beta_y=1.)
+            self.optical_func_params(seed)
+        if coupled or longitudinal:
+            self.resp = self._linear_response(energy)
+            return self.resp
 
-        :param lattice: class MagneticLattice
-        :param tw_init: if tw_init == None, function tries to find periodical solution
-        :return: orbit.resp
-        """
-        self.optical_func_params(tw_init=tw_init)
-
-        m = len(self.bpms)
-        nx = len(self.hcors)
-        ny = len(self.vcors)
-        h_resp = np.zeros((m, nx))
-        v_resp = np.zeros((m, ny))
-
-        for i, bpm in enumerate(self.bpms):
-            kx = np.sqrt(bpm.beta_x)  # /(2.*sin_pnu_x)
-            ky = np.sqrt(bpm.beta_y)  # /(2.*sin_pnu_y)
-            for j, hcor in enumerate(self.hcors):
-                if hcor.s < bpm.s:
-                    mu_x = (bpm.phi_x - hcor.phi_x)
-                    h_resp[i, j] = kx * np.sqrt(hcor.beta_x) * np.sin(mu_x) * np.sqrt(hcor.E / bpm.E)
-
-            for n, vcor in enumerate(self.vcors):
-                if vcor.s < bpm.s:
-                    mu_y = (bpm.phi_y - vcor.phi_y)
-                    v_resp[i, n] = ky * np.sqrt(vcor.beta_y) * np.sin(mu_y) * np.sqrt(vcor.E / bpm.E)
-
-        m = len(self.bpms)
-        kx = len(self.hcors)
-        ky = len(self.vcors)
-
-        self.resp = np.zeros((2 * m, kx + ky))
-        self.resp[:m, :kx] = h_resp[:, :]
-        self.resp[m:, kx:] = v_resp[:, :]
-
-        # rmatrix = ResponseMatrix()
-        # rmatrix.bpm_names = [b.id for b in self.bpms]
-        # rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
-        # rmatrix.matrix = self.resp
-        # rmatrix.mode = "radian"
+        # In separable optics a finite Ocelot corrector is equivalent to a
+        # thin angular kick at its centre.
+        correctors = [*self.hcors, *self.vcors]
+        nbpm = len(self.bpms)
+        self.resp = np.zeros((2 * nbpm, len(correctors)))
+        for j, cor in enumerate(correctors):
+            for i, bpm in enumerate(self.bpms):
+                if cor.lat_inx < bpm.lat_inx:
+                    self.resp[i, j] = (np.cos(cor.tilt) * np.sqrt(cor.beta_x * bpm.beta_x)
+                                       * np.sin(bpm.phi_x - cor.phi_x))
+                    self.resp[i + nbpm, j] = (np.sin(cor.tilt) * np.sqrt(cor.beta_y * bpm.beta_y)
+                                              * np.sin(bpm.phi_y - cor.phi_y))
         return self.resp
 
 
@@ -227,104 +241,22 @@ class LinacSimRM(MeasureResponseMatrix):
         super(LinacSimRM, self).__init__(lattice, hcors, vcors, bpms)
 
     def calculate(self, tw_init=None):
-        """
-        calculation of ideal response matrix
+        """Track the orbit response to each corrector at entrance reference energy tw_init.E."""
+        if tw_init is None:
+            raise ValueError("LinacSimRM requires tw_init with the lattice entrance energy")
 
-        :param lattice: class MagneticLattice
-        :param tw_init: if tw_init == None, function tries to find periodical solution
-        :return: orbit.resp
-        """
-        # self.optical_func_params(tw_init=tw_init)
-        match_ic = False  # for future, fitting the initial conditions
-        m = len(self.bpms)
-        nx = len(self.hcors)
-        ny = len(self.vcors)
+        def read_bpms(write2bpms):
+            return self.read_virtual_orbit(p_init=Particle(E=tw_init.E), write2bpms=write2bpms)
 
-        add_i = 0
-        if match_ic:
-            add_i = 4
-        self.resp = np.zeros((2 * m, nx + ny + add_i))
-        s = [bpm.s for bpm in self.bpms]
-        X0, Y0 = self.read_virtual_orbit(p_init=Particle(E=tw_init.E))
-
-        Or0 = np.append(X0, Y0)
-        for j, cor in enumerate([item for sublist in [self.hcors, self.vcors] for item in sublist]):
-            print(j, "/", nx + ny, cor.id)
-            cor.angle = 0.0001
-            self.lat.update_transfer_maps()
-            # start = time()
-            X1, Y1 = self.read_virtual_orbit(p_init=Particle(E=tw_init.E))
-            # print(time() - start)
-
-            Or1 = np.append(X1, Y1)
-            self.resp[:, j] = (Or1 - Or0) / cor.angle
-            cor.angle = 0.00
-        self.lat.update_transfer_maps()
-        if match_ic:
-            for i, par in enumerate(["x", "px", "y", "py"]):
-                # print(i)
-                p_i = Particle(E=tw_init.E)
-                p_i.__dict__[par] = 0.0001
-                # print ("measure = ", p_i.x, p_i.y, p_i.px, p_i.py, p_i.E)
-                X1, Y1 = self.read_virtual_orbit(p_init=p_i)
-                Or1 = np.append(X1, Y1)
-                self.resp[:, nx + ny + i] = (Or1 - Or0) / 0.0001
-        X1, Y1 = self.read_virtual_orbit(p_init=Particle(E=tw_init.E))
-        # rmatrix = ResponseMatrix()
-        # rmatrix.bpm_names = [b.id for b in self.bpms]
-        # rmatrix.cor_names = np.append(np.array([c.id for c in self.hcors]), np.array([c.id for c in self.vcors]))
-        # rmatrix.matrix = self.resp
-        # rmatrix.mode = "radian"
-        return self.resp
+        return self._calculate_kick_response(read_bpms, angle_step=0.0001)
 
 
 class LinacRmatrixRM(MeasureResponseMatrix):
-
-    def __init__(self, lattice, hcors, vcors, bpms):
-        super(LinacRmatrixRM, self).__init__(lattice, hcors, vcors, bpms)
+    """First-order orbit response from corrector kicks to BPM centres in both planes."""
 
     def calculate(self, tw_init=None):
-        """
-        calculation of ideal response matrix
-
-        :param lattice: class MagneticLattice
-        :param tw_init: if tw_init == None, initial beam energy is ZERO
-        :return: orbit.resp
-        """
-        if tw_init is None:
-            logger.warning("tw_init is None. Initial beam energy is assuemed ZERO")
-            Einit = 0
-        else:
-            Einit = tw_init.E
-
-        m = len(self.bpms)
-        nx = len(self.hcors)
-        ny = len(self.vcors)
-        self.resp = np.zeros((2 * m, nx + ny))
-
-        for j, cor in enumerate([item for sublist in [self.hcors, self.vcors] for item in sublist]):
-            print(j, "/", nx + ny, cor.id)
-            Ra = np.eye(6)
-            E = Einit
-            for i, elem in enumerate(self.lat.sequence):
-                if i < cor.lat_inx:
-                    for tm in elem.tms:
-                        E += tm.get_delta_e()
-                    continue
-
-                for tm in elem.tms:
-                    Rb = tm.get_params(E).get_rotated_R()
-                    Ra = np.dot(Rb, Ra)
-                    E += tm.get_delta_e()
-                    if elem in self.bpms:
-
-                        n = self.bpms.index(elem)
-
-                        if cor.__class__ == Hcor:
-                            self.resp[n, j] = Ra[0, 1]
-
-                        else:
-                            self.resp[n + m, j] = Ra[2, 3]
+        energy = tw_init.E if tw_init is not None else 0.
+        self.resp = self._linear_response(energy)
         return self.resp
 
 
@@ -334,88 +266,223 @@ class LinacDisperseSimRM(MeasureResponseMatrix):
         super(LinacDisperseSimRM, self).__init__(lattice, hcors, vcors, bpms)
 
     def calculate(self, tw_init=None):
+        """Track the change in BPM dispersion per radian of corrector kick.
+
+        tw_init.E is the reference energy at the lattice entrance [GeV].
+        Each column uses a +0.5 mrad increment and read_virtual_dispersion.
+        Rows are all horizontal BPM readings followed by all vertical readings.
+        Columns are horizontal correctors followed by vertical correctors.
         """
-        calculation of ideal dispersive response matrix
+        if tw_init is None:
+            raise ValueError("LinacDisperseSimRM requires tw_init with the lattice entrance energy")
 
-        :param lattice: class MagneticLattice
-        :param tw_init: if tw_init == None, function tries to find periodical solution
-        :return: orbit.resp
-        """
-        if tw_init == None:
-            print("ADD INITIAL TWISS TO LinacDisperseSimRM.calculate(tw_init)")
+        def read_bpms(write2bpms):
+            return self.read_virtual_dispersion(E0=tw_init.E, write2bpms=write2bpms)
 
-        m = len(self.bpms)
-        nx = len(self.hcors)
-        ny = len(self.vcors)
+        return self._calculate_kick_response(read_bpms, angle_step=0.0005)
 
-        self.resp = np.zeros((2 * m, nx + ny))
-        s = [bpm.s for bpm in self.bpms]
-        Dx0, Dy0 = self.read_virtual_dispersion(E0=tw_init.E)
-        D0 = np.append(Dx0, Dy0)
-        for j, cor in enumerate([item for sublist in [self.hcors, self.vcors] for item in sublist]):
-            print(j, "/", nx + ny, cor.id)
-            cor.angle = 0.0005
-            self.lat.update_transfer_maps()
-            cor.transfer_map = cor.create_tm()
-            start = time.time()
-            Dx1, Dy1 = self.read_virtual_dispersion(E0=tw_init.E)
-            # if np.max(Dx1)>1e+100 or np.max(Dy1) > 1e+100:
-            print(time.time() - start)
 
-            D1 = np.append(Dx1, Dy1)
-            self.resp[:, j] = (D1 - D0) / cor.angle
-            cor.angle = 0.00
-            cor.transfer_map = cor.create_tm()
-        # self.lat.update_transfer_maps()
-        return self.resp
+def _map_derivatives(tm, energy, orbit, dispersion=None):
+    """Return the Jacobian and, when requested, its derivative along dispersion."""
+    if isinstance(tm, SecondTM):
+        params = tm.get_params(energy)
+        tensor = params.get_rotated_T() if params.tilt else params.T
+        hessian = tensor + tensor.swapaxes(1, 2)
+        dJ = hessian @ dispersion if dispersion is not None else None
+        return params.get_rotated_R() + hessian @ orbit, dJ
+    if isinstance(tm, (CavityTM, TWCavityTM)):
+        params = tm.get_params(energy)
+        J = params.get_rotated_R()
+        dJ = np.zeros_like(J) if dispersion is not None else None
+        if tm.tm_type == TMTypes.MAIN and (energy or params.v):
+            z = tm.length if tm.delta_length is None else tm.delta_length
+            voltage = params.v * z / tm.length if tm.length else params.v
+            phi = np.deg2rad(params.phi)
+            t566, t556, t555 = rf_long_t_terms(z, voltage, energy, params.freq, phi)
+            h_tau = np.array([[2. * t555, t556], [t556, 2. * t566]])
+            J[4, 4:] += h_tau @ orbit[4:]
+            # rf_longitudinal_kick uses the full sinusoid for outgoing delta.
+            k = 2. * np.pi * params.freq / speed_of_light
+            phase = phi - k * orbit[4]
+            e_out = energy + voltage * np.cos(phi)
+            pc_out = np.sqrt((e_out - m_e_GeV) * (e_out + m_e_GeV))
+            J[5, 4] = voltage * k * np.sin(phase) / pc_out
+            if dispersion is not None:
+                dJ[4, 4:] = h_tau @ dispersion[4:]
+                dJ[5, 4] = -voltage * k**2 * np.cos(phase) / pc_out * dispersion[4]
+        return J, dJ
+    if type(tm) is TransferMap:
+        dJ = np.zeros((6, 6)) if dispersion is not None else None
+        return tm.get_params(energy).get_rotated_R(), dJ
+
+    # Non-polynomial tracking maps need local derivatives of their actual map
+    # function. Evaluate coordinate probes together, without changing magnets
+    # or the design reference energy. Scale the outer step in phase space.
+    step = np.cbrt(np.finfo(float).eps)
+    offsets = step * np.eye(6)
+
+    def jacobian(point):
+        probes = np.column_stack((point[:, None] + offsets, point[:, None] - offsets))
+        mapped = tm.map_function(probes, energy)
+        return (mapped[:, :6] - mapped[:, 6:]) / (2. * step)
+
+    J = jacobian(orbit)
+    if dispersion is None:
+        return J, None
+    norm = np.max(np.abs(dispersion))
+    if norm == 0.:
+        return J, np.zeros_like(J)
+    delta = step / norm
+    shift = delta * dispersion
+    return J, (jacobian(orbit + shift) - jacobian(orbit - shift)) / (2. * delta)
 
 
 class LinacDisperseTmatrixRM(MeasureResponseMatrix):
+    """Derivative of the BPM orbit response with respect to entrance Particle.p.
 
-    def __init__(self, lattice, hcors, vcors, bpms):
-        super(LinacDisperseTmatrixRM, self).__init__(lattice, hcors, vcors, bpms)
+    Propagate the reference trajectory, its entrance-energy derivative and all
+    corrector derivatives together. SecondTM supplies the magnetic Taylor
+    tensor and RF cavities use their longitudinal derivatives. An active
+    linear TransferMap has zero curvature. For other nonlinear tracking
+    methods, differentiate their local map in phase space.
+    No corrector settings are perturbed. Rows are X then Y, columns H then V.
+    """
 
     def calculate(self, tw_init=None):
-        """
-        calculation of ideal response matrix
+        if tw_init is None:
+            raise ValueError("LinacDisperseTmatrixRM requires tw_init with the lattice entrance energy")
+        energy = tw_init.E
+        orbit = np.zeros(6)
+        dispersion = np.array([0., 0., 0., 0., 0., 1.])
+        kicks = np.zeros((6, len(self.hcors) + len(self.vcors)))
+        mixed = np.zeros_like(kicks)
+        nbpm = len(self.bpms)
+        response = np.zeros((2 * nbpm, kicks.shape[1]))
+        for _, maps, kick, row in self._response_sections(first_order_only=False):
+            for tm in maps:
+                J, dJ = _map_derivatives(tm, energy, orbit, dispersion)
+                mixed = J @ mixed + dJ @ kicks
+                kicks = J @ kicks
+                dispersion = J @ dispersion
+                orbit = tm.map_function(orbit[:, None], energy)[:, 0]
+                energy += tm.get_delta_e()
+            if kick is not None:
+                column, unit_kick = kick
+                kicks[:, column] += unit_kick
+            if row is not None:
+                response[[row, row + nbpm]] = mixed[[0, 2]]
+        self.resp = response
+        return response
 
-        :param lattice: class MagneticLattice
-        :param tw_init: if tw_init == None, function tries to find periodical solution
-        :return: orbit.resp
-        """
-        if tw_init == None:
-            print("ADD INITIAL TWISS TO LinacDisperseTmatrixRM.calculate(tw_init)")
-        m = len(self.bpms)
-        nx = len(self.hcors)
-        ny = len(self.vcors)
-        self.resp = np.zeros((2 * m, nx + ny))
 
-        for j, cor in enumerate([item for sublist in [self.hcors, self.vcors] for item in sublist]):
-            print(j, "/", nx + ny, cor.id)
-            Ra = np.eye(6)
-            Ta = np.zeros((6, 6, 6))
-            E = tw_init.E
-            for i, elem in enumerate(self.lat.sequence):
-                if i < cor.lat_inx:
-                    E += elem.transfer_map.delta_e
-                    continue
-                # Tc = np.zeros((6, 6, 6))
-                Rb = elem.transfer_map.R(E)
-                Tb = copy.deepcopy(elem.transfer_map.t_mat_z_e(elem.l, E))
-                # Ra = dot(Rb, Ra)
-                Ba = np.zeros((6, 1))
-                Bb = np.zeros((6, 1))
-                _, Ra, Ta = transfer_maps_mult(Ba, Ra, Ta, Bb, Rb, Tb)
-                E += elem.transfer_map.delta_e
-                if elem in self.bpms:
+def _cavity_exit_reference(entrance, nominal_exit, scanned_exit, length):
+    """Convert scanned RF output to the nominal momentum and reference clock."""
+    energies = np.array([entrance, nominal_exit, scanned_exit])
+    p0, pn, ps = np.sqrt((energies - m_e_GeV) * (energies + m_e_GeV))
 
-                    n = self.bpms.index(elem)
+    def clock_slip(exit_energy, exit_momentum):
+        # For a linear energy ramp, c*t/L = (E0 + E1)/(p0 + p1).
+        # Evaluate c*t/L - 1 accurately for relativistic beams (c = 1).
+        numerator = m_e_GeV**2 * (1 / (entrance + p0) + 1 / (exit_energy + exit_momentum))
+        return numerator / (p0 + exit_momentum)
 
-                    if cor.__class__ == Hcor:
-                        self.resp[n, j] = Ta[0, 1, 5]
+    dtau = length * (clock_slip(scanned_exit, ps) - clock_slip(nominal_exit, pn))
+    return ps / pn, (scanned_exit - nominal_exit) / pn, dtau
 
-                    else:
-                        self.resp[n + m, j] = Ra[2, 3, 5]
+
+class LinacCavityScanRM(MeasureResponseMatrix):
+    """Dispersion and its corrector response for a finite RF voltage scan.
+
+    cavity_weights maps each selected Cavity or TWCavity to its voltage increment
+    per unit station increment. voltage_step [GV] is the signed end-to-end span
+    starting at the current settings. Both orbit and response differences are
+    divided by voltage_step / normalization_energy [GeV], as for an electron
+    beam measurement. tw_init.E supplies the independent entrance energy [GeV].
+    Magnet maps and kick calibration use the nominal lattice reference throughout.
+    """
+
+    def __init__(self, lattice, hcors, vcors, bpms, *, cavity_weights, voltage_step, normalization_energy):
+        super().__init__(lattice, hcors, vcors, bpms)
+        if not np.isfinite(voltage_step) or voltage_step == 0.:
+            raise ValueError("voltage_step must be finite and nonzero [GV]")
+        if not np.isfinite(normalization_energy) or normalization_energy <= 0.:
+            raise ValueError("normalization_energy must be finite and positive [GeV]")
+        weights = dict(cavity_weights)
+        if not weights or not all(np.isfinite(w) for w in weights.values()) or not any(weights.values()):
+            raise ValueError("cavity_weights must include a nonzero weight and all weights must be finite")
+        for cavity in weights:
+            if not isinstance(cavity, (Cavity, TWCavity)):
+                raise TypeError("Each RF scan element must be a Cavity or TWCavity")
+            lattice.resolve_element_index(cavity)
+        self.cavity_weights = weights
+        self.voltage_step = voltage_step
+        self.normalization_energy = normalization_energy
+
+    def _endpoint(self, energy, scanned_maps, with_response):
+        nbpm = len(self.bpms)
+        ncor = len(self.hcors) + len(self.vcors) if with_response else 0
+        readings = np.empty((4, nbpm))  # x, y, reference energy, particle delta
+        response = np.empty((2 * nbpm, ncor))
+        orbit = np.zeros(6)
+        kicks = np.zeros((6, ncor))
+        for index, nominal_maps, kick, row in self._response_sections(first_order_only=False):
+            entrance = energy
+            for tm in scanned_maps.get(index, nominal_maps):
+                exit_energy = energy + tm.get_delta_e()
+                if not np.isfinite(exit_energy) or exit_energy <= m_e_GeV:
+                    raise ValueError("RF scan requires reference energies above the electron rest energy")
+                if ncor:
+                    J, _ = _map_derivatives(tm, energy, orbit)
+                    kicks = J @ kicks
+                orbit = tm.map_function(orbit[:, None], energy)[:, 0]
+                energy = exit_energy
+            if index in scanned_maps:
+                nominal = entrance + sum(tm.get_delta_e() for tm in nominal_maps)
+                scale, delta, dtau = _cavity_exit_reference(entrance, nominal, energy, self.lat.sequence[index].l)
+                orbit[[1, 3, 5]] *= scale
+                kicks[[1, 3, 5]] *= scale
+                orbit[5] += delta
+                orbit[4] += dtau
+                energy = nominal
+            if kick is not None and ncor:
+                column, unit_kick = kick
+                kicks[:, column] += unit_kick
+            if row is not None:
+                readings[:, row] = orbit[0], orbit[2], energy, orbit[5]
+                response[[row, row + nbpm]] = kicks[[0, 2]]
+        return readings, response
+
+    def _scan(self, energy, with_response, write2bpms):
+        if not np.isfinite(energy) or energy <= m_e_GeV:
+            raise ValueError("RF scan requires a lattice entrance energy above the electron rest energy")
+        scanned_maps = {}
+        for cavity, weight in self.cavity_weights.items():
+            index = self.lat.resolve_element_index(cavity)
+            if weight:
+                atom = copy.copy(cavity.element)
+                atom.v += weight * self.voltage_step
+                scanned_maps[index] = [type(tm).from_element(atom, tm_type=tm.tm_type, delta_l=tm.delta_length)
+                                       for tm in cavity.tms]
+        baseline, nominal_response = self._endpoint(energy, {}, with_response)
+        changed, scanned_response = self._endpoint(energy, scanned_maps, with_response)
+        span = self.voltage_step / self.normalization_energy
+        dispersion = (changed[:2] - baseline[:2]) / span
+        if write2bpms:
+            for i, bpm in enumerate(self.bpms):
+                bpm.x, bpm.y, bpm.E, bpm.p = baseline[:, i]
+                bpm.Dx, bpm.Dy = dispersion[:, i]
+        return dispersion, (scanned_response - nominal_response) / span
+
+    def read_virtual_dispersion(self, E0, write2bpms=True):
+        """Return horizontal and vertical BPM dispersion [m] for this RF scan."""
+        (dx, dy), _ = self._scan(E0, with_response=False, write2bpms=write2bpms)
+        return dx, dy
+
+    def calculate(self, tw_init=None):
+        """Return the scan dispersion change per radian and store baseline BPM readings."""
+        if tw_init is None:
+            raise ValueError("LinacCavityScanRM requires tw_init with the lattice entrance energy")
+        _, self.resp = self._scan(tw_init.E, with_response=True, write2bpms=True)
         return self.resp
 
 
@@ -441,9 +508,10 @@ class ResponseMatrixJSON:
             hcors = self.method.hcors
             vcors = self.method.vcors
             bpms = self.method.bpms
-            self.cor_names = np.append([cor.id for cor in hcors], [cor.id for cor in vcors])
-            self.bpm_names = [bpm.id for bpm in bpms]
-            self.matrix = self.method.calculate(tw_init=tw_init)
+            cor_names = np.append([cor.id for cor in hcors], [cor.id for cor in vcors])
+            bpm_names = [bpm.id for bpm in bpms]
+            matrix = self.method.calculate(tw_init=tw_init)
+            self.cor_names, self.bpm_names, self.matrix = cor_names, bpm_names, matrix
         else:
             print("ResponseMatrix.method = None, Add the method, e.g. MeasureResponseMatrix")
 
@@ -656,10 +724,11 @@ class ResponseMatrix:
             hcors = self.method.hcors
             vcors = self.method.vcors
             bpms = self.method.bpms
-            self.cor_names = np.append([cor.id for cor in hcors], [cor.id for cor in vcors])
-            self.bpm_names = [bpm.id for bpm in bpms]
-            self.matrix = self.method.calculate(tw_init=tw_init)
-            self.df = self.data2df(matrix=self.matrix, bpm_names=self.bpm_names, cor_names=self.cor_names)
+            cor_names = np.append([cor.id for cor in hcors], [cor.id for cor in vcors])
+            bpm_names = [bpm.id for bpm in bpms]
+            matrix = self.method.calculate(tw_init=tw_init)
+            self.df = self.data2df(matrix=matrix, bpm_names=bpm_names, cor_names=cor_names)
+            self.cor_names, self.bpm_names, self.matrix = cor_names, bpm_names, matrix
         else:
             print("ResponseMatrix.method = None, Add the method, e.g. MeasureResponseMatrix")
 
@@ -702,29 +771,22 @@ class ResponseMatrix:
         y = df_scan.loc[:, bpm_names_xy].values
 
         reg = LinearRegression().fit(x, y)
-        # x_test = np.eye(np.shape(x)[1])
-        rm = reg.coef_
-        # df_rm = pd.DataFrame(rm.T, columns=self.cor_names, index=bpm_x+bpm_y)
-        self.df = self.data2df(matrix=rm, bpm_names=self.bpm_names, cor_names=self.cor_names)
+        self.df = self.data2df(matrix=reg.coef_, bpm_names=self.bpm_names, cor_names=self.cor_names)
+        self.matrix = self.df.to_numpy(copy=True)
         return self.df
 
     def clean_rm(self, coupling=True):
         if self.method != None:
-            hcors = self.method.hcors
-            vcors = self.method.vcors
-            bpms = self.method.bpms
-            for hcor in hcors:
-                for bpm in bpms:
-                    if bpm.s < hcor.s:
-                        self.df.loc[self.bpm2x_name(bpm.id), hcor.id] = 0
-                    if not coupling:
-                        self.df.loc[self.bpm2y_name(bpm.id), hcor.id] = 0
-            for vcor in vcors:
-                for bpm in bpms:
-                    if bpm.s < vcor.s:
-                        self.df.loc[self.bpm2y_name(bpm.id), vcor.id] = 0
-                    if not coupling:
-                        self.df.loc[self.bpm2x_name(bpm.id), vcor.id] = 0
+            ring = isinstance(self.method, RingRM)
+            for correctors, cross_plane in ((self.method.hcors, self.bpm2y_name),
+                                             (self.method.vcors, self.bpm2x_name)):
+                for cor in correctors:
+                    for bpm in self.method.bpms:
+                        if not ring and bpm.s < cor.s:
+                            self.df.loc[[self.bpm2x_name(bpm.id), self.bpm2y_name(bpm.id)], cor.id] = 0
+                        elif not coupling:
+                            self.df.loc[cross_plane(bpm.id), cor.id] = 0
+            self.matrix = self.df.to_numpy(copy=True)
 
         else:
             print("ResponseMatrix.method = None, Add the method, e.g. MeasureResponseMatrix")

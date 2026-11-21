@@ -90,15 +90,13 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
 
         _logger.info("Using Twiss parameters — overriding sigma_{x,px,y,py} values.")
 
-        cov_x_px = tws.emit_x * np.array([[tws.beta_x, -tws.alpha_x],
-                                          [-tws.alpha_x, tws.gamma_x]])
-        hor_dist = np.random.multivariate_normal((0, 0), cov_x_px, nparticles)
-        x, px = hor_dist[:, 0], hor_dist[:, 1]
-
-        cov_y_py = tws.emit_y * np.array([[tws.beta_y, -tws.alpha_y],
-                                          [-tws.alpha_y, tws.gamma_y]])
-        vert_dist = np.random.multivariate_normal((0, 0), cov_y_py, nparticles)
-        y, py = vert_dist[:, 0], vert_dist[:, 1]
+        cov = tws._transverse_covariance()
+        if cov[:2, 2:].any():
+            x, px, y, py = np.random.multivariate_normal(np.zeros(4), cov, nparticles).T
+        else:
+            # Preserve the random draw order of uncoupled bunches.
+            x, px = np.random.multivariate_normal((0, 0), cov[:2, :2], nparticles).T
+            y, py = np.random.multivariate_normal((0, 0), cov[2:, 2:], nparticles).T
 
         if getattr(tws, "pp", 0):
             sigma_p = np.sqrt(tws.pp)

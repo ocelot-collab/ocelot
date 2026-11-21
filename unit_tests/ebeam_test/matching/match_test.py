@@ -26,6 +26,15 @@ from unit_tests.params import *
 from match_conf import *
 
 
+def _twiss_values(samples):
+    """Compare public optics properties, including the projected beta and alpha."""
+    rows = []
+    for sample in samples:
+        row = {key: value for key, value in sample.to_series().items() if not key.startswith("_")}
+        rows.append(dict(row, gamma_x=sample.gamma_x, gamma_y=sample.gamma_y))
+    return rows
+
+
 def test_lattice_transfer_map(lattice, lattice_inj=None, update_ref_values=False):
     """R maxtrix calculation test"""
 
@@ -52,7 +61,7 @@ def test_twiss(lattice, lattice_inj=None, update_ref_values=False):
 
     tws = twiss(lattice, tws0, nPoints=20)
     
-    tws = obj2dict(tws)
+    tws = _twiss_values(tws)
     
     if update_ref_values:
         return tws
@@ -82,7 +91,7 @@ def test_solenoid_match(lattice, lattice_inj=None, update_ref_values=False):
 
     tws = twiss(lattice, tws0, nPoints=20)
 
-    tws = obj2dict(tws)
+    tws = _twiss_values(tws)
 
     sol1.k = k
     lattice.update_transfer_maps()
@@ -114,7 +123,7 @@ def test_quad_match(lattice, lattice_inj=None, update_ref_values=False):
 
     tws = twiss(lattice, tws0, nPoints=20)
 
-    tws = obj2dict(tws)
+    tws = _twiss_values(tws)
     q1.k1 = q1_k1
     q2.k1 = q2_k1
     lattice.update_transfer_maps()
@@ -145,7 +154,7 @@ def test_quad_match_with_dict(lattice, lattice_inj=None, update_ref_values=False
 
     tws = twiss(lattice, tws0, nPoints=20)
 
-    tws = obj2dict(tws)
+    tws = _twiss_values(tws)
     q1.k1 = q1_k1
     q2.k1 = q2_k1
     lattice.update_transfer_maps()
@@ -213,7 +222,7 @@ def test_bend_k_match(lattice, lattice_inj=None, update_ref_values=False):
     res = match(lattice, constr, vars, tws0, verbose=False)
     tws = twiss(lattice, tws0, nPoints=20)
 
-    tws = obj2dict(tws)
+    tws = _twiss_values(tws)
     b1.k1 = b1_k1
     b2.k1 = b2_k1
     lattice.update_transfer_maps()
@@ -244,7 +253,7 @@ def test_bend_angle_match(lattice, lattice_inj=None, update_ref_values=False):
     res = match(lattice, constr, vars, tws0, verbose=False, vary_bend_angle=True)
     tws = twiss(lattice, tws0, nPoints=20)
 
-    tws = obj2dict(tws)
+    tws = _twiss_values(tws)
     b1.angle = b1_angle
     b2.angle = b2_angle
     lattice.update_transfer_maps()
@@ -285,7 +294,7 @@ def test_inj_lattice(lattice, lattice_inj, update_ref_values=False):
     tws0.alpha_y = -0.838833736086
 
     tws = twiss(lattice_inj, tws0, nPoints=10)
-    tws = obj2dict(tws)
+    tws = _twiss_values(tws)
     if update_ref_values:
         return tws
 

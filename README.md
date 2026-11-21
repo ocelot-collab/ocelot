@@ -88,6 +88,20 @@ except UnstableLatticeError as exc:
     print(f"Periodic optics are unavailable: {exc}")
 ```
 
+### Coupled optics in beamlines
+
+Through a rolled quadrupole or solenoid, `twiss(lat, tws0)` transports the
+transverse betatron covariance in `(x, px, y, py)` and the four transverse
+dispersion components. The matcher uses the resulting projected beta, alpha,
+geometric emittance and rms betatron size in each plane. Supply both entrance
+emittances for a physical beam. For a correlated entrance beam, set the central
+moments `xy`, `xpy`, `ypx` and `pxpy` after subtracting dispersion.
+
+When both emittances are omitted, the projected optics assume equal entrance
+emittances. The beam sizes and physical emittances then remain zero. The
+plane phases `mux` and `muy` have their Courant–Snyder interpretation for
+uncoupled motion. The periodic solver also assumes uncoupled transverse planes.
+
 ## Repeated Elements and Position Lookups
 
 A lattice may reuse the same element object at several positions. This is

@@ -54,6 +54,11 @@ Versioning is date based: `YY.MM.patch`.
 
 ### Fixed
 
+- Corrected open-beamline Twiss propagation and matching through transverse
+  coupling. Rolled quadrupoles and solenoids now transport cross-plane
+  correlations and dispersion. Projected emittances and rms betatron sizes
+  include coupling and the geometric emittance damping of accelerating maps.
+  Bunch generation from a coupled Twiss seed preserves its transverse correlations.
 - Preserve particle energies and transverse momenta in
   `recalculate_ref_particle()` by rescaling normalized momentum coordinates
   when the reference energy changes.

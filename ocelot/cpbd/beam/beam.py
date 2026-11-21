@@ -314,6 +314,10 @@ def optics_from_moments(mean, cov_matrix, energy=None):
         r.Dyp,
         sigp2
     )
+    # Match the dispersion subtraction applied to the two diagonal blocks.
+    cross = cov_matrix[:2, 2:4] - sigp2 * np.outer([r.Dx, r.Dxp], [r.Dy, r.Dyp])
+    r.xy, r.xpy, r.ypx, r.pxpy = cross.flat
+    r._update_plane_moments()
 
     if energy is not None:
         r.E = energy

@@ -69,6 +69,9 @@ class Twiss:
         self.xpy = kwargs.get("xpy", 0.)
         self.ypx = kwargs.get("ypx", 0.)
         self.pp = kwargs.get("pp", 0)
+        # For optics-only seeds, keep the relative emittances and correlations
+        # of a unit-emittance reference beam separate from physical moments.
+        self._unit_moments = None
 
         self.id = kwargs.get("id", "")
 
@@ -79,6 +82,11 @@ class Twiss:
             if isinstance(beam, Twiss):
                 self._pending_emit_xn = beam._pending_emit_xn
                 self._pending_emit_yn = beam._pending_emit_yn
+                self.xx, self.xpx, self.pxpx = beam.xx, beam.xpx, beam.pxpx
+                self.yy, self.ypy, self.pypy = beam.yy, beam.ypy, beam.pypy
+                self.xy, self.xpy = beam.xy, beam.xpy
+                self.ypx, self.pxpy = beam.ypx, beam.pxpy
+                self._unit_moments = getattr(beam, "_unit_moments", None)
 
             self._beta_x = beam.beta_x
             self._beta_y = beam.beta_y
@@ -153,6 +161,8 @@ class Twiss:
     @E.setter
     def E(self, value):
         self._E = value
+        resolve_coupling = (value and getattr(self, "_unit_moments", None) is not None
+                            and (self._pending_emit_xn is not None or self._pending_emit_yn is not None))
         if self._E != 0 and self._pending_emit_xn is not None:
             pending_emit_xn = self._pending_emit_xn
             self._pending_emit_xn = None
@@ -161,6 +171,11 @@ class Twiss:
             pending_emit_yn = self._pending_emit_yn
             self._pending_emit_yn = None
             self.emit_yn = pending_emit_yn
+        if resolve_coupling:
+            scale = self.relbeta * self.relgamma
+            self.xy, self.xpy, self.ypx, self.pxpy = np.asarray(self._unit_moments[2:]) / scale
+            self._unit_moments = None
+            self._update_plane_moments()
 
     @property
     def relgamma(self):
@@ -251,53 +266,112 @@ class Twiss:
         tws.s = self.s + length
         return tws
 
+    def _transverse_covariance(self, moments=None):
+        """Betatron covariance in (x, px, y, py), with optional reference emittances and cross moments."""
+        ex, ey, xy, xpy, ypx, pxpy = moments or (
+            self.emit_x, self.emit_y, self.xy, self.xpy, self.ypx, self.pxpy)
+        return np.array([
+            [ex * self.beta_x, -ex * self.alpha_x, xy, xpy],
+            [-ex * self.alpha_x, ex * self.gamma_x, ypx, pxpy],
+            [xy, ypx, ey * self.beta_y, -ey * self.alpha_y],
+            [xpy, pxpy, -ey * self.alpha_y, ey * self.gamma_y],
+        ])
+
+    def _update_plane_moments(self):
+        self.xx = self.emit_x * self.beta_x
+        self.xpx = -self.emit_x * self.alpha_x
+        self.pxpx = self.emit_x * self.gamma_x
+        self.yy = self.emit_y * self.beta_y
+        self.ypy = -self.emit_y * self.alpha_y
+        self.pypy = self.emit_y * self.gamma_y
+
+    def _transport_coupled(self, matrix, entrance):
+        """Propagate correlations and extract the two projected beam ellipses."""
+        optics_only = entrance.emit_x == entrance.emit_y == 0.
+        pending = entrance._pending_emit_xn is not None or entrance._pending_emit_yn is not None
+        moments = None
+        if optics_only:
+            if entrance.xy or entrance.xpy or entrance.ypx or entrance.pxpy:
+                raise ValueError("Physical cross-plane moments require geometric emittances")
+            if entrance.beta_x == entrance.beta_y == 0. and not pending:
+                # A matrix-only match can supply just the reference energy.
+                return
+            ex, ey = (entrance.emit_xn, entrance.emit_yn) if pending else (1., 1.)
+            moments = self._unit_moments or (ex, ey, 0., 0., 0., 0.)
+        cov = matrix @ entrance._transverse_covariance(moments) @ matrix.T
+        determinants = np.linalg.det([cov[:2, :2], cov[2:, 2:]])
+        if not np.all(determinants > 0):
+            raise ValueError("Coupled projected Twiss parameters require nonsingular transverse beam ellipses")
+        ex, ey = np.sqrt(determinants)
+        self.beta_x, self.alpha_x = cov[0, 0] / ex, -cov[0, 1] / ex
+        self.beta_y, self.alpha_y = cov[2, 2] / ey, -cov[2, 3] / ey
+        if optics_only:
+            self._unit_moments = tuple(map(float, (ex, ey, *cov[:2, 2:].flat)))
+            if pending:
+                self._pending_emit_xn, self._pending_emit_yn = ex, ey
+        else:
+            self.emit_x, self.emit_y = ex, ey
+            self.xy, self.xpy, self.ypx, self.pxpy = cov[:2, 2:].flat
+            self._unit_moments = None
+
+    @staticmethod
+    def _transport_plane(block, beta, alpha, gamma):
+        (a, b), (c, d) = block
+        scale = abs(a * d - b * c)
+        if scale == 0:
+            raise ValueError("Projected Twiss parameters require nonsingular transverse maps")
+        # A symplectic map preserves emittance. Ignore roundoff in its determinant.
+        if abs(scale - 1.) <= 1e-14:
+            scale = 1.
+        beta_out = (a**2 * beta - 2 * a * b * alpha + b**2 * gamma) / scale
+        alpha_out = (-a * c * beta + (b * c + d * a) * alpha - b * d * gamma) / scale
+        return beta_out, alpha_out, scale
+
     @staticmethod
     def track(R, tws0):
-        R00, R01, R10, R11 = R[0, 0], R[0, 1], R[1, 0], R[1, 1]
-        R22, R23, R32, R33 = R[2, 2], R[2, 3], R[3, 2], R[3, 3]
-        R05, R15, R25, R35 = R[0, 5], R[1, 5], R[2, 5], R[3, 5]
-
+        """Propagate projected Twiss parameters and transverse dispersion."""
         tws = Twiss(tws0)
         tws.p = tws0.p
 
-        tws.beta_x = R00 ** 2 * tws0.beta_x - 2 * R00 * R01 * tws0.alpha_x + R01 ** 2 * tws0.gamma_x
-        tws.beta_y = R22 ** 2 * tws0.beta_y - 2 * R22 * R23 * tws0.alpha_y + R23 ** 2 * tws0.gamma_y
+        if (tws._unit_moments is not None or tws.xy or tws.xpy or tws.ypx or tws.pxpy
+                or R[:2, 2:4].any() or R[2:4, :2].any()):
+            tws._transport_coupled(R[:4, :4], tws0)
+        else:
+            tws.beta_x, tws.alpha_x, scale_x = Twiss._transport_plane(
+                R[:2, :2], tws0.beta_x, tws0.alpha_x, tws0.gamma_x)
+            tws.beta_y, tws.alpha_y, scale_y = Twiss._transport_plane(
+                R[2:4, 2:4], tws0.beta_y, tws0.alpha_y, tws0.gamma_y)
+            if tws.emit_x:
+                tws.emit_x *= scale_x
+            if tws.emit_y:
+                tws.emit_y *= scale_y
 
-        tws.alpha_x = -R00 * R10 * tws0.beta_x + (R01 * R10 + R11 * R00) * tws0.alpha_x - R01 * R11 * tws0.gamma_x
-        tws.alpha_y = -R22 * R32 * tws0.beta_y + (R23 * R32 + R33 * R22) * tws0.alpha_y - R23 * R33 * tws0.gamma_y
+        tws._update_plane_moments()
 
-        tws.Dx = R00 * tws0.Dx + R01 * tws0.Dxp + R05
-        tws.Dxp = R10 * tws0.Dx + R11 * tws0.Dxp + R15
-        tws.Dy = R22 * tws0.Dy + R23 * tws0.Dyp + R25
-        tws.Dyp = R32 * tws0.Dy + R33 * tws0.Dyp + R35
+        dispersion = [tws0.Dx, tws0.Dxp, tws0.Dy, tws0.Dyp]
+        tws.Dx, tws.Dxp, tws.Dy, tws.Dyp = R[:4, :4] @ dispersion + R[:4, 5]
 
-        d_mux = np.arctan2(R01, R00 * tws0.beta_x - R01 * tws0.alpha_x)
+        d_mux = np.arctan2(R[0, 1], R[0, 0] * tws0.beta_x - R[0, 1] * tws0.alpha_x)
         if d_mux < 0: d_mux += 2*np.pi
         tws.mux = tws0.mux + d_mux
 
-        d_muy = np.arctan2(R23, R22 * tws0.beta_y - R23 * tws0.alpha_y)
+        d_muy = np.arctan2(R[2, 3], R[2, 2] * tws0.beta_y - R[2, 3] * tws0.alpha_y)
         if d_muy < 0: d_muy += 2*np.pi
         tws.muy = tws0.muy + d_muy
 
         return tws
 
     def map_x_twiss(self, tm):
-        E = self.E
-        M = tm.get_params(energy=E).get_rotated_R()
-        zero_tol = 1.e-10
-        if abs(tm.get_delta_e()) > zero_tol:
-            Ef = self.E + tm.get_delta_e()
-            # Remove the transverse emittance damping before propagating
-            # normalized Twiss parameters. With the same damping d in both
-            # planes, det(M_transverse) = d**2 and the required scale is
-            # 1/sqrt(d). Cavity uses d = Ei/Ef, whereas TWCavity uses pi/pf;
-            # assuming the former for every map breaks low-energy optics.
-            k = np.linalg.det(M[:4, :4]) ** (-0.25)
-            M[:4, :4] *= k
-            E = Ef
-
+        M = tm.get_params(energy=self.E).get_rotated_R()
         tws = self.track(M, self)
-        tws.E = E
+        delta_e = tm.get_delta_e()
+        if abs(delta_e) > 1.e-10:
+            tws.E = self.E + delta_e
+            # Preserve the optics normalization of incoming dispersion across RF.
+            if self.Dx or self.Dxp or self.Dy or self.Dyp:
+                scale = np.linalg.det(M[:4, :4]) ** (-0.25)
+                incoming = M[:4, :4] @ [self.Dx, self.Dxp, self.Dy, self.Dyp]
+                tws.Dx, tws.Dxp, tws.Dy, tws.Dyp = scale * incoming + M[:4, 5]
         return tws
 
     def __str__(self):
@@ -339,6 +413,8 @@ class Twiss:
             'id'
         ]
         data = {k: getattr(self, k) for k in keys if hasattr(self, k)}
+        if getattr(self, "_unit_moments", None) is not None:
+            data["_unit_moments"] = self._unit_moments
         return pd.Series(data)
 
     @classmethod
@@ -347,7 +423,11 @@ class Twiss:
         if "E" in series and hasattr(result, "E"):
             result.E = np.squeeze(series["E"])
         for key, value in series.items():
-            if key != "E" and hasattr(result, key):
+            if key == "_unit_moments":
+                # A mixed DataFrame uses NaN for rows without a reference beam.
+                if isinstance(value, (tuple, list, np.ndarray)) and np.ndim(value) == 1:
+                    result._unit_moments = tuple(value)
+            elif key != "E" and hasattr(result, key):
                 setattr(result, key, np.squeeze(value))
         return result
 

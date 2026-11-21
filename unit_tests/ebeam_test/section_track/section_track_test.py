@@ -1,6 +1,7 @@
 """Test of the demo file demos/ebeam/csr_ex.py"""
 
 import numpy as np
+from ocelot.cpbd.beam import ParticleArray
 from ocelot.cpbd.optics import lattice_transfer_map
 
 
@@ -15,6 +16,28 @@ from unit_tests.params import *
 from section_track_conf import *
 
 import copy
+
+
+def test_ah1_matching_target_from_tracked_rf_optics(section_lat):
+    # SectionLattice derives the AH1 entrance target from A1, whose RF
+    # couplers mix x and y. Track a monoenergetic beam with the seed optics.
+    seed = section_lat.tws0
+    covariance = np.zeros((4, 4))
+    covariance[:2, :2] = [[seed.beta_x, -seed.alpha_x], [-seed.alpha_x, seed.gamma_x]]
+    covariance[2:, 2:] = [[seed.beta_y, -seed.alpha_y], [-seed.alpha_y, seed.gamma_y]]
+    particles = ParticleArray(8)
+    particles.E = seed.E
+    particles.rparticles[:4] = 1e-6 * np.linalg.cholesky(covariance) @ np.c_[np.eye(4), -np.eye(4)]
+    for element in section_lat.dict_sections[A1].lattice.sequence:
+        for transfer_map in element.first_order_tms:
+            transfer_map.apply(particles)
+    target = section_lat.dict_sections[AH1].tws0
+    for coords, beta, alpha in ((particles.rparticles[:2], target.beta_x, target.alpha_x),
+                                (particles.rparticles[2:4], target.beta_y, target.alpha_y)):
+        block = np.cov(coords, bias=True)
+        emittance = np.sqrt(np.linalg.det(block))
+        np.testing.assert_allclose([beta, alpha], [block[0, 0], -block[0, 1]] / emittance, rtol=1e-12)
+
 
 @pytest.mark.parametrize('parameter', [0, 1, 2, 3, 4])
 def test_lattice_transfer_map(section_lat, p_array, parameter, update_ref_values=False):

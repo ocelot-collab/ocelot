@@ -71,6 +71,9 @@ def merger(lat, remaining_types=None, remaining_elems=None, init_energy=0.):
     """
     Function to compress the lattice excluding elements by type or by individual elements
 
+    Each merged Matrix is expanded about the orbit reached from zero coordinates
+    at the original lattice entrance.
+
     :param lat: MagneticLattice
     :param remaining_types: list, the type of the elements which needed to be untouched
                             others will be "compress" to Matrix element
@@ -98,13 +101,16 @@ def merger(lat, remaining_types=None, remaining_elems=None, init_energy=0.):
 
     seq = []
     E = init_energy
+    orbit = np.zeros((6, 1))
     for elem_list in lattice_analysis:
-        if len(elem_list) == 1:
-            for tm in elem_list[0].tms:
-                E += tm.get_delta_e()
-            seq.append(elem_list[0])
-        elif len(elem_list) == 0:
+        if not elem_list:
             continue
+        entrance_orbit = orbit
+        orbit, R, T = lat._transfer_maps(elem_list, E, entrance_orbit)
+        delta_e = sum(tm.get_delta_e() for elem in elem_list for tm in elem.tms)
+        E += delta_e
+        if len(elem_list) == 1:
+            seq.append(elem_list[0])
         else:
             magnetic_elems = [elem for elem in elem_list if elem.__class__ not in [Marker, Drift, Monitor]]
             if len(magnetic_elems) == 0:
@@ -112,13 +118,13 @@ def merger(lat, remaining_types=None, remaining_elems=None, init_energy=0.):
                 d = Drift(l=total_len)
                 seq.append(d)
             else:
-                delta_e = np.sum([tm.get_delta_e() for elem in elem_list for tm in elem.tms])
-                lattice = MagneticLattice(elem_list, method=lat.method)
                 m = Matrix()
-                m.b, m.r, m.t = lattice.transfer_maps(energy=E)
-                m.l = lattice.totalLen
+                # The section map takes deviations from its entrance orbit.
+                # Matrix takes absolute coordinates, so prepend x -> x - orbit_in.
+                m.b, m.r, m.t = transfer_maps_mult(
+                    -entrance_orbit, np.eye(6), np.zeros((6, 6, 6)), orbit, R, T)
+                m.l = sum(elem.l for elem in elem_list)
                 m.delta_e = delta_e
-                E += delta_e
                 seq.append(m)
 
     new_lat = MagneticLattice(seq, method=lat.method)
@@ -399,7 +405,9 @@ class MagneticLattice:
         """
         Calculates the zero, first- and second-order transfer maps for the lattice.
 
-        This method computes the full transfer maps (B, R, T) across the lattice or a specified segment.
+        B is the exit orbit of the element maps for zero input at the start of
+        the selected segment. R and T are the linear and quadratic coefficients
+        for perturbations of that input.
         If `output_at_each_step` is set to `True`, it also returns the intermediate transfer maps after each element.
 
         :param start: (Element, optional): Element from which to start the transfer map calculation. Defaults to beginning.
@@ -410,9 +418,14 @@ class MagneticLattice:
         :return: B, R, T - matrices OR [Bs], [Rs], [Ts], [S] if output_at_each_step = True
         """
         sequence = self.get_sequence_part(start, stop)
+        return self._transfer_maps(sequence, energy, np.zeros((6, 1)), output_at_each_step)
+
+    @staticmethod
+    def _transfer_maps(sequence, energy, entrance_orbit, output_at_each_step=False):
+        """Expand the exit coordinates in deviations from the given entrance orbit."""
         Ra = np.eye(6)
         Ta = np.zeros((6, 6, 6))
-        Ba = np.zeros((6, 1))
+        Ba = entrance_orbit
         Bs, Rs, Ts, S = [], [], [], []
         s_pos = 0.
         E = energy

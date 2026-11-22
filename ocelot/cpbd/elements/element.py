@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from ocelot.common.geometry import get_tilt_matrix
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
-from ocelot.cpbd.r_matrix import uni_matrix
+from ocelot.cpbd.r_matrix import rot_mtx, uni_matrix
 
 
 class Element:
@@ -57,7 +56,7 @@ class Element:
         self.dy = kwargs.pop('dy', 0.)
         self.mag_field = kwargs.pop('mag_field', None)
         self.params = {}
-        for tm_param in ("npoints", "s_start"):
+        for tm_param in ("npoints", "s_start", "reference"):
             if tm_param in kwargs:
                 self.params[tm_param] = kwargs.pop(tm_param)
         self.width = kwargs.pop('width', 0.05)    # transverse width of the element. it used only in the beamline plotting
@@ -78,6 +77,30 @@ class Element:
     def _default_B(self, R):
         return np.dot((np.eye(6) - R), np.array([[self.dx], [0.], [self.dy], [0.], [0.], [0.]]))
 
+    def _aligned_map_params(self, R, tilt, T=None):
+        """Translate a centered map by the local beam-frame offsets dx, dy.
+
+        R and T are stored in magnet axes and rotated by the tracker. B is
+        stored in beam axes, so its rotation is applied here exactly once.
+        """
+        B = np.zeros((6, 1))
+        if self.dx or self.dy:
+            offset = np.array([[self.dx], [0.], [self.dy], [0.], [0.], [0.]])
+            if tilt:
+                rotation = rot_mtx(tilt)
+                offset = rotation @ offset
+            if T is None:
+                B = (np.eye(6) - R) @ offset
+            else:
+                from ocelot.cpbd.tm_utils import map_transform_with_offsets
+                B, R = map_transform_with_offsets(-offset, R, T)
+            if tilt:
+                B = rotation.T @ B
+        if T is None:
+            return FirstOrderParams(R, B, tilt)
+        from ocelot.cpbd.tm_params.second_order_params import SecondOrderParams
+        return SecondOrderParams(R, B, T, tilt, self.dx, self.dy)
+
     def create_first_order_main_params(self, energy: float, delta_length: float = None) -> FirstOrderParams:
         # Generic straight-element first-order fallback used when a concrete
         # family does not override the main map construction.
@@ -89,14 +112,10 @@ class Element:
             R = uni_matrix(delta_length, 0., hx=hx, sum_tilts=0, energy=energy)
         else:
             R = uni_matrix(self.l, 0., hx=hx, sum_tilts=0, energy=energy)
-        B = self._default_B(R)
-
-        return FirstOrderParams(R, B, self.tilt)
+        return self._aligned_map_params(R, self.tilt)
 
     def create_second_order_main_params(self, energy: float, delta_length: float = 0.0) -> SecondOrderParams:
         from ocelot.cpbd.high_order import t_nnn
-        from ocelot.cpbd.tm_params.second_order_params import SecondOrderParams
-        from ocelot.cpbd.tm_utils import map_transform_with_offsets
 
         # Generic straight-element second-order fallback. Families with custom
         # nonlinear behavior should override this instead of relying on it.
@@ -104,11 +123,7 @@ class Element:
                   energy)
         first_order_params = self.create_first_order_main_params(energy, delta_length)
 
-        m_off = np.array([[-self.dx], [0], [-self.dy], [0], [0], [0]])
-        # alternative way
-        # B = first_order_params.B + np.dot(np.dot(m_off.T, T), m_off)[0]
-        B, R = map_transform_with_offsets(m_off, first_order_params.R, T)
-        return SecondOrderParams(R, B, T, self.tilt, self.dx, self.dy)
+        return self._aligned_map_params(first_order_params.R, self.tilt, T)
 
     def create_delta_e(self, total_length, delta_length=0.0):
         # Passive default: only active RF-like families are expected to
@@ -117,6 +132,14 @@ class Element:
 
     def __repr__(self):
         return f"<{type(self).__name__}: name={self.id} at {hex(id(self))}>"
+
+    @staticmethod
+    def _design_face(s):
+        """Nominal origin and transverse frame at arc length s in a straight element."""
+        return np.array([0., 0., s]), np.eye(3)
+
+    def _rk_nominal_face(self, s):
+        return self._design_face(s)
 
     def get_transfer_geometry(self):
         """
@@ -137,12 +160,4 @@ class Element:
         """
         L = getattr(self, "l", 0.0)
 
-        # Straight trajectory along local s
-        R_end = np.array([0.0, 0.0, L], dtype=float)
-        R_mid = np.array([0.0, 0.0, 0.5 * L], dtype=float)
-
-        # No rotation of the reference frame for a straight segment
-        S_end = np.eye(3, dtype=float)
-        S_mid = np.eye(3, dtype=float)
-
-        return R_end, S_end, R_mid, S_mid
+        return (*self._design_face(L), *self._design_face(L / 2))

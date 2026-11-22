@@ -152,7 +152,16 @@ class XYQuadrupoleAtom(Magnet):
         params = FirstOrderParams(r, np.zeros((6, 1)), self.tilt)
         # Alignment translations are in beam coordinates, after rolling R.
         params.B = self._default_B(params.get_rotated_R())
+        if self.dtilt and length:
+            from ocelot.cpbd.magnet_alignment import roll_map
+            return roll_map(params, self._rolled_face(start_length), self._rolled_face(start_length + length), energy)
         return params
+
+    def _design_face(self, s):
+        if s == 0 or self.k1 == 0 or self.x_offs == self.y_offs == self.x_angle == self.y_angle == 0:
+            return np.array([0., 0., s]), np.eye(3)
+        positions, frames = self._reference_geometry([s])
+        return positions[0], frames[0]
 
     def create_second_order_main_params(self, energy: float, delta_length=None):
         raise NotImplementedError(
@@ -192,7 +201,7 @@ class XYQuadrupoleAtom(Magnet):
         frames = roll @ solution.y[3:].T.reshape(-1, 3, 3) @ roll.T
         return positions, frames
 
-    def default_mag_field(self, energy):
+    def _design_mag_field(self, energy):
         """Ideal quadrupole field in the reference entrance frame, for CSR RK.
 
         Transform positions into magnet coordinates and rotate B back. The

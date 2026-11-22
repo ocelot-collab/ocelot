@@ -1,3 +1,4 @@
+from functools import partial
 import logging
 
 import numpy as np
@@ -23,9 +24,12 @@ class TransferMap(Transformation):
 
     @classmethod
     def from_element(cls, element: Element, tm_type: TMTypes = TMTypes.MAIN, delta_l=None, **params):
+        main_params = element.create_first_order_main_params
+        if params.get("start_length"):
+            main_params = partial(main_params, start_length=params["start_length"])
         return cls.create(entrance_tm_params_func=element.create_first_order_entrance_params if element.has_edge else None,
                           delta_e_func=element.create_delta_e,
-                          main_tm_params_func=element.create_first_order_main_params,
+                          main_tm_params_func=main_params,
                           exit_tm_params_func=element.create_first_order_exit_params if element.has_edge else None,
                           tm_type=tm_type, length=element.l, delta_length=delta_l)
 

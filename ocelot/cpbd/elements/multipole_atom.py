@@ -10,8 +10,12 @@ class MultipoleAtom(Element):
     kn - list of strengths
     """
 
-    def __init__(self, kn=0., eid=None, **kwargs):
+    dtilt = 0.  # Legacy pickles can carry the roll error on the wrapper.
+
+    def __init__(self, kn=0., eid=None, tilt=0., dtilt=0., **kwargs):
         super().__init__(eid, **kwargs)
+        self.tilt = tilt
+        self.dtilt = dtilt
         kn = np.array([kn]).flatten()
         if len(kn) < 2:
             self.kn = np.append(kn, [0.])
@@ -28,11 +32,11 @@ class MultipoleAtom(Element):
         return s
 
     def create_multipole_tm_main_params(self):
-        return MultipoleParams(kn=self.kn)
+        return MultipoleParams(self.kn, self.dx, self.dy, self.tilt + self.dtilt)
 
     def create_first_order_main_params(self, energy: float, delta_length: float = None) -> FirstOrderParams:
         R = np.eye(6)
         R[1, 0] = -self.kn[1]
         R[3, 2] = self.kn[1]
         R[1, 5] = self.kn[0]
-        return FirstOrderParams(R=R, B=self._default_B(R), tilt=self.tilt)
+        return self._aligned_map_params(R, self.tilt + self.dtilt)

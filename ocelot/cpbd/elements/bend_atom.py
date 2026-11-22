@@ -1,8 +1,6 @@
 import numpy as np
 
 from ocelot.cpbd.elements.magnet import Magnet
-from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
-from ocelot.cpbd.tm_params.second_order_params import SecondOrderParams
 from ocelot.cpbd.high_order import fringe_ent, fringe_ext
 from ocelot.cpbd.r_matrix import bend_edge_matrix
 
@@ -67,29 +65,28 @@ class BendAtom(Magnet):
     def _R_edge(self, fint, edge):
         return bend_edge_matrix(h=self._curvature(), edge=edge, gap=self.gap, fint=fint)
 
-    def create_first_order_entrance_params(self, energy: float, delta_length: float = 0.0) -> FirstOrderParams:
-        R = self._R_edge(self.fint, self.e1)
-        B = self._default_B(R)
-        return FirstOrderParams(R, B, self.tilt)
+    def _edge_params(self, energy, entrance, second_order):
+        fint, edge, pole, s = ((self.fint, self.e1, self.h_pole1, 0.) if entrance else
+                               (self.fintx, self.e2, self.h_pole2, self.l))
+        if second_order:
+            fringe = fringe_ent if entrance else fringe_ext
+            R, T = fringe(h=self._curvature(), k1=self.k1, e=edge, h_pole=pole, gap=self.gap, fint=fint)
+        else:
+            R, T = self._R_edge(fint, edge), None
+        params = self._aligned_map_params(R, self._map_tilt, T)
+        return self._body_roll(params, s, s, energy)
 
-    def create_first_order_exit_params(self, energy: float, delta_length: float = 0.0) -> FirstOrderParams:
-        R = self._R_edge(self.fintx, self.e2)
-        B = self._default_B(R)
-        return FirstOrderParams(R, B, self.tilt)
+    def create_first_order_entrance_params(self, energy, delta_length=0.):
+        return self._edge_params(energy, entrance=True, second_order=False)
 
-    def create_second_order_entrance_params(self, energy: float, delta_length: float = 0.0) -> SecondOrderParams:
-        h = self._curvature()
-        first_order_params = self.create_first_order_entrance_params(energy)
-        _, T = fringe_ent(h=h, k1=self.k1, e=self.e1, h_pole=self.h_pole1,
-                          gap=self.gap, fint=self.fint)
-        return SecondOrderParams(first_order_params.R, first_order_params.B, T, self.tilt, self.dx, self.dy)
+    def create_first_order_exit_params(self, energy, delta_length=0.):
+        return self._edge_params(energy, entrance=False, second_order=False)
 
-    def create_second_order_exit_params(self, energy: float, delta_length: float = 0.0) -> SecondOrderParams:
-        h = self._curvature()
-        first_order_params = self.create_first_order_exit_params(energy)
-        _, T = fringe_ext(h=h, k1=self.k1, e=self.e2, h_pole=self.h_pole2,
-                          gap=self.gap, fint=self.fintx)
-        return SecondOrderParams(first_order_params.R, first_order_params.B, T, self.tilt, self.dx, self.dy)
+    def create_second_order_entrance_params(self, energy, delta_length=0.):
+        return self._edge_params(energy, entrance=True, second_order=True)
+
+    def create_second_order_exit_params(self, energy, delta_length=0.):
+        return self._edge_params(energy, entrance=False, second_order=True)
 
     def create_runge_kutta_entrance_params(self, energy):
         return super().create_runge_kutta_main_params(energy)

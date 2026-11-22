@@ -79,12 +79,34 @@ class RungeKuttaOcelotTM(RungeKuttaGlobalTM):
     retain that reference and its Bishop axes. Transverse momenta are mechanical
     p/p0; no vector-potential terms are added. Arrival time is tau=ct-s/beta0.
     npoints bounds the RK step by full_element_length/(npoints-1).
+
+    reference="field" follows the native field reference (the default).
+    reference="nominal" uses the surveyed element frames to measure orbit errors.
     """
+    reference = "field"
+
+    def __init__(self, *args, reference="field", nominal_face=None, **params):
+        super().__init__(*args, **params)
+        if reference not in ("field", "nominal"):
+            raise ValueError("RK reference must be 'field' or 'nominal'")
+        if reference == "nominal" and nominal_face is None:
+            raise ValueError("Nominal RK reference requires the element's survey geometry")
+        self.reference = reference
+        self._nominal_face = nominal_face
+
+    @classmethod
+    def from_element(cls, element, tm_type=TMTypes.MAIN, delta_l=None, **params):
+        if params.get("reference") == "nominal":
+            params["nominal_face"] = element._rk_nominal_face
+        return super().from_element(element, tm_type, delta_l, **params)
+
     def map_function(self, X, energy: float):
         from ocelot.cpbd.high_order import rk_field_to_ocelot
 
         params = self.get_params(energy)
         length = self.delta_length if self.delta_length is not None else self.length
+        alignment = getattr(params, "alignment", None)
         return rk_field_to_ocelot(X, self.s_start, self.s_start + length, self.npoints,
-                                  energy, params.mag_field, self.long_dynamics,
-                                  reference_length=self.length)
+                                  energy, params.design_field if alignment else params.mag_field,
+                                  self.long_dynamics, reference_length=self.length, alignment=alignment,
+                                  reference_face=self._nominal_face if self.reference == "nominal" else None)

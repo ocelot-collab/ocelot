@@ -4,7 +4,6 @@ import numpy as np
 from ocelot.common.globals import speed_of_light, m_e_GeV
 from ocelot.common.geometry import get_tilt_matrix
 from ocelot.cpbd.elements.element import Element
-from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
 from ocelot.cpbd.r_matrix import uni_matrix
 
 
@@ -17,6 +16,7 @@ class Magnet(Element):
     - angle: Bending angle or deflection [rad] (zero for quadrupoles, non-zero for bends)
     - k1: Quadrupole strength [1/m²] (focusing/defocusing)
     - k2: Sextupole strength [1/m³] (chromatic, nonlinear effects)
+    - dtilt: Mechanical roll error about the displaced entrance axis [rad]
 
     Available Hook Methods
     =======================
@@ -35,12 +35,20 @@ class Magnet(Element):
     https://ocelot-collab.github.io/docs/docu/elements/magnet/
     Element : Base atom class
     """
+    dtilt = 0.  # Default for standalone magnet atoms pickled before this field existed.
+
     def __init__(self, eid=None, has_edge=False, **kwargs):
+        self.dtilt = kwargs.pop("dtilt", 0.)
         super().__init__(eid=eid, has_edge=has_edge, **kwargs)
         self.angle = 0.  # Magnets Drift, Bend, Correctors (just angle)
         self.k1 = 0.  # Magnets quadropole
         self.k2 = 0.  # Magnets Sextupole
         self.k3 = 0.  # Magnets Octupole
+
+    @property
+    def _map_tilt(self):
+        # A curved reference also needs the mechanical change of normal planes.
+        return self.tilt if self.angle else self.tilt + self.dtilt
 
     @staticmethod
     def _brho(energy: float) -> float:
@@ -70,7 +78,7 @@ class Magnet(Element):
         )
         return bx, by
 
-    def default_mag_field(self, energy: float):
+    def _design_mag_field(self, energy: float):
         """
         Hard-edge magnetic field from the element strengths.
 
@@ -94,122 +102,90 @@ class Magnet(Element):
 
         return field
 
+    def _roll_field(self, field):
+        if not self.dtilt:
+            return field
+        dx, dy = self.dx, self.dy
+        c, s = np.cos(self.dtilt), np.sin(self.dtilt)
+
+        def rolled_field(x, y, z):
+            bx, by, bz = field(dx + c*(x-dx) + s*(y-dy), dy - s*(x-dx) + c*(y-dy), z)
+            return c*bx - s*by, s*bx + c*by, bz
+
+        return rolled_field
+
+    def default_mag_field(self, energy: float):
+        return self._roll_field(self._design_mag_field(energy))
+
     def get_mag_field(self, energy: float):
-        return self.mag_field if self.mag_field is not None else self.default_mag_field(energy)
+        return self.default_mag_field(energy) if self.mag_field is None else self._roll_field(self.mag_field)
 
     def create_runge_kutta_main_params(self, energy):
         from ocelot.cpbd.tm_params.runge_kutta_params import RungeKuttaParams
-        return RungeKuttaParams(mag_field=self.get_mag_field(energy))
+        if not self.dtilt:
+            return RungeKuttaParams(self.get_mag_field(energy))
+        design_field = self._design_mag_field(energy) if self.mag_field is None else self.mag_field
+        return RungeKuttaParams(self._roll_field(design_field), design_field=design_field,
+                                alignment=(self.dx, self.dy, self.dtilt))
 
-    def create_first_order_main_params(self, energy: float, delta_length: float = None) -> FirstOrderParams:
-        k1 = self.k1
-        if self.l == 0:
-            hx = 0.
-        else:
-            hx = self.angle / self.l
-        if delta_length is not None:
-            R = uni_matrix(delta_length, k1, hx=hx, sum_tilts=0, energy=energy)
-        else:
-            R = uni_matrix(self.l, k1, hx=hx, sum_tilts=0, energy=energy)
-        B = self._default_B(R)
-        return FirstOrderParams(R, B, self.tilt)
+    def _body_matrix(self, length, energy):
+        hx = self.angle / self.l if self.l else 0.
+        return uni_matrix(length, self.k1, hx=hx, energy=energy)
 
-    def create_second_order_main_params(self, energy: float, delta_length: float = 0.0) -> SecondOrderParams:
+    def create_first_order_main_params(self, energy, delta_length=None, *, start_length=0.):
+        length = self.l if delta_length is None else delta_length
+        params = self._aligned_map_params(self._body_matrix(length, energy), self._map_tilt)
+        return self._body_roll(params, start_length, start_length + length, energy)
+
+    def create_second_order_main_params(self, energy, delta_length=0.0, *, start_length=0.):
         from ocelot.cpbd.high_order import t_nnn
-        from ocelot.cpbd.tm_params.second_order_params import SecondOrderParams
-        from ocelot.cpbd.tm_utils import map_transform_with_offsets
+        length = self.l if delta_length is None else delta_length
+        T = t_nnn(length, self.angle / self.l if self.l else 0., self.k1, self.k2, energy)
+        params = self._aligned_map_params(self._body_matrix(length, energy), self._map_tilt, T)
+        return self._body_roll(params, start_length, start_length + length, energy)
 
-        T = t_nnn(delta_length if delta_length is not None else self.l, 0. if self.l == 0 else self.angle / self.l,
-                  self.k1, self.k2, energy)
-        first_order_params = self.create_first_order_main_params(energy, delta_length)
-        m_off = np.array([[-self.dx], [0], [-self.dy], [0], [0], [0]])
-        # alternative way
-        # B = first_order_params.B + np.dot(np.dot(m_off.T, T), m_off)[0]
-        B, R = map_transform_with_offsets(m_off, first_order_params.R, T)
-        return SecondOrderParams(R, B, T, self.tilt, self.dx, self.dy)
+    def _body_roll(self, params, start, stop, energy):
+        if self.angle and self.dtilt:
+            from ocelot.cpbd.magnet_alignment import roll_map
+            return roll_map(params, self._rolled_face(start), self._rolled_face(stop), energy)
+        return params
 
-    def create_kick_entrance_params(self) -> KickParams:
-        from ocelot.cpbd.tm_params.kick_params import KickParams
-        return KickParams(dx=self.dx, dy=self.dy, angle=self.angle, tilt=self.tilt, k1=self.k1, k2=self.k2)
+    def _rolled_face(self, s):
+        from ocelot.cpbd.magnet_alignment import rolled_face
+        position, frame = self._design_face(s)
+        return rolled_face(position, frame, self.dx, self.dy, self.dtilt)
 
     def create_kick_main_params(self) -> KickParams:
         from ocelot.cpbd.tm_params.kick_params import KickParams
-        return KickParams(dx=self.dx, dy=self.dy, angle=self.angle, tilt=self.tilt, k1=self.k1, k2=self.k2)
+        return KickParams(dx=self.dx, dy=self.dy, angle=self.angle, tilt=self._map_tilt,
+                          k1=self.k1, k2=self.k2, k3=self.k3,
+                          rolled_face=self._rolled_face if self.angle and self.dtilt else None)
+
+    def create_kick_entrance_params(self) -> KickParams:
+        return self.create_kick_main_params()
 
     def create_kick_exit_params(self) -> KickParams:
-        from ocelot.cpbd.tm_params.kick_params import KickParams
-        return KickParams(dx=self.dx, dy=self.dy, angle=self.angle, tilt=self.tilt, k1=self.k1, k2=self.k2)
+        return self.create_kick_main_params()
+
+    def _design_face(self, s):
+        """Survey origin and axes at arc length s, in the nominal entrance frame."""
+        if self.angle == 0. or self.l == 0.:
+            return super()._design_face(s)
+        a = self.angle * (s / self.l)
+        ca, sa = np.cos(a), np.sin(a)
+        # Arc displacement, using sinc to retain precision at small angles.
+        position = s * np.array([-np.sin(a / 2) * np.sinc(a / (2 * np.pi)), 0., np.sinc(a / np.pi)])
+        axes = np.array([[ca, 0., -sa], [0., 1., 0.], [sa, 0., ca]])
+        roll = get_tilt_matrix(self.tilt)
+        return roll @ position, roll @ axes @ roll.T
+
+    def _rk_nominal_face(self, s):
+        # Even if the exit points forward again, a sector that has already
+        # turned through 90 degrees cannot be integrated using Cartesian Z.
+        if self.l and abs(self.angle * (s / self.l)) >= np.pi / 2:
+            raise ValueError("Nominal RK reference must move forward in Cartesian Z")
+        return self._design_face(s)
 
     def get_transfer_geometry(self):
-        """
-        Geometry for magnets.
-
-        - If angle == 0: falls back to straight-element geometry (Element.get_transfer_geometry()).
-        - If angle != 0: uses a sector-like arc in the local x-s plane (y is vertical).
-          Then applies TILT as a rotation around local s, which rotates the bending plane:
-            * tilt = 0      -> horizontal bend (x-s plane)
-            * tilt = pi/2   -> vertical bend (y-s plane)
-
-        Returns:
-            (R_end, S_end, R_mid, S_mid) in local coordinates.
-
-        Important:
-            - For dipoles, TILT *does* affect the reference trajectory (bending plane rotation),
-              hence both R_* and S_* are rotated by the roll matrix.
-            - For quadrupoles/sextupoles (angle==0), TILT should NOT change trajectory;
-              it is handled in the map/field and/or drawing.
-        """
-        # 1) Straight / non-bending magnet
-        if getattr(self, "angle", 0.0) == 0.0:
-            return super().get_transfer_geometry()
-
-        L = float(getattr(self, "l", 0.0))
-        ang = float(getattr(self, "angle", 0.0))
-
-        # Guard against division by zero; a "bend" with L==0 is degenerate
-        if abs(ang) < 1e-15 or abs(L) < 1e-15:
-            return super().get_transfer_geometry()
-
-        # Curvature radius (sector-like)
-        rho = L / ang
-
-        # --- A) End point (full angle) in the *un-tilted* x-s plane ---
-        ca = np.cos(ang)
-        sa = np.sin(ang)
-
-        R_end = np.array([rho * (ca - 1.0), 0.0, rho * sa], dtype=float)
-
-        # Rotation of the local frame at the end of a bend (about local y)
-        S_end = np.array([
-            [ca, 0.0, -sa],
-            [0.0, 1.0, 0.0],
-            [sa, 0.0, ca]
-        ], dtype=float)
-
-        # --- B) Midpoint (half angle) ---
-        half = 0.5 * ang
-        ca2 = np.cos(half)
-        sa2 = np.sin(half)
-
-        R_mid = np.array([rho * (ca2 - 1.0), 0.0, rho * sa2], dtype=float)
-
-        S_mid = np.array([
-            [ca2, 0.0, -sa2],
-            [0.0, 1.0, 0.0],
-            [sa2, 0.0, ca2]
-        ], dtype=float)
-
-        # --- C) Apply TILT (roll about local s-axis) to rotate bending plane ---
-        tilt = float(getattr(self, "tilt", 0.0))
-        if tilt != 0.0:
-            T = get_tilt_matrix(tilt)  # roll about s
-
-            # Rotate the arc displacement into the tilted plane
-            R_end = T @ R_end
-            R_mid = T @ R_mid
-
-            # Similarity transform rotates the bend rotation into the tilted plane
-            S_end = T @ S_end @ T.T
-            S_mid = T @ S_mid @ T.T
-
-        return R_end, S_end, R_mid, S_mid
+        """Design survey at exit and midpoint, independent of installation errors."""
+        return (*self._design_face(self.l), *self._design_face(self.l / 2.))

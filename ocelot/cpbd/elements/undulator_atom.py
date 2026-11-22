@@ -259,8 +259,7 @@ class UndulatorAtom(Element):
 
     def create_first_order_main_params(self, energy: float, delta_length: float = None) -> FirstOrderParams:
         R = self.R_main_matrix(energy=energy, length=delta_length if delta_length != None else self.l)
-        B = self._default_B(R)
-        return FirstOrderParams(R, B, self.tilt)
+        return self._aligned_map_params(R, self.tilt)
 
     def get_mag_field(self, energy=None, end_poles=None):
         if self.mag_field is not None:

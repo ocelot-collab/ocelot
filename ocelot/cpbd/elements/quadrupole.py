@@ -24,7 +24,10 @@ class Quadrupole(OpticElement):
     k2 : float, default=0
         Sextupole coupling strength in [1/m³]
     tilt : float, default=0
-        Roll angle around beam axis in [rad]
+        Design roll in [rad]
+    dtilt : float, default=0
+        Mechanical roll error in [rad], added to the design roll about the
+        magnetic axis at the beam-frame offsets (dx, dy).
 
     Physics
     -------

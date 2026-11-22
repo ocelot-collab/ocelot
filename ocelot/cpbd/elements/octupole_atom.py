@@ -1,7 +1,6 @@
 import numpy as np
 
 from ocelot.cpbd.elements.magnet import Magnet
-from ocelot.cpbd.tm_params.kick_params import KickParams
 
 
 class OctupoleAtom(Magnet):
@@ -27,6 +26,3 @@ class OctupoleAtom(Magnet):
         s += 'tilt=%8.6e, ' % self.tilt if np.abs(self.tilt) > 1e-15 else ""
         s += 'eid="' + str(self.id) + '")' if self.id is not None else ")"
         return s
-
-    def create_kick_main_params(self) -> KickParams:
-        return KickParams(dx=self.dx, dy=self.dy, angle=self.angle, tilt=self.tilt, k1=self.k1, k2=self.k2, k3=self.k3)

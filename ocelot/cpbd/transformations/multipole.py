@@ -4,6 +4,7 @@ import numpy as np
 
 from ocelot.cpbd.transformations.transfer_map import TransferMap, TMTypes
 from ocelot.cpbd.elements.element import Element
+from ocelot.cpbd.tm_utils import transform_vec_ent, transform_vec_ext
 
 
 class MultipoleTM(TransferMap):
@@ -38,4 +39,12 @@ class MultipoleTM(TransferMap):
         return X
 
     def map_function(self, X, energy: float):
-        return self.kick(X, self.get_params().kn)
+        params = self.get_params()
+        dx = getattr(params, "dx", 0.)
+        dy = getattr(params, "dy", 0.)
+        tilt = getattr(params, "tilt", 0.)
+        if not (dx or dy or tilt):
+            return self.kick(X, params.kn)
+        transform_vec_ent(X, dx, dy, tilt)
+        self.kick(X, params.kn)
+        return transform_vec_ext(X, dx, dy, tilt)

@@ -1,4 +1,5 @@
 import logging
+from functools import cache
 
 import numpy as np
 
@@ -8,7 +9,6 @@ _logger = logging.getLogger(__name__)
 
 nb = None
 nb_flag = None
-_transfer_maps_mult_impl = None
 
 
 def _numba_is_available():
@@ -81,16 +81,7 @@ def transform_vec_ext(X, dx, dy, tilt):
 
 
 def transfer_maps_mult_py(Ba, Ra, Ta, Bb, Rb, Tb):
-    """
-    cell = [A, B]
-    Rc = Rb * Ra
-    :param Ra:
-    :param Ta:
-    :param Rb:
-    :param Tb:
-    :param sym_flag:
-    :return:
-    """
+    """Compose A followed by B when Ba or Tb is zero."""
     Bc = np.dot(Rb, Ba) + Bb
     Rc = np.dot(Rb, Ra)
     Tc = np.zeros((6, 6, 6))
@@ -108,17 +99,7 @@ def transfer_maps_mult_py(Ba, Ra, Ta, Bb, Rb, Tb):
 
 
 def transfer_maps_mult_full_py(Ba, Ra, Ta, Bb, Rb, Tb):
-    """
-    cell = [A, B]
-    Rc = Rb * Ra
-    :param Ba:
-    :param Ra:
-    :param Ta:
-    :param Bb:
-    :param Rb:
-    :param Tb:
-    :return:
-    """
+    """Compose A followed by B through second order about zero input to A."""
     # zero order, multiplication was rewritten due to limitations of Numba
     Bc = np.zeros((6, 1))  # Bb + np.dot(Rb, Ba) + np.dot(Ba.T, np.dot(Tb, Ba))[0]
     for i in range(6):
@@ -161,18 +142,15 @@ def transfer_maps_mult_full_py(Ba, Ra, Ta, Bb, Rb, Tb):
     return Bc, Rc, Tc
 
 
-def _get_transfer_maps_mult_impl():
-    global _transfer_maps_mult_impl
-    if _transfer_maps_mult_impl is None:
-        if _numba_is_available():
-            _transfer_maps_mult_impl = nb.jit(transfer_maps_mult_py, nopython=True)
-        else:
-            _transfer_maps_mult_impl = transfer_maps_mult_py
-    return _transfer_maps_mult_impl
+@cache
+def _get_transfer_maps_mult_impl(impl):
+    return nb.njit(impl) if _numba_is_available() else impl
 
 
-def transfer_maps_mult(*args, **kwargs):
-    return _get_transfer_maps_mult_impl()(*args, **kwargs)
+def transfer_maps_mult(Ba, Ra, Ta, Bb, Rb, Tb):
+    """Compose the quadratic maps in beam order, evaluating the second map at Ba."""
+    impl = transfer_maps_mult_full_py if Ba.any() and Tb.any() else transfer_maps_mult_py
+    return _get_transfer_maps_mult_impl(impl)(Ba, Ra, Ta, Bb, Rb, Tb)
 
 
 def transfer_map_rotation(R, T, tilt):

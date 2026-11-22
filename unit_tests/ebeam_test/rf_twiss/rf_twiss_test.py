@@ -37,7 +37,7 @@ def test_lattice_transfer_map(lattice, p_array, parameter=None, update_ref_value
 
 @pytest.mark.parametrize('parameter', [0, 1])
 def test_lattice_r_t_maps_wo_coupler(lattice, p_array, parameter, update_ref_values=False):
-    """R maxtrix test"""
+    """Check lattice R and T with RF coupler kicks enabled (0) and disabled (1)."""
     if parameter == 0:
         for elem in lattice.sequence:
             if elem.__class__ is Cavity:

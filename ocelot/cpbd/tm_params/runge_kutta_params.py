@@ -9,7 +9,9 @@ class RungeKuttaParams(TMParams):
     coordinates, so the transformation can integrate through the field.
     """
 
-    def __init__(self, mag_field) -> None:
+    def __init__(self, mag_field, design_field=None, alignment=None) -> None:
         super().__init__()
         self.mag_field = mag_field
+        self.design_field = mag_field if design_field is None else design_field
+        self.alignment = alignment
     

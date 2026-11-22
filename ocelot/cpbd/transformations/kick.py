@@ -26,6 +26,7 @@ class KickTM(Transformation):
         super().__init__(create_tm_param_func, delta_e_func, tm_type, length, delta_length)
         nkick = params.get('nkick')
         self.nkick = nkick if nkick else 1
+        self.start_length = params.get("start_length", 0.)
 
     @classmethod
     def from_element(cls, element: Element, tm_type: TMTypes = TMTypes.MAIN, delta_l=None, **params):
@@ -50,6 +51,8 @@ class KickTM(Transformation):
         Returns:
             Any: The calculated transformation matrix or related object.
         """
+        if tm_type == TMTypes.EXIT:
+            params["start_length"] = element.l
         return cls.create(entrance_tm_params_func=element.create_kick_entrance_params if element.has_edge else None,
                           delta_e_func=element.create_delta_e,
                           main_tm_params_func=element.create_kick_main_params,
@@ -110,11 +113,19 @@ class KickTM(Transformation):
         nkick = self.nkick
         l = self.delta_length if self.delta_length is not None else self.length
 
+        if self.delta_length is not None and self.length:
+            angle *= l / self.length
+        rolled_face = getattr(params, "rolled_face", None)
+        if rolled_face:
+            rolled_face(self.start_length).inverse().apply(X, energy)
+
         if dx != 0 or dy != 0 or tilt != 0:
             X = transform_vec_ent(X, dx, dy, tilt)
         self.kick(X, l, angle, k1, k2, k3, energy, nkick=nkick)
         if dx != 0 or dy != 0 or tilt != 0:
             X = transform_vec_ext(X, dx, dy, tilt)
+        if rolled_face:
+            rolled_face(self.start_length + l).apply(X, energy)
 
         return X
 

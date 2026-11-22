@@ -436,6 +436,9 @@ class LatticeIO:
         element_type = element.__class__.__name__
         element_ref = type(element)()
         params_order = LatticeIO._element_init_params(element)
+        # Alignment kwargs belong to the magnet atom and must survive a round trip.
+        if "dtilt" in vars(element.element):
+            params_order.extend(name for name in ("dx", "dy", "dtilt") if name not in params_order)
 
         for param in params_order:
             # fix for parameter 'eid'

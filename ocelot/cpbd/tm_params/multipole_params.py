@@ -1,6 +1,4 @@
 from ocelot.cpbd.tm_params.tm_params import TMParams
-from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
-from ocelot.cpbd.r_matrix import rot_mtx
 
 
 class MultipoleParams(TMParams):
@@ -11,6 +9,9 @@ class MultipoleParams(TMParams):
     multipole transformation.
     """
 
-    def __init__(self, kn) -> None:
+    def __init__(self, kn, dx=0., dy=0., tilt=0.) -> None:
         super().__init__()
         self.kn = kn
+        self.dx = dx
+        self.dy = dy
+        self.tilt = tilt

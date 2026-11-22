@@ -10,7 +10,7 @@ class KickParams(TMParams):
     algorithmically.
     """
 
-    def __init__(self, dx, dy, tilt, angle, k1, k2, k3=0.):
+    def __init__(self, dx, dy, tilt, angle, k1, k2, k3=0., rolled_face=None):
         super().__init__()
         self.k1 = k1
         self.k2 = k2
@@ -19,3 +19,4 @@ class KickParams(TMParams):
         self.dy = dy
         self.tilt = tilt
         self.angle = angle
+        self.rolled_face = rolled_face

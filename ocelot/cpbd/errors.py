@@ -17,6 +17,8 @@ class Errors:
 
 
 def tgauss(mu=0, sigma=1, trunc=2, num=1):
+    if sigma == 0:
+        return mu if num == 1 else np.full(num, mu)
     lower = -sigma*trunc
     upper = sigma*trunc
     X = stats.truncnorm((lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)

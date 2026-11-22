@@ -101,6 +101,15 @@ class OpticElement:
         self._activate_tm(requested_tm, **params)
         self.__is_init = True  # needed to disable __getattr__ and __setattr__ in __init__ phase. Do not add new attributes after.
 
+    def __setstate__(self, state):
+        # Older pickles kept seeded roll errors on the wrapper. Their cached
+        # maps predate the mechanical error, even when the energy matches.
+        atom = state["element"]
+        if hasattr(atom, "dtilt") and "dtilt" not in vars(atom):
+            atom.dtilt = state.pop("dtilt", 0.)
+            state["_first_order_tms"] = state["_tms"] = None
+        self.__dict__.update(state)
+
     def __getattr__(self, name):
         # Forward reads to the wrapped atom to preserve the historical public
         # element API without storing duplicate physics state on the wrapper.
@@ -156,7 +165,7 @@ class OpticElement:
             else:
                 # Rebuild the active tracking maps lazily from the current
                 # physics state on the wrapped element.
-                self._tms = self._create_tms(self.element, self._tm_class_type)
+                self._tms = self._create_tms(self.element, self._tm_class_type, **self._kwargs)
         return self._tms
 
     @property
@@ -191,7 +200,7 @@ class OpticElement:
         For ``SecondTM`` the active second-order maps are used. Otherwise CPBD
         continues to use the first-order maps for this accessor.
         """
-        tms = self._tms if self._tm_class_type == SecondTM else self.first_order_tms
+        tms = self.tms if self._tm_class_type == SecondTM else self.first_order_tms
         res = []
         E = energy
         for tm in tms:
@@ -393,6 +402,9 @@ class OpticElement:
             params = copy(self._kwargs)
             if "RungeKutta" in main_tm_class.__name__:
                 params["s_start"] = start_l
+
+        if start_l and hasattr(self.element, "_rolled_face") and self.element.has_edge:
+            params["start_length"] = start_l
 
         if (start_l + delta_l > total_length or np.isclose(start_l + delta_l, total_length)):
             delta_l_red = total_length - start_l

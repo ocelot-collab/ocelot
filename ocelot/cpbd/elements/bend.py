@@ -26,7 +26,10 @@ class Bend(OpticElement):
     e1, e2 : float, default=0
         Entrance and exit face angles in [rad]
     tilt : float, default=0
-        Roll angle around beam axis in [rad]
+        Design rotation of the bending plane in [rad]
+    dtilt : float, default=0
+        Mechanical roll about the entrance axis in [rad]. The exit orbit is
+        measured in the nominal survey frame.
     gap : float, default=0
         Magnet gap in [m] (NOTE: HGAP=gap/2 in MAD/ELEGANT)
     fint, fintx : float, default=0

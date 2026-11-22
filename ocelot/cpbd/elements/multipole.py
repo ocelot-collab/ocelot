@@ -14,6 +14,11 @@ class Multipole(OpticElement):
     kn : float or array-like, default=0
         Multipole strength coefficients (list or single value)
 
+    tilt, dtilt : float, default=0
+        Design and mechanical roll in radians about the axis at (dx, dy).
+    dx, dy : float, default=0
+        Magnetic-axis offsets in nominal beam coordinates, in metres.
+
     Physics
     -------
     Arbitrary multipole field expansion.
@@ -42,5 +47,5 @@ class Multipole(OpticElement):
     default_tm = MultipoleTM
     supported_tms = {MultipoleTM}
 
-    def __init__(self, kn=0., eid=None, tm=None, **kwargs):
-        super().__init__(MultipoleAtom(kn=kn, eid=eid, **kwargs), tm=tm)
+    def __init__(self, kn=0., eid=None, tm=None, *, tilt=0., **kwargs):
+        super().__init__(MultipoleAtom(kn=kn, eid=eid, tilt=tilt, **kwargs), tm=tm)

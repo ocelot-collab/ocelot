@@ -3,8 +3,32 @@ import numpy as np
 
 from ocelot.cpbd.magnetic_lattice import MagneticLattice, insert_markers_by_predicate
 from ocelot.cpbd.elements import Drift, SBend, Marker, Quadrupole, Cavity, Sextupole
-from ocelot.cpbd.beam import Twiss
+from ocelot.cpbd.beam import ParticleArray, Twiss
 from ocelot.cpbd.transformations.second_order import SecondTM
+
+
+def test_transfer_maps_tracks_offset_orbit_through_sextupole():
+    lattice = MagneticLattice(
+        [Quadrupole(l=0.4, k1=2.0, dx=1e-3), Drift(l=1.0), Sextupole(l=0.2, k2=20.0)],
+        method={"global": SecondTM},
+    )
+    B, R, T = lattice.transfer_maps(energy=1.0)
+
+    # Sample the orbit and its first two derivatives along an entrance perturbation.
+    direction = np.array([1., 0., 0., 0., 0., 1.])
+    step = 1e-5
+    particles = ParticleArray(n=3)
+    particles.E = 1.0
+    particles.rparticles[:] = direction[:, None] * np.array([-step, 0., step])
+    for elem in lattice.sequence:
+        for tm in elem.tms:
+            tm.apply(particles)
+    minus, orbit, plus = particles.rparticles.T
+
+    np.testing.assert_allclose(B[:, 0], orbit, rtol=0, atol=1e-14)
+    np.testing.assert_allclose(R @ direction, (plus - minus) / (2 * step), rtol=0, atol=1e-8)
+    np.testing.assert_allclose(np.einsum("ijk,j,k->i", T, direction, direction),
+                               (plus - 2 * orbit + minus) / (2 * step**2), rtol=0, atol=1e-7)
 
 
 def test_magnetic_lattice_find_indices():

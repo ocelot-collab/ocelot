@@ -1173,7 +1173,7 @@ def _rk_reference(s_values, max_step, energy, mag_field, *, require_forward_z=Tr
 
 
 def rk_field_to_ocelot(rparticles, s_start, s_stop, N, energy, mag_field,
-                       long_dynamics=True, *, reference_length=None):
+                       long_dynamics=True, *, reference_length=None, alignment=None, reference_face=None):
     """Track between normal planes of one continuously curved reference.
 
     Input/output transverse momenta are MECHANICAL p/p0 in Bishop axes;
@@ -1181,6 +1181,10 @@ def rk_field_to_ocelot(rparticles, s_start, s_stop, N, energy, mag_field,
     s_start/s_stop are reference arc lengths measured from the element entrance.
     The reference and field always retain that original entrance frame.
     reference_length fixes the RK step for slices of the same full element.
+    reference_face(s) optionally supplies the nominal origin and 3D frame at
+    entrance-based arc length s. By default the reference follows mag_field.
+    For an installation roll, mag_field is the design field and alignment
+    gives (dx, dy, dtilt) for the two face transformations.
     """
     if isinstance(N, (bool, np.bool_)) or not isinstance(N, (int, np.integer)) or N < 2:
         raise ValueError("RK tracking requires an integer npoints >= 2")
@@ -1193,9 +1197,22 @@ def rk_field_to_ocelot(rparticles, s_start, s_stop, N, energy, mag_field,
     max_step = (reference_length if reference_length is not None else s_stop) / (N - 1)
     if max_step <= 0:
         raise ValueError("RK reference length must be positive")
-    positions, frames = _rk_reference([s_start, s_stop], max_step, energy, mag_field)
-    origin_in, origin_out = positions
-    frame_in, frame_out = frames
+    if reference_face is None:
+        positions, frames = _rk_reference([s_start, s_stop], max_step, energy, mag_field)
+        origin_in, origin_out = positions
+        frame_in, frame_out = frames
+    else:
+        origin_in, frame_in = reference_face(s_start)
+        origin_out, frame_out = reference_face(s_stop)
+        if min(frame_in[2, 2], frame_out[2, 2]) <= 0 or origin_out[2] <= origin_in[2]:
+            raise ValueError("Nominal RK reference must move forward in Cartesian Z")
+    if alignment is not None:
+        from ocelot.cpbd.magnet_alignment import rolled_face
+        # Integrate in the native magnet, between its actual faces. Report
+        # coordinates on the original reference planes, including flight time.
+        destination = rparticles
+        rparticles = rparticles.copy()
+        rolled_face(origin_in, frame_in, *alignment).inverse().apply(rparticles, energy)
     normal_p = _rk_forward_pz(rparticles[1], rparticles[3], momentum2)
     position = origin_in[:, None] + frame_in[:, :2] @ rparticles[[0, 2]]
     momentum = frame_in @ np.vstack((rparticles[1], rparticles[3], normal_p))
@@ -1234,6 +1251,10 @@ def rk_field_to_ocelot(rparticles, s_start, s_stop, N, energy, mag_field,
     rparticles[1], rparticles[3] = local_momentum[:2]
     if long_dynamics:
         rparticles[4] += state[4] / beta - (s_stop - s_start) / beta0
+    if alignment is not None:
+        rolled_face(origin_out, frame_out, *alignment).apply(rparticles, energy)
+        destination[:] = rparticles
+        return destination
     return rparticles
 
 

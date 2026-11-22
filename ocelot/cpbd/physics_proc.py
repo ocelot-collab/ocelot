@@ -658,37 +658,63 @@ class LatticeEnergyProfile(PhysProc):
 
 class IBS(PhysProc):
     """
-    Intrabeam Scattering (IBS) Physics Process.
+    Longitudinal intrabeam-scattering heating for a round electron beam in a linac.
 
-    This class models the intrabeam scattering process in particle beams. Two methods are implemented based on different formulations:
+    ``method="Huang"`` uses the longitudinally cold limit of Z. Huang,
+    *Intrabeam Scattering in an X-ray FEL Driver*, LCLS-TN-02-8 (2002),
+    Eqs. (5)-(9): https://www-ssrl.slac.stanford.edu/lcls/technotes/LCLS-TN-02-8.pdf.
+    ``method="Nagaitsev"`` uses the round-beam rate with the approximate
+    G function in S. Nagaitsev, PRSTAB 8, 064403 (2005), Eqs. (45)-(49):
+    https://doi.org/10.1103/PhysRevSTAB.8.064403. The fit has approximately
+    20% accuracy; this is not the general elliptic-integral IBS model.
 
-    1. **Huang Method:** Based on Z. Huang's work: *Intrabeam Scattering in an X-ray FEL Driver* (LCLS-TN-02-8, 2002).
-       URL: https://www-ssrl.slac.stanford.edu/lcls/technotes/LCLS-TN-02-8.pdf
-    2. **Nagaitsev Method:** Based on S. Nagaitsev's work: *Intrabeam scattering formulas for fast numerical evaluation*
-       (PRAB 8, 064403, 2005). URL: https://journals.aps.org/prab/abstract/10.1103/PhysRevSTAB.8.064403
+    The Nagaitsev longitudinal variance rate is multiplied by two because
+    there are no synchrotron oscillations in a linac (Xiao and Borland,
+    PAC09, TH5PFP038, Eq. (4):
+    https://accelconf.web.cern.ch/pac2009/papers/th5pfp038.pdf).
+    This doubles the kick variance, not its standard deviation.
 
-    The methods can be selected using `self.method`, which accepts "Huang" or "Nagaitsev".
+    Parameters
+    ----------
+    step : int
+        Number of Navigator unit steps between applications (default: 1).
+    method : str
+        "Huang" (default) or "Nagaitsev".
+    Clog : float
+        Fixed Coulomb logarithm, used only when ``update_Clog=False``.
+        Default: 8, approximating Huang's cutoff for the Gaussian core.
+    update_Clog : bool
+        Default: True. Recalculate the uncut, high-energy Coulomb-log
+        estimate each step instead of using ``Clog``. ``Clog_used`` records
+        the effective value from the last nonzero-charge, positive-length step.
+    bounds : sequence of float or None
+        Analysis window in units of the whole-bunch rms length, relative
+        to ``slice``. Default: [-0.5, 0.5]; None selects the whole bunch.
+    slice : str or None
+        "Imax" (default) centers the window on the current maximum;
+        otherwise it is centered on the mean longitudinal position.
 
-    Key assumptions and features:
-    - A **round beam approximation** is used, where `sigma_xy = (sigma_x + sigma_y) / 2`.
-    - Beam parameters are calculated within a slice of width ±0.5 `sigma_tau` relative to the slice with maximum current
-      (`self.slice = "Imax"` by default).
-    - The Coulomb logarithm (`self.Clog`) is a configurable parameter, defaulting to 8 (based on Z. Huang's work).
-    - A factor of 2 is applied to the Nagaitsev formula to align high-energy results with the Huang formula.
+    Notes
+    -----
+    ``sigma_dgamma0`` measures energy spread after subtracting a fitted
+    linear chirp within the analysis window, without modifying the particles.
+    Curvature and variation between slices require a narrower window.
+    Transverse sizes and normalized emittances are averaged between planes.
+    One kick strength is applied to the entire bunch using its total charge
+    and rms length: ``sigma_z`` stores std(tau), with tau = c*delta_t; the
+    physical bunch length in the rate is beta*sigma_z. Local density
+    variation, transverse IBS, and dispersion
+    effects are not modelled. Equal macro-particle weights and approximately
+    Gaussian, transversely round distributions are assumed.
 
-    Attributes:
-    - `method` (str): Selected method for IBS calculation ("Huang" or "Nagaitsev").
-    - `Clog` (float): Coulomb logarithm (default: 8) is used constant if update_Clog = False
-    - `update_Clog` (bool): recalculate Clog on each step using Huang's formula without cut off.
-    - `bounds` (list): Range of bounds for slice analysis in units of `sigma_tau` (default: `[-0.5, 0.5]`).
-    - `slice` (str): Reference slice ("Imax" for maximum current by default).
-
-    Methods:
-    - `get_beam_params(p_array)`: Computes beam parameters such as `sigma_xy`, `sigma_z`, and normalized emittance.
-    - `apply(p_array, dz)`: Applies the IBS process to a particle array over a specified distance.
-
-    Raises:
-    - `ValueError`: If an invalid method is specified.
+    Nagaitsev heating requires a longitudinal/transverse rest-frame
+    temperature ratio xi <= 1. A larger ratio raises ValueError before any
+    kick: longitudinal cooling and the accompanying transverse heating
+    require a coupled model. Huang requires xi << 1. Both methods use the
+    finite-beta conversion of Nagaitsev's rate to Ocelot's energy coordinate;
+    Huang is recovered as the cold limit and agrees with its reference at
+    beta approximately 1. This does not extend the Coulomb-log estimate's
+    validity to nonrelativistic beams.
     """
 
     def __init__(self, step=1, **kwargs):
@@ -703,24 +729,62 @@ class IBS(PhysProc):
         self.sigma_xy = None
         self.sigma_z = None
         self.sigma_dgamma0 = None
+        self.Clog_used = None
 
     def get_beam_params(self, p_array):
         """
-        Compute beam parameters such as sigma_xy, sigma_z, and normalized emittance.
+        Compute transverse moments and the energy spread after removing linear chirp.
 
         :param p_array: ParticleArray
             Input particle array containing particle properties.
         """
-        tws = get_envelope(p_array, bounds=self.bounds, slice=self.slice)
+        if not np.isfinite(p_array.E) or p_array.E <= m_e_GeV:
+            raise ValueError("IBS requires a finite reference energy above the electron rest energy.")
+        if p_array.n < 3 or not np.all(np.isfinite(p_array.rparticles)):
+            raise ValueError("IBS requires at least three particles with finite coordinates.")
         self.sigma_z = np.std(p_array.tau())
+        if self.sigma_z <= 0 or not np.isfinite(self.sigma_z):
+            raise ValueError("IBS requires a positive, finite rms bunch length.")
+
+        # Select once so the transverse moments and chirp fit use the same particles.
+        selected = p_array
+        if self.bounds is not None:
+            bounds = np.asarray(self.bounds, dtype=float)
+            if bounds.shape != (2,) or not np.all(np.isfinite(bounds)) or bounds[0] >= bounds[1]:
+                raise ValueError("IBS bounds must contain two finite, increasing values.")
+            if self.slice == "Imax":
+                current = s_to_cur(p_array.tau(), 0.01 * self.sigma_z,
+                                   np.sum(p_array.q_array), speed_of_light)
+                center = current[np.argmax(current[:, 1]), 0]
+            else:
+                center = np.mean(p_array.tau())
+            mask = ((center + self.sigma_z * bounds[0] <= p_array.tau()) &
+                    (p_array.tau() <= center + self.sigma_z * bounds[1]))
+            selected = ParticleArray()
+            selected.E = p_array.E
+            selected.rparticles = p_array.rparticles[:, mask]
+            selected.q_array = p_array.q_array[mask]
+        if selected.n < 3:
+            raise ValueError("IBS analysis window must contain at least three particles.")
+
+        with np.errstate(divide="ignore", invalid="ignore"):
+            tws = get_envelope(selected)
+        if not np.all(np.isfinite([tws.emit_xn, tws.emit_yn])) or min(tws.emit_xn, tws.emit_yn) <= 0:
+            raise ValueError("IBS requires positive, finite emittances in both transverse planes.")
         self.sigma_xy = (np.sqrt(tws.xx) + np.sqrt(tws.yy)) / 2.
         self.emit_n = (tws.emit_xn + tws.emit_yn) / 2.
+
+        tau = selected.tau() - np.mean(selected.tau())
+        residual = selected.p() - np.mean(selected.p())
+        tau_variance = np.mean(tau * tau)
+        if tau_variance > 0:
+            residual = residual - np.mean(tau * residual) / tau_variance * tau
         pc = np.sqrt(p_array.E ** 2 - m_e_GeV ** 2)
-        self.sigma_dgamma0 = np.sqrt(tws.pp)*pc / m_e_GeV
+        self.sigma_dgamma0 = np.std(residual) * pc / m_e_GeV
 
     def estimate_Clog(self):
         """
-        Used formula from Hunag's paper without cut offs
+        Huang's high-energy estimate without the Gaussian-core cutoff.
 
         :return: float - Coulomb logarithm
         """
@@ -737,10 +801,20 @@ class IBS(PhysProc):
             The path length over which the IBS process is applied.
 
         Raises:
-        - ValueError: If an invalid method is specified.
+        - ValueError: For invalid inputs or unsupported Nagaitsev cooling.
         """
-        # Number of particles
+        if self.method not in ("Huang", "Nagaitsev"):
+            raise ValueError(f"Invalid method '{self.method}'. Choose 'Huang' or 'Nagaitsev'.")
+        if not np.isfinite(dz) or dz < 0:
+            raise ValueError("IBS path length must be finite and nonnegative.")
+        if dz == 0:
+            return
+
         Nb = np.sum(p_array.q_array) / q_e
+        if not np.isfinite(Nb) or Nb < 0:
+            raise ValueError("IBS requires a finite, nonnegative bunch charge.")
+        if Nb == 0:
+            return
 
         # Update beam parameters
         self.get_beam_params(p_array)
@@ -750,6 +824,11 @@ class IBS(PhysProc):
             Clog = self.estimate_Clog()
         else:
             Clog = self.Clog
+        if not np.isfinite(Clog) or Clog < 0:
+            raise ValueError("IBS Coulomb logarithm must be finite and nonnegative.")
+        self.Clog_used = Clog
+        if Clog == 0:
+            return
 
         # Particle energy and momentum
         gamma = p_array.E / m_e_GeV
@@ -760,17 +839,30 @@ class IBS(PhysProc):
 
         pc = np.sqrt(p_array.E**2 - m_e_GeV**2)
 
-        # Calculate sigma_gamma based on the selected method
-        if self.method == "Huang":
-            sigma_gamma = np.sqrt(Clog * ro_e**2 * Nb / (beta**3 * self.sigma_xy * self.emit_n * self.sigma_z) * dz / 4)
+        # Nagaitsev Eq. (46) uses delta = dP/P0, whereas Ocelot uses dE/(P0*c).
+        # dgamma = beta**2 * gamma * delta; emit_n = beta*gamma*sigma_xy*theta.
+        # Convert dt to ds/(beta*c) and double the ring variance rate for a linac.
+        # The cold-limit rate has a beta prefactor for a physical bunch length.
+        # Ocelot tau = c*delta_t, so that length is beta*std(tau).
+        sigma_s = beta * self.sigma_z
+        G = 1.
+        if self.method == "Nagaitsev":
+            xi = (self.sigma_dgamma0 * self.sigma_xy / (beta * gamma * self.emit_n))**2
+            if not np.isfinite(xi) or xi > 1:
+                raise ValueError(
+                    f"Nagaitsev IBS requires xi <= 1 (got {xi:g}). Longitudinal cooling "
+                    "and accompanying transverse heating are not supported by this longitudinal-kick model."
+                )
+            # Eq. (49), with its finite cold-beam limit and stable log near zero.
+            G = (1 - xi**0.25) * np.log1p(xi) / xi if xi > 0 else 1.
 
-        elif self.method == "Nagaitsev":
-            xi = (self.sigma_dgamma0 * self.sigma_xy / (gamma * self.emit_n))**2
-            F = (1 - xi**0.25) * np.log(xi + 1) / xi
-            sigma_gamma = np.sqrt(Clog / 4 * ro_e**2 * Nb / (beta**3 * self.sigma_xy * self.emit_n * self.sigma_z) * F * dz)
-        else:
-            raise ValueError(f"Invalid method '{self.method}'. Choose 'Huang' or 'Nagaitsev'.")
+        variance_gamma = Clog * ro_e**2 * Nb * beta * G * dz / (
+            4 * self.sigma_xy * self.emit_n * sigma_s)
+        if not np.isfinite(variance_gamma) or variance_gamma < 0:
+            raise ValueError("IBS produced an invalid energy-variance increment.")
+        if variance_gamma == 0:
+            return
 
         # Energy spread and update particle momenta
-        sigma_e = sigma_gamma * m_e_GeV / pc
+        sigma_e = np.sqrt(variance_gamma) * m_e_GeV / pc
         p_array.p()[:] += np.random.randn(p_array.n) * sigma_e

@@ -496,12 +496,7 @@ def test_phase_space_aperture(lattice, p_array, parameter, update_ref_values=Fal
 
 @pytest.mark.parametrize('parameter', [0, 1, 2, 3])
 def test_ibs(lattice, p_array, parameter, update_ref_values=False):
-    """
-    test PhysicsProc WakeTable
-
-    0 - tracking of the electron beam with positive energy chirp trough undulator
-    1 - tracking of the electron beam with negative energy chirp trough undulator
-    """
+    """Energy-spread evolution for both IBS methods and both Coulomb-log modes."""
     emit_x = 1e-6  # m
     sigma_x = 250e-6  # m
     sigma_z = 1e-3  # m
@@ -513,20 +508,9 @@ def test_ibs(lattice, p_array, parameter, update_ref_values=False):
                                   energy=E,
                                   tau_trunc=None, tws=None, shape="gauss")
     parray = copy.deepcopy(parray_init)
-    ibs = IBS()
-    ibs.Clog = 8
-    if parameter == 0:
-        ibs.method = "Nagaitsev"
-        ibs.update_Clog = True
-    if parameter == 1:
-        ibs.method = "Nagaitsev"
-        ibs.update_Clog = False
-    if parameter == 2:
-        ibs.method = "Huang"
-        ibs.update_Clog = True
-    else:
-        ibs.method = "Huang"
-        ibs.update_Clog = False
+    method, update_Clog = [("Nagaitsev", True), ("Nagaitsev", False),
+                           ("Huang", True), ("Huang", False)][parameter]
+    ibs = IBS(method=method, Clog=8, update_Clog=update_Clog)
     tws = get_envelope(parray, bounds=[-0.5, 0.5], slice="Imax")
 
     pc = np.sqrt(parray.E ** 2 - m_e_GeV ** 2)

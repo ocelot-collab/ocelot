@@ -42,6 +42,36 @@ To explore tutorials, visit:
 👉 [**Tutorial Overview**](https://www.ocelot-collab.com/docs/tutorial/intro)
 👉 [**Student-Friendly Introduction**](https://www.ocelot-collab.com/docs/tutorial/tutorial-beam-dynamics/for_students)
 
+## Plotting optics and electron beams
+
+When writing an accelerator example or tutorial, first check the plotting
+functions in `ocelot.gui.accelerator`. Use `plot_opt_func` to see how the
+beta functions and dispersion vary through the magnets. Use `show_e_beam`
+to inspect a `ParticleArray` at one location, including its current, slice
+emittances and longitudinal phase space.
+
+```python
+import matplotlib.pyplot as plt
+import ocelot as ocl
+from ocelot.gui.accelerator import plot_opt_func, show_e_beam
+
+d = ocl.Drift(l=0.5)
+lat = ocl.MagneticLattice([d, ocl.Quadrupole(l=0.2, k1=1.0), d])
+entrance = ocl.Twiss(E=0.13, beta_x=3, beta_y=2, emit_xn=0.5e-6, emit_yn=0.5e-6)
+optics = ocl.twiss(lat, entrance, nPoints=80)
+plot_opt_func(lat, optics, top_plot=["alpha_x", "alpha_y"])
+
+bunch = ocl.generate_parray(tws=entrance, nparticles=20_000)
+show_e_beam(bunch, nparts_in_slice=500, title="Bunch at the entrance")
+plt.show()
+```
+
+For custom curves above a lattice, `plot_API` returns the figure and plotting
+axes. For a single particle-density view, `show_density` accepts a Matplotlib
+axis. Use Matplotlib directly or customize the Ocelot panels when that makes
+the physics clearer. See the [double-bend achromat demo](demos/ebeam/dba.py)
+and the [injector tracking tutorial](demos/ipython_tutorials/2_tracking.ipynb).
+
 ## Import and Startup Notes
 
 Legacy tutorial code using `from ocelot import *` remains supported, but it is

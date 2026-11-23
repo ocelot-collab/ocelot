@@ -92,6 +92,12 @@ For workflow examples, prefer these before inventing new patterns:
   `demos/ipython_tutorials/pfs_1_synchrotron_radiation.ipynb`,
   `demos/sr/`, `demos/optics/`
 
+For new accelerator examples and tutorials, first check `ocelot.gui.accelerator`.
+Prefer `plot_opt_func` for optics along a lattice and `show_e_beam` for bunch
+diagnostics when they fit. Follow the existing examples' plotting style and use
+Matplotlib for custom figures or to customize the panels. See the
+[README plotting example](README.md#plotting-optics-and-electron-beams).
+
 ## Architecture Notes
 
 The CPBD element implementation uses a wrapper/atom/parameter/transformation

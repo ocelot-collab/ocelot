@@ -83,7 +83,7 @@ s = [p.s for p in tws]
 p1, = plt.plot(s, [p.beta_x for p in tws], lw=2.0)
 p2, = plt.plot(s, [p.beta_y for p in tws], lw=2.0)
 plt.grid(True)
-plt.legend([p1,p2], [r'$\beta_x$',r'$\beta_y$', r'$D_x$'])
+plt.legend([p1, p2], [r'$\beta_x$', r'$\beta_y$'])
 
 ax2 = f.add_subplot(212)
 plot_lattice(lat, ax2, alpha=0.5)

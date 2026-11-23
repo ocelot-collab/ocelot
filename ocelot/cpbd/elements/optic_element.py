@@ -384,11 +384,14 @@ class OpticElement:
         # ENTRANCE -> MAIN(slice) -> EXIT.
         tm_list = []
         total_length = self.element.l
+        # Distances are in metres. A relative tolerance can move an interior
+        # optics sample across a thin exit kick in a long magnet.
+        at_exit = start_l + delta_l >= total_length - 1e-12
         if start_l < 1e-10:
             if self.element.has_edge and not ignore_edges:
                 tm = self.get_tm(TMTypes.ENTRANCE, first_order_only)
                 tm_list.append(copy(tm))
-            if np.isclose(delta_l, total_length):
+            if at_exit:
                 tm = self.get_tm(TMTypes.MAIN, first_order_only)
                 tm_list.append(copy(tm))
                 if self.element.has_edge and not ignore_edges:
@@ -406,7 +409,7 @@ class OpticElement:
         if start_l and hasattr(self.element, "_rolled_face") and self.element.has_edge:
             params["start_length"] = start_l
 
-        if (start_l + delta_l > total_length or np.isclose(start_l + delta_l, total_length)):
+        if at_exit:
             delta_l_red = total_length - start_l
             tm_list.append(main_tm_class.from_element(element=self.element, tm_type=TMTypes.MAIN, delta_l=delta_l_red, **params))
             if self.element.has_edge and not ignore_edges:

@@ -1,10 +1,14 @@
 """Local derivatives of active single-particle tracking maps."""
 
+from math import factorial
+
 import numpy as np
 
 from ocelot.common.globals import m_e_GeV, speed_of_light
+from ocelot.cpbd.r_matrix import rot_mtx
 from ocelot.cpbd.rf_maps import rf_long_t_terms
-from ocelot.cpbd.transformations import CavityTM, SecondTM, TMTypes, TransferMap, TWCavityTM
+from ocelot.cpbd.tm_params.multipole_params import thin_dipole_dispersion, thin_multipole_matrix
+from ocelot.cpbd.transformations import CavityTM, MultipoleTM, SecondTM, TMTypes, TransferMap, TWCavityTM
 from ocelot.cpbd.transformations.transformation import Transformation
 
 
@@ -15,6 +19,23 @@ def map_derivatives(
     dispersion: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray | None]:
     """Return the Jacobian and, when requested, its derivative along dispersion."""
+    if isinstance(tm, MultipoleTM):
+        params = tm.get_params(energy)
+        rotation = rot_mtx(params.tilt)
+        offset = np.array([params.dx, 0., params.dy, 0., 0., 0.])
+        local = rotation @ (orbit - offset)
+        z = local[0] + 1j * local[2]
+        # Differentiate the thin kick polynomial in z = x + iy. A finite
+        # difference would give even a centered octupole artificial focusing.
+        gradient = sum(k * z**n / factorial(n) for n, k in enumerate(params.kn[1:]))
+        dipole = thin_dipole_dispersion(params.kn[0], energy)
+        J = rotation.T @ thin_multipole_matrix(dipole, gradient) @ rotation
+        if dispersion is None:
+            return J, None
+        local_dispersion = rotation @ dispersion
+        curvature = sum(k * z**n / factorial(n) for n, k in enumerate(params.kn[2:]))
+        change = curvature * (local_dispersion[0] + 1j * local_dispersion[2])
+        return J, rotation.T @ (thin_multipole_matrix(0., change) - np.eye(6)) @ rotation
     if isinstance(tm, SecondTM):
         params = tm.get_params(energy)
         tensor = params.get_rotated_T() if params.tilt else params.T
@@ -53,9 +74,12 @@ def map_derivatives(
     offsets = step * np.eye(6)
 
     def jacobian(point: np.ndarray) -> np.ndarray:
-        probes = np.column_stack((point[:, None] + offsets, point[:, None] - offsets))
+        # A two-point derivative mistakes a cubic kick for a quadrupole on
+        # the octupole axis. Cancel that term with the five-point stencil.
+        probes = point[:, None] + np.column_stack((offsets, -offsets, 2 * offsets, -2 * offsets))
         mapped = tm.map_function(probes, energy)
-        return (mapped[:, :6] - mapped[:, 6:]) / (2. * step)
+        plus, minus, far_plus, far_minus = np.split(mapped, 4, axis=1)
+        return (8 * (plus - minus) - (far_plus - far_minus)) / (12 * step)
 
     J = jacobian(orbit)
     if dispersion is None:

@@ -14,4 +14,6 @@ class RungeKuttaParams(TMParams):
         self.mag_field = mag_field
         self.design_field = mag_field if design_field is None else design_field
         self.alignment = alignment
+        self.centered_field = None
+        self.nominal_alignment = None
     

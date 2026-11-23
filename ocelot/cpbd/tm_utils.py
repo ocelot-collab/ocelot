@@ -1,53 +1,14 @@
-import logging
-from functools import cache
-
 import numpy as np
 
 from ocelot.cpbd.r_matrix import rot_mtx
 
-_logger = logging.getLogger(__name__)
-
-nb = None
-nb_flag = None
-
-
-def _numba_is_available():
-    global nb, nb_flag
-    if nb_flag is None:
-        try:
-            import numba as _nb
-        except ImportError:
-            _logger.debug(" optics.py: module NUMBA is not installed. Install it to speed up calculation")
-            nb = None
-            nb_flag = False
-        else:
-            nb = _nb
-            nb_flag = True
-    return nb_flag
-
 
 class SecondOrderMult:
-    """
-    The class includes three different methods for transforming the particle
-    coordinates:
-
-    1. NUMBA module - DEACTIVATED, because new numpy implementation shows higher performance.
-        Slightly faster than NUMPY for simulations with a large number of time
-        steps. Uses full matrix multiplication.
-
-    2. NUMPY module
-        Base method to be used.
-        Uses full matrix multiplication.
-
-    """
+    """Apply a second-order transfer map to a particle array."""
 
     def __init__(self):
         self.full_matrix = False
-
-        if False:
-            self.tmat_multip = nb.njit()(SecondOrderMult.numba_apply)
-        else:
-            self.tmat_multip = SecondOrderMult.numpy_apply
+        self.tmat_multip = SecondOrderMult.numpy_apply
 
     @staticmethod
     def numba_apply(X, R, T):
@@ -82,83 +43,33 @@ def transform_vec_ext(X, dx, dy, tilt):
 
 def transfer_maps_mult_py(Ba, Ra, Ta, Bb, Rb, Tb):
     """Compose A followed by B when Ba or Tb is zero."""
-    Bc = np.dot(Rb, Ba) + Bb
-    Rc = np.dot(Rb, Ra)
-    Tc = np.zeros((6, 6, 6))
-    for i in range(6):
-        for j in range(6):
-            for k in range(6):
-                t1 = 0.
-                t2 = 0.
-                for l in range(6):
-                    t1 += Rb[i, l] * Ta[l, j, k]
-                    for m in range(6):
-                        t2 += Tb[i, l, m] * Ra[l, j] * Ra[m, k]
-                Tc[i, j, k] = t1 + t2
-    return Bc, Rc, Tc
+    Tc = np.einsum("il,ljk->ijk", Rb, Ta) + Ra.T @ Tb @ Ra
+    return Bb + Rb @ Ba, Rb @ Ra, Tc
 
 
 def transfer_maps_mult_full_py(Ba, Ra, Ta, Bb, Rb, Tb):
     """Compose A followed by B through second order about zero input to A."""
-    # zero order, multiplication was rewritten due to limitations of Numba
-    Bc = np.zeros((6, 1))  # Bb + np.dot(Rb, Ba) + np.dot(Ba.T, np.dot(Tb, Ba))[0]
-    for i in range(6):
-        b1 = Bb[i, 0]
-        b2 = 0.
-        for l in range(6):
-            b1 += Rb[i, l] * Ba[l, 0]
-            for m in range(6):
-                b2 += Ba[m, 0] * Ba[l, 0] * Tb[i, m, l]
-        Bc[i, 0] += b1 + b2
-
-    # first order
-    Rc = np.dot(Rb, Ra)
-    for i in range(6):
-        for j in range(6):
-            r1 = 0.
-            r2 = 0.
-            for l in range(6):
-                for m in range(6):
-                    r1 += Ra[l, j] * Ba[m, 0] * Tb[i, m, l]
-                    r2 += Ba[l, 0] * Ra[m, j] * Tb[i, m, l]
-            Rc[i, j] += r1 + r2
-
-    # second order
-    Tc = np.zeros((6, 6, 6))
-    for i in range(6):
-        for j in range(6):
-            for k in range(6):
-                t1 = 0.
-                t2 = 0.
-                t3 = 0.
-                t4 = 0.
-                for l in range(6):
-                    t1 += Rb[i, l] * Ta[l, j, k]
-                    for m in range(6):
-                        t2 += Tb[i, l, m] * Ra[l, j] * Ra[m, k]
-                        t3 += Ta[l, j, k] * Ba[m, 0] * Tb[i, m, l]
-                        t4 += Ba[l, 0] * Ta[m, j, k] * Tb[i, m, l]
-                Tc[i, j, k] = t1 + t2 + t3 + t4
-    return Bc, Rc, Tc
-
-
-@cache
-def _get_transfer_maps_mult_impl(impl):
-    return nb.njit(impl) if _numba_is_available() else impl
+    # Evaluate B(x) = Bb + Rb x + Tb[x,x] and its Jacobian at x = Ba.
+    # Accept symmetric tensors and the one-sided mixed terms used by some maps.
+    tensor_offset = Tb @ Ba[:, 0]
+    orbit = Bb + Rb @ Ba + tensor_offset @ Ba
+    jacobian = Rb + tensor_offset + Tb.swapaxes(1, 2) @ Ba[:, 0]
+    quadratic = np.einsum("il,ljk->ijk", jacobian, Ta) + Ra.T @ Tb @ Ra
+    return orbit, jacobian @ Ra, quadratic
 
 
 def transfer_maps_mult(Ba, Ra, Ta, Bb, Rb, Tb):
     """Compose the quadratic maps in beam order, evaluating the second map at Ba."""
-    impl = transfer_maps_mult_full_py if Ba.any() and Tb.any() else transfer_maps_mult_py
-    return _get_transfer_maps_mult_impl(impl)(Ba, Ra, Ta, Bb, Rb, Tb)
+    if Ba.any() and Tb.any():
+        return transfer_maps_mult_full_py(Ba, Ra, Ta, Bb, Rb, Tb)
+    return transfer_maps_mult_py(Ba, Ra, Ta, Bb, Rb, Tb)
 
 
 def transfer_map_rotation(R, T, tilt):
-    rotmat = rot_mtx(tilt)
-    Bc, Rc, Tc = transfer_maps_mult(Ba=np.zeros((6, 1)), Ra=rotmat, Ta=np.zeros((6, 6, 6)), Bb=np.zeros((6, 1)), Rb=R,
-                                    Tb=T)
-    B, R, T = transfer_maps_mult(Ba=Bc, Ra=Rc, Ta=Tc, Bb=np.zeros((6, 1)), Rb=rot_mtx(-tilt), Tb=np.zeros((6, 6, 6)))
-    return R, T
+    rotation = rot_mtx(tilt)
+    # Transform both tensor inputs to magnet axes and its output to beam axes.
+    return (rotation.T @ R @ rotation,
+            np.einsum("il,ljk->ijk", rotation.T, rotation.T @ T @ rotation))
 
 
 def sym_matrix(T):

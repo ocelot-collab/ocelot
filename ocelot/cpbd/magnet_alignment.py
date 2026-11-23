@@ -18,18 +18,20 @@ class FaceTransform:
 
     def _crossing(self, X, energy):
         # Straight flight from the source face to z=0 of the destination.
+        if energy and (not np.isfinite(energy) or energy <= m_e_GeV):
+            raise ValueError("Magnet alignment requires energy above the electron rest energy or zero for beta=1")
         inv_beta = 1. / np.sqrt(1. - (m_e_GeV / energy)**2) if energy else 1.
         px, py, delta = X[1], X[3], X[5]
+        relative_energy = inv_beta + delta
         ps2 = 1. + delta * (2. * inv_beta + delta) - px**2 - py**2
-        if np.any(ps2 <= 0):
-            raise ValueError("Magnet alignment requires forward particle momentum")
+        if not np.all((relative_energy > 0.) & np.isfinite(ps2) & (ps2 > 0.)):
+            raise ValueError("Magnet alignment requires positive particle energy and forward momentum")
         ps = np.sqrt(ps2)
         p = self.axes @ np.array([px, py, ps])
         if np.any(p[2] <= 0):
             raise ValueError("Particle must cross the rolled magnet face forwards")
         position = self.shift[:, None] + self.axes[:, :2] @ X[[0, 2]]
         flight = -position[2] / p[2]
-        relative_energy = inv_beta + delta
         out = X.copy()
         out[[0, 2]] = position[:2] + p[:2] * flight
         out[[1, 3]] = p[:2]
@@ -70,13 +72,19 @@ class FaceTransform:
         return value, R, (T + T.swapaxes(1, 2)) / 2.
 
 
-def rolled_face(position, frame, dx, dy, dtilt):
+def rolled_face(position, frame, dx, dy, dtilt, *, local_offsets=False):
     """Physical face in nominal face coordinates after a roll at the entrance."""
     roll = get_tilt_matrix(dtilt)
     # Rotate the arm from the entrance pivot, then express both its change
     # and the new axes in the local survey frame at this arc length.
     arm = position - np.array([dx, dy, 0.])
-    return FaceTransform(frame.T @ ((roll - np.eye(3)) @ arm), frame.T @ roll @ frame)
+    axes = frame.T @ roll @ frame
+    shift = frame.T @ ((roll - np.eye(3)) @ arm)
+    if local_offsets:
+        # The centered native map/field starts at (dx, dy) in the physical
+        # face. Analytic maps already incorporate this translation in B and R.
+        shift += axes[:, 0] * dx + axes[:, 1] * dy
+    return FaceTransform(shift, axes)
 
 
 def roll_map(params, entrance, exit_face, energy):

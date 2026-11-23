@@ -139,12 +139,16 @@ def errors_seed(lattice, er_list, *, shared_groups=()):
     er_list maps exact element classes to {"offset": sigma_xy, "dtilt": sigma_roll}.
     Each transverse offset [m] and the mechanical roll [rad] are independent
     zero-mean Gaussian draws truncated at two sigma. Zero sigma sets that
-    component to zero. Other element families keep their existing alignments.
+    component to zero. Supported magnetic families include quadrupoles,
+    sextupoles, octupoles, bends, XYQuadrupole and thin Multipole. Correctors
+    have a separate horizontal/vertical kick model and cannot be seeded here.
 
     Occurrences are independent by default. Pass groups of zero-based sequence
-    indices, e.g. shared_groups=[(0, 2)], to give slices of one physical magnet
-    the same three values. records[i] is the alignment dict for sequence[i],
-    or None for an untargeted occurrence. Replay it with apply_alignment_errors.
+    indices, e.g. shared_groups=[(0, 2)], to give those occurrences the same
+    three values. Each bend occurrence still rolls about its own entrance.
+    To slice one rigidly rolled bend, use get_section_tms on a single bend.
+    records[i] is the alignment dict for sequence[i], or None for an
+    untargeted occurrence. Replay it with apply_alignment_errors.
     """
     records = _sample_alignment_errors(lattice, er_list, shared_groups)
     return apply_alignment_errors(lattice, records), records

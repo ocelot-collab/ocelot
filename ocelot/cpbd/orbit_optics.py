@@ -47,20 +47,81 @@ def orbit_seed(tws: Twiss | None, particle: Particle) -> Twiss:
 
 
 def _matched_modes(matrix: np.ndarray) -> np.ndarray:
-    """Return the two positive-action transverse modes with unit symplectic norm."""
+    """Find stable modes, with Re(v)ᵀ J Im(v) = 1 in (x, px, y, py)."""
     from ocelot.cpbd.optics import UnstableLatticeError
 
+    J2 = np.array([[0., 1.], [-1., 0.]])
+    J = np.kron(np.eye(2), J2)
+    # An off-axis truncated SecondTM can have a small area defect (the
+    # modulus tolerance below is 1e-7). Unit eigenvalue moduli alone do
+    # not make the eigenvectors a canonical change of coordinates.
+    if not np.allclose(matrix.T @ J @ matrix, J, rtol=0., atol=2e-7):
+        raise ValueError("Closed-orbit normal modes require a symplectic transverse one-turn map")
+
+    resolution = 64 * np.finfo(float).eps * max(1., np.linalg.norm(matrix))
+    if np.max(abs(matrix[:2, 2:])) <= resolution and np.max(abs(matrix[2:, :2])) <= resolution:
+        # An exactly decoupled resonant ring has two known physical planes.
+        # Roundoff from a roll by pi/2 must not select arbitrary mixtures.
+        matrix = matrix.copy()
+        matrix[:2, 2:] = matrix[2:, :2] = 0.
     values, vectors = np.linalg.eig(matrix)
-    sx = np.imag(vectors[0].conj() * vectors[1])
-    sy = np.imag(vectors[2].conj() * vectors[3])
-    action = sx + sy
-    keep = action > 1e-14
-    if np.count_nonzero(keep) != 2 or not np.allclose(abs(values), 1., atol=1e-7, rtol=0.):
-        raise UnstableLatticeError(np.trace(matrix[:2, :2]) / 2, np.trace(matrix[2:, 2:]) / 2,
-                                   detail=f"transverse one-turn eigenvalues {values}")
-    # Label the mode with the larger fractional horizontal action as mode x.
-    order = np.argsort((sx[keep] / action[keep]))[::-1]
-    return (vectors[:, keep] / np.sqrt(action[keep]))[:, order]
+    upper = values.imag > resolution
+    half_trace_x = np.trace(matrix[:2, :2]) / 2
+    half_trace_y = np.trace(matrix[2:, 2:]) / 2
+    if np.count_nonzero(upper) != 2 or not np.allclose(abs(values), 1., atol=1e-7, rtol=0.):
+        raise UnstableLatticeError(half_trace_x, half_trace_y, detail=f"transverse one-turn eigenvalues {values}")
+
+    modes = vectors[:, upper]
+    separation = abs(values[upper][0] - values[upper][1])
+    if separation <= np.sqrt(resolution):
+        # A defective repeated eigenvalue can split by O(sqrt(eps)) in eig().
+        # At its midpoint a Jordan block has only one independent eigenvector.
+        midpoint = np.mean(values[upper])
+        singular = np.linalg.svd(matrix - midpoint * np.eye(4), compute_uv=False)
+        if singular[-1] <= resolution and singular[-2] > np.sqrt(resolution):
+            raise UnstableLatticeError(half_trace_x, half_trace_y, detail="defective transverse one-turn eigenspace")
+    # At coincident tunes eig() may return two nonorthogonal vectors in
+    # the same eigenspace. Choose its horizontal- and vertical-like axes
+    # by extremizing the horizontal fraction of the symplectic action.
+    if separation <= resolution:
+        from scipy.linalg import eigh
+
+        action = modes.conj().T @ J @ modes / (2j)
+        horizontal = modes[:2].conj().T @ J2 @ modes[:2] / (2j)
+        signs = np.linalg.eigvalsh(action)
+        if signs[0] * signs[1] > 0:
+            sign = np.sign(signs[0])
+            _, axes = eigh(sign * horizontal, sign * action)
+            modes = modes @ axes
+        elif matrix[:2, 2:].any() or matrix[2:, :2].any():
+            raise ValueError("Coincident coupled tunes of opposite action do not define unique mode emittances")
+
+    # Conjugate a negative-action eigenvector to retain the tune above pi.
+    horizontal = np.imag(modes[0].conj() * modes[1])
+    action = horizontal + np.imag(modes[2].conj() * modes[3])
+    if np.any(abs(action) <= np.finfo(float).eps):
+        raise UnstableLatticeError(half_trace_x, half_trace_y, detail="vanishing transverse mode action")
+    modes[:, action < 0.] = modes[:, action < 0.].conj()
+    modes = modes / np.sqrt(abs(action))
+    fraction = horizontal / action
+    if abs(fraction[0] - fraction[1]) <= 1e-12:
+        # Equal plane participation leaves no horizontal-like mode. Put
+        # the smaller fractional tune first to make unequal weights reproducible.
+        phases = (np.sign(action) * np.angle(values[upper])) % (2 * np.pi)
+        order = np.argsort(phases)
+    else:
+        order = np.argsort(fraction)[::-1]
+    modes = modes[:, order]
+    # Roundoff mixes nearly resonant eigenvectors. Remove the component in
+    # the first mode's canonical plane before assigning unequal emittances.
+    q, p = modes[:, 0].real, modes[:, 0].imag
+    v = modes[:, 1]
+    v = v + q * (p @ J @ v) - p * (q @ J @ v)
+    norm = v.real @ J @ v.imag
+    if norm <= np.finfo(float).eps:
+        raise ValueError("Transverse normal modes are numerically indistinguishable")
+    modes[:, 1] = v / np.sqrt(norm)
+    return modes
 
 
 def closed_orbit_optics(
@@ -76,8 +137,8 @@ def closed_orbit_optics(
     seed = orbit_seed(tws, reference)
     entrance = _OrbitMap.entrance(seed)
 
-    def one_turn(x: np.ndarray) -> _OrbitMap:
-        state = _OrbitMap(np.r_[x, entrance.orbit[4:]], np.eye(6), seed.E, seed.s)
+    def one_turn(x: np.ndarray, tau: float = seed.tau) -> _OrbitMap:
+        state = _OrbitMap(np.r_[x, tau, seed.p], np.eye(6), seed.E, seed.s)
         for element in lattice.sequence:
             for tm in element.tms:
                 state = state.advance(tm)
@@ -98,6 +159,18 @@ def closed_orbit_optics(
             or not np.allclose(matrix[:4, 4], 0., atol=1e-9, rtol=0.)):
         raise ValueError("Closed-orbit Twiss requires a fixed-momentum ring with time-independent transverse motion")
 
+    tau_slip = turn.orbit[4] - seed.tau
+    if abs(tau_slip) > 1e-12:
+        # A magnetic ring may slip in arrival time. A time-dependent kick at
+        # a stationary phase can nevertheless vanish on the first turn and
+        # change the closed orbit or its focusing at the next arrival.
+        following = one_turn(solution.x, turn.orbit[4])
+        expected = turn.orbit.copy()
+        expected[4] += tau_slip
+        if (not np.allclose(following.orbit, expected, atol=1e-11, rtol=0.)
+                or not np.allclose(following.matrix, matrix, atol=1e-9, rtol=1e-9)):
+            raise ValueError("Closed orbit or its linear optics changes with the arrival time on the next turn")
+
     modes = _matched_modes(matrix[:4, :4])
     # Map two unit-beta ellipses with the specified mode emittances into beam coordinates.
     basis = np.eye(6)
@@ -115,6 +188,23 @@ def closed_orbit_optics(
     return matched, modes
 
 
+def _projected_mode_advance(old: np.ndarray, new: np.ndarray, plane: int) -> float:
+    """Phase change of a transported eigenvector viewed in x (0) or y (1)."""
+    row = 2 * plane
+    if abs(new[row]) <= 64 * np.finfo(float).eps * np.linalg.norm(new):
+        return np.nan  # Phase is undefined where the position projection vanishes.
+    ratio = new[row] / old[row]
+    advance = np.angle(ratio)
+    other = slice(2, 4) if plane == 0 else slice(0, 2)
+    in_one_plane = not (new[other].any() or old[other].any())
+    # A decoupled plane or complete mode rotation has a forward eigenphase
+    # in [0, 2 pi). An arbitrary coupled projection can rotate backwards.
+    # Follow its nearest branch between observations.
+    if advance < -1e-13 and (in_one_plane or np.allclose(new, ratio * old, rtol=1e-12, atol=1e-14)):
+        advance += 2 * np.pi
+    return advance
+
+
 def trace_orbit_optics(
     lattice: MagneticLattice,
     seed: Twiss,
@@ -124,9 +214,10 @@ def trace_orbit_optics(
 ) -> list[Twiss]:
     """Transport the orbit and the full entrance-to-observation-point Jacobian."""
     dispersion = np.array([seed.Dx, seed.Dxp, seed.Dy, seed.Dyp, 0., 1.])
-    initial_phase = np.array([seed.mux, seed.muy])
+    last_phase = np.array([seed.mux, seed.muy], dtype=float)
+    last_modes = modes.copy() if modes is not None else None
 
-    def sample(state: _OrbitMap, previous: Twiss, eid: str) -> Twiss:
+    def sample(state: _OrbitMap, eid: str) -> Twiss:
         # The cumulative Jacobian retains longitudinal feedback from intervening maps.
         out = Twiss.track(state.matrix, seed)
         out.x, out.xp, out.y, out.yp, out.tau, out.p = state.orbit
@@ -135,15 +226,21 @@ def trace_orbit_optics(
         # Express dispersion per unit of local relative momentum deviation.
         out.Dx, out.Dxp, out.Dy, out.Dyp = (derivative[:4] / derivative[5]
                                              if derivative[5] != 0. else np.full(4, np.nan))
-        phase = np.array([out.mux, out.muy])
-        if modes is not None:
-            projected = (state.matrix[:4, :4] @ modes)[[0, 2], [0, 1]]
-            phase = initial_phase + np.angle(projected / modes[[0, 2], [0, 1]])
-        # Twiss.track returns a phase modulo one turn for a single cumulative matrix.
-        last = np.array([previous.mux, previous.muy])
-        advance = (phase - last) % (2 * np.pi)
-        advance[np.isclose(advance, 2 * np.pi, atol=1e-13, rtol=0.)] = 0.
-        out.mux, out.muy = last + advance
+        if modes is None:
+            advance = (np.array([out.mux, out.muy]) - last_phase) % (2 * np.pi)
+            advance[np.isclose(advance, 2 * np.pi, atol=1e-13, rtol=0.)] = 0.
+            last_phase[:] += advance
+            out.mux, out.muy = last_phase
+        else:
+            transported = state.matrix[:4, :4] @ modes
+            phase = np.full(2, np.nan)
+            for i in range(2):
+                advance = _projected_mode_advance(last_modes[:, i], transported[:, i], i)
+                if np.isfinite(advance):
+                    last_phase[i] += advance
+                    phase[i] = last_phase[i]
+                    last_modes[:, i] = transported[:, i]
+            out.mux, out.muy = phase
         return out
 
     grid = None if n_points is None else seed.s + np.linspace(0., lattice.totalLen, n_points)
@@ -153,21 +250,26 @@ def trace_orbit_optics(
     state = _OrbitMap.entrance(seed)
     exits = []
     for elem in lattice.sequence:
-        # Each interior sample starts from the same entrance. Slicing a nonlinear
-        # map successively would make the exit trajectory depend on the plot grid.
-        if grid is not None:
-            end = state.s + elem.l
-            while point < len(grid) and grid[point] < end - 1e-13:
-                length = grid[point] - state.s
-                partial = state
-                if length > 1e-13:
-                    for tm in elem.get_section_tms(length):
-                        partial = partial.advance(tm)
-                samples.append(sample(partial, previous, elem.id))
-                point += 1
+        entrance = state
+        if grid is not None and elem.l > 0 and point < len(grid) and abs(grid[point] - entrance.s) <= 1e-13:
+            samples.append(previous)
+            point += 1
         for tm in elem.tms:
+            # Sample a body in beam order, after its entrance face and before
+            # its exit. Each partial map starts at the original element
+            # entrance so the plotted grid cannot change the tracked orbit.
+            if grid is not None and tm.length:
+                while point < len(grid) and grid[point] < entrance.s + elem.l - 1e-13:
+                    length = grid[point] - entrance.s
+                    if length > 1e-13:
+                        partial = entrance
+                        for section in elem.get_section_tms(length):
+                            partial = partial.advance(section)
+                        previous = sample(partial, elem.id)
+                    samples.append(previous)
+                    point += 1
             state = state.advance(tm)
-            previous = sample(state, previous, elem.id)
+            previous = sample(state, elem.id)
             if grid is None:
                 samples.append(previous)
         exits.append(previous)

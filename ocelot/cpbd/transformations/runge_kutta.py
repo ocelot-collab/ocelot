@@ -106,7 +106,13 @@ class RungeKuttaOcelotTM(RungeKuttaGlobalTM):
         params = self.get_params(energy)
         length = self.delta_length if self.delta_length is not None else self.length
         alignment = getattr(params, "alignment", None)
+        field = params.design_field if alignment else params.mag_field
+        use_local_offsets = self.reference == "nominal" and getattr(params, "centered_field", None) is not None
+        if use_local_offsets:
+            field = params.centered_field
+            alignment = params.nominal_alignment
         return rk_field_to_ocelot(X, self.s_start, self.s_start + length, self.npoints,
-                                  energy, params.design_field if alignment else params.mag_field,
+                                  energy, field,
                                   self.long_dynamics, reference_length=self.length, alignment=alignment,
+                                  local_offsets=use_local_offsets,
                                   reference_face=self._nominal_face if self.reference == "nominal" else None)

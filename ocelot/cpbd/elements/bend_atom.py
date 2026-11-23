@@ -88,6 +88,18 @@ class BendAtom(Magnet):
     def create_second_order_exit_params(self, energy, delta_length=0.):
         return self._edge_params(energy, entrance=False, second_order=True)
 
+    def _kick_edge_params(self, fint: float, edge: float):
+        params = self.create_kick_main_params()
+        matrix = self._R_edge(fint, edge)
+        params.edge_focusing = (matrix[1, 0], matrix[3, 2])
+        return params
+
+    def create_kick_entrance_params(self):
+        return self._kick_edge_params(self.fint, self.e1)
+
+    def create_kick_exit_params(self):
+        return self._kick_edge_params(self.fintx, self.e2)
+
     def create_runge_kutta_entrance_params(self, energy):
         return super().create_runge_kutta_main_params(energy)
 

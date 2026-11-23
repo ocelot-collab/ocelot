@@ -2,7 +2,6 @@ import numpy as np
 
 from ocelot.common.globals import m_e_GeV
 from ocelot.cpbd.tm_utils import transform_vec_ent, transform_vec_ext
-from ocelot.cpbd.transformations.transfer_map import TransferMap
 from ocelot.cpbd.transformations.transformation import Transformation, TMTypes
 from ocelot.cpbd.elements.element import Element
 
@@ -19,13 +18,14 @@ class KickTM(Transformation):
         - `create_kick_entrance_params(self) -> KickParams`: Defines the parameters for the entrance edge.
         - `create_kick_exit_params(self) -> KickParams`: Defines the parameters for the exit edge.
 
-    Attributes:
-        (Add any attributes here if applicable, e.g., main parameters or edge-related configurations.)
+    nkick is the number of symmetric substeps in one main map or requested slice.
     """
     def __init__(self, create_tm_param_func, delta_e_func, tm_type: TMTypes, length: float, delta_length: float = 0.0, **params) -> None:    
         super().__init__(create_tm_param_func, delta_e_func, tm_type, length, delta_length)
         nkick = params.get('nkick')
-        self.nkick = nkick if nkick else 1
+        self.nkick = nkick or 1  # Historically None or zero selects the default.
+        if not isinstance(self.nkick, (int, np.integer)) or self.nkick < 1:
+            raise ValueError("KickTM requires an integer nkick >= 1")
         self.start_length = params.get("start_length", 0.)
 
     @classmethod
@@ -63,16 +63,10 @@ class KickTM(Transformation):
         return self.create_tm_param_func()
 
     def kick(self, X, l, angle, k1, k2, k3, energy, nkick=1):
-        """
-        does not work for dipole
-        """
-        gamma = energy / m_e_GeV
-        coef = 0.
-        beta = 1.
-        if gamma != 0:
-            gamma2 = gamma * gamma
-            beta = 1. - 0.5 / gamma2
-            coef = 1. / (beta * beta * gamma2)
+        """Symmetric drift-kick-drift steps in the paraxial magnet Hamiltonian."""
+        inv_gamma2 = (m_e_GeV / energy)**2 if energy else 0.
+        beta = np.sqrt(1. - inv_gamma2)
+        curvature = angle / l if l else 0.
         l = l / nkick
         angle = angle / nkick
 
@@ -85,18 +79,20 @@ class KickTM(Transformation):
             x = X[0] + X[1] * dl
             y = X[2] + X[3] * dl
 
-            p = -angle * X[5] + 0j
+            # Sector weak focusing acts only in the bending plane. The
+            # dispersion and path-length kicks are a conjugate pair in
+            # (x, px, tau, -delta), where delta = (E-E0)/(p0*c).
+            p = angle * (curvature * x - X[5] / beta) + 0j
             xy1 = x + 1j * y
             xy2 = xy1 * xy1
             xy3 = xy2 * xy1
             p += k1 * xy1 + k2 * xy2 + k3 * xy3
             X[1] = X[1] - np.real(p)
             X[3] = X[3] + np.imag(p)
-            X[4] = X[4] + np.real(angle * xy1) / beta - X[5] * dl * coef
+            X[4] += angle * x / beta - X[5] * l * inv_gamma2 / beta**2
 
             X[0] = x + X[1] * dl
             X[2] = y + X[3] * dl
-            # X[4] -= X[5] * dl * coef
         return X
 
     def kick_apply(self, X, energy):
@@ -121,7 +117,13 @@ class KickTM(Transformation):
 
         if dx != 0 or dy != 0 or tilt != 0:
             X = transform_vec_ent(X, dx, dy, tilt)
-        self.kick(X, l, angle, k1, k2, k3, energy, nkick=nkick)
+        edge_focusing = getattr(params, "edge_focusing", None)
+        if edge_focusing is None:
+            self.kick(X, l, angle, k1, k2, k3, energy, nkick=nkick)
+        else:
+            horizontal, vertical = edge_focusing
+            X[1] += horizontal * X[0]
+            X[3] += vertical * X[2]
         if dx != 0 or dy != 0 or tilt != 0:
             X = transform_vec_ext(X, dx, dy, tilt)
         if rolled_face:

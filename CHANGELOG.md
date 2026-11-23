@@ -22,6 +22,12 @@ Versioning is date based: `YY.MM.patch`.
 
 ### Changed
 
+- `errors_seed` now returns one alignment record per lattice occurrence.
+  Use `records[i]` for sequence index `i`. This replaces the dictionary
+  keyed by element ID and supports repeated elements and duplicate IDs.
+- Periodic design optics requires an uncoupled transverse one-turn map.
+  Use `periodic_twiss(ring, reference_orbit="closed")` for coupled normal modes.
+
 - Renamed CSR `x_qbin` to `charge_binning_fraction` and `step_unit` to
   `mesh_step_quantum`. The old constructor arguments and attribute assignments
   now raise errors naming the replacements. Documented the binning blend,

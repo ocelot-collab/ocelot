@@ -2,7 +2,6 @@ __author__ = 'Sergey'
 
 
 from copy import deepcopy
-from numpy.linalg import inv
 import pandas as pd
 from typing import Iterable, Literal
 import numpy as np
@@ -172,8 +171,12 @@ def trace_obj(lattice, obj, nPoints=None, attach2elem=False):
 
 
 def _periodic_twiss_from_matrix(tws, R):
-    """Return periodic initial Twiss parameters for a one-turn matrix."""
+    """Match two uncoupled Courant–Snyder ellipses to the design map."""
     tws = Twiss(tws)
+    roundoff = 64 * np.finfo(float).eps * max(1., np.linalg.norm(R[:4, :4]))
+    if np.any(abs(R[:2, 2:4]) > roundoff) or np.any(abs(R[2:4, :2]) > roundoff):
+        raise ValueError("Periodic design optics requires an uncoupled transverse one-turn map; "
+                         "use periodic_twiss(..., reference_orbit='closed') for coupled rings")
 
     if R[5, 5] != 1:
         if tws.E == 0:
@@ -182,14 +185,8 @@ def _periodic_twiss_from_matrix(tws, R):
         g0 = tws.E / m_e_GeV
         g1 = np.sqrt(g0 ** 2 - 1 + R[5, 5] ** 2) / R[5, 5]
         k = np.sqrt(g1 / g0)
-        R[0, 0] = R[0, 0] * k
-        R[0, 1] = R[0, 1] * k
-        R[1, 0] = R[1, 0] * k
-        R[1, 1] = R[1, 1] * k
-        R[2, 2] = R[2, 2] * k
-        R[2, 3] = R[2, 3] * k
-        R[3, 2] = R[3, 2] * k
-        R[3, 3] = R[3, 3] * k
+        R = R.copy()
+        R[:4, :4] *= k
 
     cosmx = (R[0, 0] + R[1, 1]) / 2.
     cosmy = (R[2, 2] + R[3, 3]) / 2.
@@ -207,21 +204,12 @@ def _periodic_twiss_from_matrix(tws, R):
     tws.beta_x = abs(R[0, 1] / sinmx)
     tws.beta_y = abs(R[2, 3] / sinmy)
 
-    tws.alpha_x = (R[0, 0] - R[1, 1]) / (2. * sinmx)  # X[0,0]
-
-
-    tws.alpha_y = (R[2, 2] - R[3, 3]) / (2 * sinmy)  # Y[0,0]
-
-    Hx = np.array([[R[0, 0] - 1, R[0, 1]], [R[1, 0], R[1, 1] - 1]])
-    Hhx = np.array([[R[0, 5]], [R[1, 5]]])
-    hh = np.dot(inv(-Hx), Hhx)
-    tws.Dx = hh[0, 0]
-    tws.Dxp = hh[1, 0]
-    Hy = np.array([[R[2, 2] - 1, R[2, 3]], [R[3, 2], R[3, 3] - 1]])
-    Hhy = np.array([[R[2, 5]], [R[3, 5]]])
-    hhy = np.dot(inv(-Hy), Hhy)
-    tws.Dy = hhy[0, 0]
-    tws.Dyp = hhy[1, 0]
+    tws.alpha_x = (R[0, 0] - R[1, 1]) / (2. * sinmx)
+    tws.alpha_y = (R[2, 2] - R[3, 3]) / (2. * sinmy)
+    tws.xy = tws.xpy = tws.ypx = tws.pxpy = 0.
+    tws._unit_moments = None
+    tws._update_plane_moments()
+    tws.Dx, tws.Dxp, tws.Dy, tws.Dyp = np.linalg.solve(np.eye(4) - R[:4, :4], R[:4, 5])
     return tws
 
 
@@ -300,11 +288,13 @@ def periodic_twiss(
     ``tws0`` may provide beam energy, emittance, and other seed values. Its
     transverse Twiss parameters are replaced by the periodic solution.
 
-    Omit ``reference_orbit`` or pass ``None`` for periodic design optics.
+    Omit ``reference_orbit`` or pass ``None`` for periodic design optics with
+    an uncoupled transverse one-turn matrix.
     Pass ``"closed"`` to find the transverse closed orbit at fixed momentum,
     starting the search at zero. Pass a ``Particle`` to supply the transverse
     starting guess, entrance tau and relative momentum. In this mode the tunes follow the
     transverse normal modes and beta and alpha describe the projected beam.
+    The seed emittances weight the horizontal-like and vertical-like modes.
 
     Raises
     ------
@@ -391,7 +381,7 @@ class MethodTM:
         res = self.params
         if self.params.get('global') != self.global_method:
             res['global'] = self.global_method
-        if not self.params.get('nkick') != self.nkick:
+        if self.params.get('nkick', 1) != self.nkick:
             res['nkick'] = self.nkick
 
         # OLD BEHAVIOR: old CorrectorTM has been splitted in First Order and Second Order to keep

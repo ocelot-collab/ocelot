@@ -56,7 +56,7 @@ class Element:
         self.dy = kwargs.pop('dy', 0.)
         self.mag_field = kwargs.pop('mag_field', None)
         self.params = {}
-        for tm_param in ("npoints", "s_start", "reference"):
+        for tm_param in ("npoints", "s_start", "reference", "nkick"):
             if tm_param in kwargs:
                 self.params[tm_param] = kwargs.pop(tm_param)
         self.width = kwargs.pop('width', 0.05)    # transverse width of the element. it used only in the beamline plotting

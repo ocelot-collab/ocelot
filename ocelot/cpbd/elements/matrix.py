@@ -1,7 +1,5 @@
 from typing import List
 
-import numpy as np
-
 from ocelot.cpbd.elements.drift_atom import DriftAtom
 from ocelot.cpbd.elements.matrix_atom import MatrixAtom
 from ocelot.cpbd.elements.optic_element import OpticElement
@@ -42,10 +40,11 @@ class Matrix(OpticElement):
 
     def get_section_tms(self, delta_l: float, start_l: float = 0.0, ignore_edges=False, first_order_only=False) -> List[Transformation]:
         total_length = self.element.l
-        if start_l + delta_l > total_length or np.isclose(start_l + delta_l, total_length):
+        at_exit = start_l + delta_l >= total_length - 1e-12
+        if at_exit:
             delta_l = max(0.0, total_length - start_l)
 
-        if start_l < 1e-10 and np.isclose(delta_l, total_length):
+        if start_l < 1e-10 and at_exit:
             return super().get_section_tms(delta_l=delta_l, start_l=start_l, ignore_edges=ignore_edges, first_order_only=first_order_only)
 
         if not first_order_only:

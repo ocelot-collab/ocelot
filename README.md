@@ -100,7 +100,8 @@ moments `xy`, `xpy`, `ypx` and `pxpy` after subtracting dispersion.
 When both emittances are omitted, the projected optics assume equal entrance
 emittances. The beam sizes and physical emittances then remain zero. The
 plane phases `mux` and `muy` have their Courant–Snyder interpretation for
-uncoupled motion. The design periodic solver also assumes uncoupled transverse planes.
+uncoupled motion. The design periodic solver requires an uncoupled transverse
+one-turn matrix and matches the same first-order maps used for propagation.
 
 ### Optics about a displaced orbit
 
@@ -125,8 +126,17 @@ print(optics[-1].x, optics[-1].beta_x)
 
 For a fixed-momentum ring, `periodic_twiss(ring, reference_orbit="closed")`
 finds the transverse closed orbit and evaluates the one-turn Jacobian there.
-Each returned Twiss sample includes the reference coordinates. Omitting
-`reference_orbit` selects the existing design-optics workflow.
+The seed emittances weight the horizontal-like and vertical-like normal modes.
+The reported emittances, beta and alpha describe the projected beam ellipses.
+The phase of each mode follows its position projection in the corresponding
+plane. That projection can rotate backwards or vanish in a coupled lattice.
+At a zero projection its phase is undefined. Closely spaced observations
+resolve phase wrapping between elements.
+
+Each returned sample includes the reference coordinates. Orbit-based dispersion
+is the derivative with respect to the local momentum coordinate. This includes
+arrival-time feedback through RF. Design optics retains its historical
+normalization for incoming dispersion across accelerating cavities.
 
 ## Repeated Elements and Position Lookups
 
@@ -190,6 +200,12 @@ for `lat.sequence[i]`. A zero RMS sets that component to zero. Untargeted
 occurrences keep their alignment and have a `None` record. If a reused element
 object needs different alignments, Ocelot copies it, so later strength changes
 apply separately to each copy.
+
+In a sector bend, Ocelot measures `dx` and `dy` in the local transverse
+axes at each face. Mechanical roll is a rigid rotation about the displaced
+entrance axis. For one rolled bend tracked in sections, slice a single bend
+element so every section uses the same pivot. Separate bend elements given
+the same random draw each have their own entrance pivot.
 
 Replay the draw with `ocelot.cpbd.errors.apply_alignment_errors(other_lat, records)`
 on a lattice in the same sequence order. For MPI tracking, pass `errors=records`

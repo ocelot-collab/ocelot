@@ -2,7 +2,7 @@ import numpy as np
 
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
 from ocelot.cpbd.elements.element import Element
-from ocelot.cpbd.tm_params.multipole_params import MultipoleParams
+from ocelot.cpbd.tm_params.multipole_params import MultipoleParams, thin_dipole_dispersion, thin_multipole_matrix
 
 
 class MultipoleAtom(Element):
@@ -35,8 +35,6 @@ class MultipoleAtom(Element):
         return MultipoleParams(self.kn, self.dx, self.dy, self.tilt + self.dtilt)
 
     def create_first_order_main_params(self, energy: float, delta_length: float = None) -> FirstOrderParams:
-        R = np.eye(6)
-        R[1, 0] = -self.kn[1]
-        R[3, 2] = self.kn[1]
-        R[1, 5] = self.kn[0]
+        dipole = thin_dipole_dispersion(self.kn[0], energy)
+        R = thin_multipole_matrix(dipole, self.kn[1])
         return self._aligned_map_params(R, self.tilt + self.dtilt)

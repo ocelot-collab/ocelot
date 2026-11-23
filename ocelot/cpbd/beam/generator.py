@@ -85,13 +85,15 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
                 f"'tws' must be an instance of Twiss or None, got {type(tws).__name__} instead."
             )
 
+    coupled_draw = False
     if isinstance(tws, core.Twiss) and np.all(np.array([tws.emit_x, tws.emit_y, tws.beta_x, tws.beta_y]) != 0):
         #raise ValueError("Twiss parameters contain zeros. Check emit_{x,y}, and beta_{x,y} values.")
 
         _logger.info("Using Twiss parameters — overriding sigma_{x,px,y,py} values.")
 
         cov = tws._transverse_covariance()
-        if cov[:2, 2:].any():
+        coupled_draw = cov[:2, 2:].any()
+        if coupled_draw:
             x, px, y, py = np.random.multivariate_normal(np.zeros(4), cov, nparticles).T
         else:
             # Preserve the random draw order of uncoupled bunches.
@@ -169,6 +171,11 @@ def generate_parray(sigma_x=1e-4, sigma_px=2e-5, sigma_y=None, sigma_py=None,
         dp += chirp * p_array.tau() / sigma_tau
     p_array.rparticles[5][:] = dp[:]
     if isinstance(tws, core.Twiss):
+        if coupled_draw:
+            # The draw already contains the cross moments at this location.
+            # A further phase rotation of either ellipse would change them.
+            tws = core.Twiss(tws)
+            tws.mux = tws.muy = 0.
         p_array.match_to_twiss(tws, bounds=(-5, 5), remove_offsets=True)
 
     return p_array

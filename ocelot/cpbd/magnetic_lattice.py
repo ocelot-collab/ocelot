@@ -8,6 +8,8 @@ from ocelot.cpbd.elements.drift import Drift
 from ocelot.cpbd.elements.monitor import Monitor
 from ocelot.cpbd.elements.unknown_element import UnknownElement
 from ocelot.cpbd.elements.matrix import Matrix
+from ocelot.cpbd.transformations.kick import KickTM
+from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 from ocelot.cpbd.tm_utils import transfer_maps_mult
 from ocelot.common.globals import m_e_GeV
@@ -72,8 +74,9 @@ def merger(lat, remaining_types=None, remaining_elems=None, init_energy=0.):
     """
     Function to compress the lattice excluding elements by type or by individual elements
 
-    Each merged Matrix is expanded about the orbit reached from zero coordinates
-    at the original lattice entrance.
+    Each merged Matrix stores the source lattice's transfer-map expansion about
+    the orbit reached from zero entrance coordinates. The returned lattice keeps
+    the tracking methods of the retained elements and the order of each merged map.
 
     :param lat: MagneticLattice
     :param remaining_types: list, the type of the elements which needed to be untouched
@@ -113,22 +116,23 @@ def merger(lat, remaining_types=None, remaining_elems=None, init_energy=0.):
         if len(elem_list) == 1:
             seq.append(elem_list[0])
         else:
-            magnetic_elems = [elem for elem in elem_list if elem.__class__ not in [Marker, Drift, Monitor]]
-            if len(magnetic_elems) == 0:
-                total_len = np.sum([elem.l for elem in elem_list])
-                d = Drift(l=total_len)
-                seq.append(d)
-            else:
-                m = Matrix()
-                # The section map takes deviations from its entrance orbit.
-                # Matrix takes absolute coordinates, so prepend x -> x - orbit_in.
-                m.b, m.r, m.t = transfer_maps_mult(
-                    -entrance_orbit, np.eye(6), np.zeros((6, 6, 6)), orbit, R, T)
-                m.l = sum(elem.l for elem in elem_list)
-                m.delta_e = delta_e
-                seq.append(m)
+            length = sum(elem.l for elem in elem_list)
+            if all(type(elem) in (Marker, Drift, Monitor) for elem in elem_list):
+                drift_methods = {type(elem.tms[0]) for elem in elem_list if elem.l}
+                if len(drift_methods) <= 1:
+                    seq.append(Drift(l=length, tm=next(iter(drift_methods), TransferMap)))
+                    continue
 
-    new_lat = MagneticLattice(seq, method=lat.method)
+            # The section map takes deviations from its entrance orbit.
+            # Matrix takes absolute coordinates, so prepend x -> x - orbit_in.
+            m = Matrix(l=length, delta_e=delta_e, tm=SecondTM if T.any() else TransferMap)
+            m.b, m.r, m.t = transfer_maps_mult(
+                -entrance_orbit, np.eye(6), np.zeros((6, 6, 6)), orbit, R, T)
+            seq.append(m)
+
+    # Family-wide defaults could change a retained element or discard the
+    # quadratic terms of a generated Matrix. Each element already has its map.
+    new_lat = MagneticLattice(seq, method={})
     _logger.debug("element numbers after: " + str(len(new_lat.sequence)))
     return new_lat
 
@@ -332,12 +336,15 @@ class MagneticLattice:
                         element.l = element.l * 0.001
 
             tm_class_type = self.method.get(element.__class__)
-            if tm_class_type:
-                element.set_tm(tm_class_type, request_source="explicit")
-            else:
+            source = "explicit"
+            if not tm_class_type:
                 tm_class_type = self.method.get('global')
-                if tm_class_type:
-                    element.set_tm(tm_class_type, request_source="global")
+                source = "global"
+            if tm_class_type:
+                params = {}
+                if tm_class_type is KickTM and element._is_declared_tm(KickTM) and "nkick" in self.method:
+                    params = {**element._kwargs, "nkick": self.method["nkick"]}
+                element.set_tm(tm_class_type, request_source=source, **params)
 
             _logger.debug(f"update: {','.join([tm.__class__.__name__ for tm in element.tms])}")
         return self
@@ -634,9 +641,15 @@ class MagneticLattice:
         from ocelot.cpbd.optics import _periodic_twiss_from_matrix
 
         tws = beam.Twiss(tws)
-        R = self.transfer_maps(energy=tws.E)[1]
-        tw_periodic = _periodic_twiss_from_matrix(tws, R)
-        return tw_periodic
+        # Match the same design maps used by twiss(). The quadratic lattice
+        # map can include sextupole feed-down along a displaced trajectory.
+        R = np.eye(6)
+        energy = tws.E
+        for elem in self.sequence:
+            for tm in elem.first_order_tms:
+                R = tm.get_params(energy).get_rotated_R() @ R
+                energy += tm.get_delta_e()
+        return _periodic_twiss_from_matrix(tws, R)
 
 
 def merge_drifts(cell):

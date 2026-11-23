@@ -78,15 +78,15 @@ class Magnet(Element):
         )
         return bx, by
 
-    def _design_mag_field(self, energy: float):
+    def _design_mag_field(self, energy: float, *, centered: bool = False):
         """
         Hard-edge magnetic field from the element strengths.
 
         The field is longitudinally uniform and follows the normal multipole
         convention used by the kick maps.
         """
-        dx = self.dx
-        dy = self.dy
+        dx = 0. if centered else self.dx
+        dy = 0. if centered else self.dy
         tilt = self.tilt
         cos_t = np.cos(tilt)
         sin_t = np.sin(tilt)
@@ -122,11 +122,18 @@ class Magnet(Element):
 
     def create_runge_kutta_main_params(self, energy):
         from ocelot.cpbd.tm_params.runge_kutta_params import RungeKuttaParams
-        if not self.dtilt:
-            return RungeKuttaParams(self.get_mag_field(energy))
-        design_field = self._design_mag_field(energy) if self.mag_field is None else self.mag_field
-        return RungeKuttaParams(self._roll_field(design_field), design_field=design_field,
-                                alignment=(self.dx, self.dy, self.dtilt))
+        alignment = (self.dx, self.dy, self.dtilt)
+        if self.dtilt:
+            design_field = self._design_mag_field(energy) if self.mag_field is None else self.mag_field
+            params = RungeKuttaParams(self._roll_field(design_field), design_field=design_field, alignment=alignment)
+        else:
+            params = RungeKuttaParams(self.get_mag_field(energy))
+        if self.angle and (self.dx or self.dy) and self.mag_field is None:
+            # Curved maps measure dx, dy in the local transverse axes at each
+            # face. Integrate a centered field when using that nominal frame.
+            params.centered_field = self._design_mag_field(energy, centered=True)
+            params.nominal_alignment = alignment
+        return params
 
     def _body_matrix(self, length, energy):
         hx = self.angle / self.l if self.l else 0.

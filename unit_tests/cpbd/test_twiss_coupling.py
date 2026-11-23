@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from ocelot.cpbd.beam import ParticleArray, Twiss, generate_parray, optics_from_moments
+from ocelot.cpbd.beam import Particle, ParticleArray, Twiss, generate_parray, optics_from_moments
 from ocelot.cpbd.elements import Cavity, Drift, Matrix, Quadrupole, Solenoid
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.matcher import MatchProblem
@@ -34,6 +34,20 @@ def assert_projected(optics, cov):
         assert getattr(optics, f"sigma_{plane}") == pytest.approx(np.sqrt(block[0, 0]))
     np.testing.assert_allclose([[optics.xy, optics.xpy], [optics.ypx, optics.pxpy]],
                                cov[:2, 2:], atol=1e-18)
+
+
+@pytest.mark.parametrize("reference_orbit", [None, Particle()])
+@pytest.mark.parametrize("n_points", [None, 3])
+def test_entrance_sample_reports_betatron_moments(reference_orbit, n_points):
+    seed = Twiss(beta_x=2., beta_y=2., alpha_x=.5, alpha_y=-.4,
+                 emit_x=2e-9, emit_y=.5e-9, xy=2e-10)
+    lat = MagneticLattice([Drift(l=1.)])
+    row = twiss(lat, seed, nPoints=n_points, reference_orbit=reference_orbit, return_df=True).iloc[0]
+    np.testing.assert_allclose(row[["xx", "xpx", "pxpx", "yy", "ypy", "pypy"]].to_numpy(float),
+                               [4e-9, -1e-9, 1.25e-9, 1e-9, .2e-9, .29e-9], atol=1e-22)
+    assert row.xy / np.sqrt(row.xx * row.yy) == pytest.approx(.1)
+    assert seed.xx == seed.yy == 0.
+    assert seed.xy == 2e-10
 
 
 @pytest.mark.parametrize("correlated", [False, True])

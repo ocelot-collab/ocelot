@@ -213,7 +213,8 @@ def _periodic_twiss_from_matrix(tws, R):
     return tws
 
 
-def _validate_twiss_seed(tws0):
+def _prepare_entrance_twiss(tws0: Twiss, reference_orbit: Particle | None = None) -> Twiss:
+    """Form the entrance optics sample while preserving the caller's beam moments."""
     if not isinstance(tws0, Twiss):
         raise TypeError(f"tws0 must be a Twiss instance, got {type(tws0).__name__}")
     if tws0.beta_x <= 0 or tws0.beta_y <= 0:
@@ -221,6 +222,14 @@ def _validate_twiss_seed(tws0):
             "tws0.beta_x and tws0.beta_y must be positive; "
             "use periodic_twiss(lattice, ...) to calculate periodic optics"
         )
+    if reference_orbit is None:
+        entrance_twiss = deepcopy(tws0)
+    else:
+        from ocelot.cpbd.orbit_optics import twiss_at_launch
+
+        entrance_twiss = twiss_at_launch(tws0, reference_orbit)
+    entrance_twiss._update_plane_moments()
+    return entrance_twiss
 
 
 def twiss(
@@ -234,39 +243,48 @@ def twiss(
 ) -> list[Twiss] | pd.DataFrame:
     """Propagate entrance Twiss parameters through a beamline.
 
-    :param attach2elem: if True and nPoints=None, attach the exit Twiss to every
-                        element as ``elem.tws``. An iterable attaches only to
-                        the selected elements. Every selected element instance
-                        must identify exactly one lattice occurrence. This is
-                        not recommended for standard use, but may be handy for
-                        small scripts.
-    :param return_df: return the samples as a pandas DataFrame.
+    By default, each element supplies its first-order design map. To calculate
+    focusing along a steered beam, pass its entrance particle. Ocelot tracks
+    that particle and transports the beam ellipse with the derivative of the
+    selected tracking map at each point on its trajectory. For example, an
+    off-axis sextupole contributes linear focusing when its tracking map
+    includes the sextupole field.
+
+    In an uncoupled line, ``mux`` and ``muy`` are the Courant–Snyder phase
+    advances [rad]. To obtain normal-mode phases in a coupled ring, use
+    :func:`periodic_twiss` with ``reference_orbit="closed"``.
+
     :param lattice: beamline in tracking order.
-    :param tws0: explicit initial Twiss parameters to propagate. ``beta_x``
-                 and ``beta_y`` must be positive. Use :func:`periodic_twiss`
-                 when the initial optics should be calculated from the lattice.
-    :param nPoints: number of points per cell. If None, then twiss parameters are calculated at the end of each element.
-    :param reference_orbit: Omit this argument or pass ``None`` for design optics.
-                 Pass ``Particle()`` to launch at zero entrance coordinates using
-                 ``tws0.E``, or e.g. ``Particle(x=1e-3)`` to launch 1 mm off axis.
-                 In both cases the active maps track the particle and transport
-                 small deviations about its trajectory.
-    :return: Twiss samples, or a DataFrame when ``return_df=True``.
+    :param tws0: entrance optics with positive ``beta_x`` and ``beta_y`` [m].
+                 Supply both geometric emittances [m rad] for physical beam
+                 sizes. In coupled transport their ratio affects projected beta.
+    :param nPoints: number of equally spaced samples along the whole beamline.
+                    The default includes the entrance and the end of each map.
+    :param return_df: return a pandas DataFrame with one row per sample.
+    :param attach2elem: with ``nPoints=None``, pass ``True`` or an iterable of
+                        elements to store exit optics as ``elem.tws``. Each
+                        selected object must occur exactly once in the lattice.
+    :param reference_orbit: ``None`` for design optics. Pass ``Particle()`` for
+                            a zero launch at ``tws0.E`` [GeV], or, for example,
+                            ``Particle(x=1e-3)`` for a 1 mm horizontal launch.
+    :return: list of Twiss samples, or a DataFrame. At every sample,
+             ``xx = beta_x * emit_x`` and ``yy = beta_y * emit_y`` are the
+             betatron beam variances [m²]. With a particle launch,
+             ``x, xp, y, yp, tau, p`` give the tracked orbit.
     """
     attachment_targets = _resolve_attachment_targets(lattice, attach2elem)
     if attachment_targets and nPoints is not None:
         raise ValueError("attach2elem requires nPoints=None so element exits are available")
 
-    _validate_twiss_seed(tws0)
+    entrance_twiss = _prepare_entrance_twiss(tws0, reference_orbit)
 
     if reference_orbit is None:
         attachment_elements = [element for element, _index in attachment_targets]
-        twiss_list = trace_obj(lattice, tws0, nPoints, attachment_elements)
+        twiss_list = trace_obj(lattice, entrance_twiss, nPoints, attachment_elements)
     else:
-        from ocelot.cpbd.orbit_optics import orbit_seed, trace_orbit_optics
+        from ocelot.cpbd.orbit_optics import trace_orbit_optics
 
-        seed = orbit_seed(tws0, reference_orbit)
-        twiss_list = trace_orbit_optics(lattice, seed, nPoints, attachment_targets)
+        twiss_list = trace_orbit_optics(lattice, entrance_twiss, nPoints, attachment_targets)
 
     if return_df:
         twiss_list = twiss_iterable_to_df(twiss_list)
@@ -283,23 +301,37 @@ def periodic_twiss(
     *,
     reference_orbit: Particle | Literal["closed"] | None = None,
 ) -> list[Twiss] | pd.DataFrame:
-    """Calculate and propagate periodic Twiss parameters through a lattice.
+    """Match the entrance optics to one turn and propagate it around the ring.
 
-    ``tws0`` may provide beam energy, emittance, and other seed values. Its
-    transverse Twiss parameters are replaced by the periodic solution.
+    The default uses the design maps and requires an uncoupled transverse
+    one-turn matrix. For a coupled ring or a distorted orbit, pass
+    ``reference_orbit="closed"``. The active tracking maps then determine the
+    transverse closed orbit and the two normal modes of small oscillations
+    about it. This calculation assumes fixed momentum and time-independent
+    transverse motion. The arrival time may slip from turn to turn.
 
-    Omit ``reference_orbit`` or pass ``None`` for periodic design optics with
-    an uncoupled transverse one-turn matrix.
-    Pass ``"closed"`` to find the transverse closed orbit at fixed momentum,
-    starting the search at zero. Pass a ``Particle`` to supply the transverse
-    starting guess, entrance tau and relative momentum. In this mode the tunes follow the
-    transverse normal modes and beta and alpha describe the projected beam.
-    The seed emittances weight the horizontal-like and vertical-like modes.
+    :param lattice: one turn of the ring or one repeating cell.
+    :param tws0: optional beam parameters giving the energy [GeV] and
+                 geometric emittances [m rad]. In closed-orbit optics,
+                 ``emit_x`` and ``emit_y`` weight the horizontal-like and vertical-like modes. The
+                 returned beta, alpha and emittances describe the beam
+                 projected onto the local horizontal and vertical planes.
+    :param reference_orbit: ``None`` for design optics. Use ``"closed"`` to
+                            start the orbit search at zero or pass a
+                            ``Particle`` to set the transverse starting guess,
+                            entrance ``tau`` [m] and ``p = (E-E0)/(p0*c)``.
+    :return: Twiss samples along the ring. Sampling, DataFrame output and
+             element attachment follow :func:`twiss`. In closed-orbit optics,
+             ``mux`` and ``muy`` [rad] follow the phases of the horizontal and
+             vertical position projections of the respective normal modes.
 
     Raises
     ------
     UnstableLatticeError
-        If either transverse plane has no strictly stable periodic solution.
+        If the transverse motion has no stable periodic solution.
+    ValueError
+        If the design one-turn matrix couples the planes, or the requested
+        closed orbit or its symplectic transverse normal modes cannot be found.
     """
 
     if reference_orbit is not None:
@@ -308,14 +340,14 @@ def periodic_twiss(
         targets = _resolve_attachment_targets(lattice, attach2elem)
         if targets and nPoints is not None:
             raise ValueError("attach2elem requires nPoints=None so element exits are available")
-        seed, modes = closed_orbit_optics(lattice, tws0, reference_orbit)
-        samples = trace_orbit_optics(lattice, seed, nPoints, targets, modes)
+        matched_twiss, modes = closed_orbit_optics(lattice, tws0, reference_orbit)
+        samples = trace_orbit_optics(lattice, matched_twiss, nPoints, targets, modes)
         return twiss_iterable_to_df(samples) if return_df else samples
 
-    periodic_seed = lattice.periodic_twiss(tws=tws0)
+    matched_twiss = lattice.periodic_twiss(tws=tws0)
     return twiss(
         lattice,
-        periodic_seed,
+        matched_twiss,
         nPoints=nPoints,
         return_df=return_df,
         attach2elem=attach2elem,
@@ -331,7 +363,7 @@ def twiss_fast(lattice, tws0):
     :param nPoints: number of points per cell. If None, then twiss parameters are calculated at the end of each element.
     :return: list of Twiss() objects
     """
-    _validate_twiss_seed(tws0)
+    tws0 = _prepare_entrance_twiss(tws0)
 
     obj_list = [tws0]
     for e in lattice.fast_seq:

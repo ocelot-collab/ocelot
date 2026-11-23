@@ -632,7 +632,15 @@ class MagneticLattice:
         *,
         reference_orbit: beam.Particle | Literal["closed"] | None = None,
     ) -> beam.Twiss:
-        """Return periodic entrance optics. Pass ``"closed"`` or a particle guess for closed-orbit optics."""
+        """Return one matched Twiss object at the lattice entrance.
+
+        By default the one-turn design matrix must have uncoupled transverse
+        planes. Pass ``reference_orbit="closed"`` or a particle starting guess
+        to match about a fixed-momentum transverse closed orbit. The optional
+        ``tws`` supplies energy [GeV] and emittances [m rad].
+
+        For samples over the full turn, use :func:`ocelot.cpbd.optics.periodic_twiss`.
+        """
         if reference_orbit is not None:
             from ocelot.cpbd.orbit_optics import closed_orbit_optics
 

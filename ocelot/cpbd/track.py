@@ -514,12 +514,13 @@ def track(
 
 
 def lattice_track(lat, p):
-    """
-    Function tracks Particle through lattice and save Particles after each element
+    """Track one particle through the active maps and sample it at element exits.
 
-    :param lat: MagneticLattice
-    :param p: Particle
-    :return: list of Particles along the lattice
+    :param lat: magnetic lattice in traversal order.
+    :param p: entrance Particle, advanced in place to the end of the lattice.
+    :return: independent Particle snapshots at the entrance and after each
+             element, including zero-length elements. Positions are in metres
+             and transverse momenta are normalized to the reference momentum.
     """
     plist = [copy.copy(p)]
     for elem in lat.sequence:

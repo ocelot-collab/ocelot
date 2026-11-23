@@ -13,8 +13,19 @@ _logger = logging.getLogger(__name__)
 
 
 class Twiss:
-    """
-    class - container for twiss parameters
+    """Beam optics and reference coordinates at one longitudinal position.
+
+    In a beamline calculation, ``beta_x`` [m], ``alpha_x`` and geometric
+    ``emit_x`` [m rad] describe the betatron ellipse projected onto (x, px).
+    The y plane uses the same convention. If a rolled magnet couples the
+    planes, their projected emittances can change. The four cross-plane
+    covariances are ``xy``, ``xpy``, ``ypx`` and ``pxpy``, with px and py
+    measured in units of the reference momentum.
+
+    Supply both entrance emittances for physical beam sizes. With both
+    omitted, coupled optics uses equal entrance emittances to calculate the
+    ellipse shapes and leaves the physical sizes at zero. ``Dx`` and ``Dy``
+    [m] describe dispersion separately from the betatron ellipses.
     """
 
     def __init__(self, beam=None, **kwargs):

@@ -1,4 +1,17 @@
-"""Rigid mechanical roll between the normal planes of two reference frames."""
+"""Track a particle across the faces of a mechanically rolled magnet.
+
+The lattice survey defines the nominal trajectory and a transverse plane
+at each position along it. The magnet's design roll is ``tilt``. The
+installation offsets ``dx, dy`` locate its centre in local transverse
+coordinates [m], and ``dtilt`` rolls it about the longitudinal axis through
+the displaced entrance [rad]. Rolling a bend moves and tips its exit plane.
+
+The field acts in the physical magnet frame. To report a particle in survey
+coordinates, express its momentum in the survey axes and follow its ray to
+the survey plane. The distance between crossings also changes its arrival
+time. The kick and Runge–Kutta trackers apply these changes of coordinates
+to particles. Magnet transfer maps use their first- or second-order expansions.
+"""
 
 import numpy as np
 
@@ -7,7 +20,13 @@ from ocelot.common.globals import m_e_GeV
 
 
 class FaceTransform:
-    """Source origin and axes expressed in destination coordinates."""
+    """Describe where one transverse observation plane lies relative to another.
+
+    ``shift`` is the source origin in destination coordinates [m]. The columns
+    of ``axes`` are the source unit vectors in that same frame. A transform
+    returned by ``rolled_face`` takes a particle from physical to survey
+    coordinates. At the entrance, tracking uses its inverse to enter the magnet.
+    """
 
     def __init__(self, shift, axes):
         self.shift = shift
@@ -39,6 +58,10 @@ class FaceTransform:
         return out, ps, p, relative_energy, flight
 
     def apply(self, X, energy):
+        """Move each column of a (6, N) particle array to the destination plane in place.
+
+        ``energy`` is the reference total energy [GeV]. Zero selects beta = 1.
+        """
         X[:] = self._crossing(X, energy)[0]
 
     def taylor(self, orbit, energy, second_order):
@@ -73,7 +96,12 @@ class FaceTransform:
 
 
 def rolled_face(position, frame, dx, dy, dtilt, *, local_offsets=False):
-    """Physical face in nominal face coordinates after a roll at the entrance."""
+    """Return the physical-to-survey transform at a given longitudinal position.
+
+    ``position`` [m] and ``frame`` give the nominal face origin and axes in the
+    design entrance frame. Set ``local_offsets=True`` for a centred field map
+    that still needs the local translation by ``dx, dy``.
+    """
     roll = get_tilt_matrix(dtilt)
     # Rotate the arm from the entrance pivot, then express both its change
     # and the new axes in the local survey frame at this arc length.

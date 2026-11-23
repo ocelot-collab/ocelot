@@ -1,6 +1,8 @@
-"""
-module for misalignment error generation
-Sergey Tomin
+"""Generate and replay magnet alignment errors for tracking and optics studies.
+
+Use :func:`errors_seed` to draw transverse offsets and rolls for a lattice.
+Save its records to repeat the same alignment in another copy of the beamline
+with :func:`apply_alignment_errors`.
 """
 import copy
 from numbers import Integral
@@ -95,10 +97,12 @@ def _sample_alignment_errors(lattice, er_list, shared_groups):
 def apply_alignment_errors(lattice, records):
     """Apply absolute alignment values by sequence index and return the same lattice.
 
-    Supply one entry per occurrence in the original sequence order. Each entry
-    is either None (keep its alignment) or a dict with dx, dy [m] and dtilt
-    [rad]. If a reused element needs different alignments, the affected
-    occurrences receive independent copies, including their magnet strengths.
+    Supply one entry per lattice occurrence in sequence order. A dictionary
+    sets ``dx`` and ``dy`` [m] in the horizontal and vertical beam coordinates
+    and ``dtilt`` [rad] about the displaced entrance axis. ``None`` preserves
+    the existing alignment. Reapplying the same records reproduces the same
+    errors. If a reused magnet needs different alignments, its occurrences
+    receive separate copies and subsequent strength edits act on those copies.
     """
     if len(records) != len(lattice.sequence):
         raise ValueError("Expected one alignment record per lattice occurrence")
@@ -134,21 +138,34 @@ def apply_alignment_errors(lattice, records):
 
 
 def errors_seed(lattice, er_list, *, shared_groups=()):
-    """Seed magnet alignments in place and return (lattice, records).
+    """Draw magnet offsets and rolls, apply them, and return ``(lattice, records)``.
 
-    er_list maps exact element classes to {"offset": sigma_xy, "dtilt": sigma_roll}.
-    Each transverse offset [m] and the mechanical roll [rad] are independent
-    zero-mean Gaussian draws truncated at two sigma. Zero sigma sets that
-    component to zero. Supported magnetic families include quadrupoles,
-    sextupoles, octupoles, bends, XYQuadrupole and thin Multipole. Correctors
-    have a separate horizontal/vertical kick model and cannot be seeded here.
+    ``er_list`` maps exact element classes to errors. For each occurrence,
+    ``offset`` [m] sets the Gaussian sigma for independent horizontal and
+    vertical shifts. ``dtilt`` [rad] sets the sigma for the mechanical roll.
+    Each draw is centered on zero and truncated at ±2 sigma. Zero sigma sets
+    that component to zero. Suitable classes include quadrupoles, sextupoles,
+    octupoles, bends, XYQuadrupole and thin Multipole. Correctors use a
+    separate kick model.
 
-    Occurrences are independent by default. Pass groups of zero-based sequence
-    indices, e.g. shared_groups=[(0, 2)], to give those occurrences the same
-    three values. Each bend occurrence still rolls about its own entrance.
-    To slice one rigidly rolled bend, use get_section_tms on a single bend.
-    records[i] is the alignment dict for sequence[i], or None for an
-    untargeted occurrence. Replay it with apply_alignment_errors.
+    Pass zero-based sequence indices in ``shared_groups``, e.g. ``[(0, 2)]``,
+    for occurrences that should share all three values. Each bend still rolls
+    about its own entrance. Use ``get_section_tms`` on one bend to take
+    sections of a single rigidly rolled magnet.
+
+    ``records[i]`` contains the values applied to ``lattice.sequence[i]``, or
+    ``None`` for an untargeted occurrence. This example reproduces a draw in
+    a second beamline.
+
+    >>> from copy import deepcopy
+    >>> import ocelot as ocl
+    >>> from ocelot.cpbd.errors import apply_alignment_errors, errors_seed
+    >>> line = ocl.MagneticLattice((ocl.Quadrupole(l=0.2, k1=1.0),))
+    >>> other_line = deepcopy(line)
+    >>> _, records = errors_seed(line, {ocl.Quadrupole: {"offset": 1e-4, "dtilt": 2e-4}})
+    >>> _ = apply_alignment_errors(other_line, records)
+    >>> other_line.sequence[0].dx == line.sequence[0].dx
+    True
     """
     records = _sample_alignment_errors(lattice, er_list, shared_groups)
     return apply_alignment_errors(lattice, records), records

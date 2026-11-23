@@ -1,4 +1,12 @@
-"""Local derivatives of active single-particle tracking maps."""
+"""Linear transport for particles close to a chosen reference particle.
+
+Two particles crossing the same sextupole see different gradients if their
+orbits are displaced. The Jacobian of the active tracking map gives the
+linear focusing at the chosen orbit. Tracked-orbit Twiss calculations use
+these Jacobians to propagate small betatron oscillations and dispersion.
+Linac response matrices use them to transport small corrector kicks to
+downstream monitors, including during cavity-voltage scans.
+"""
 
 from math import factorial
 
@@ -18,7 +26,24 @@ def map_derivatives(
     orbit: np.ndarray,
     dispersion: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray | None]:
-    """Return the Jacobian and, when requested, its derivative along dispersion."""
+    """Linearize one active tracking map about its incoming reference particle.
+
+    ``orbit`` is a six-vector (x, px, y, py, tau, delta). Positions and
+    arrival-time distance tau are in metres. Transverse momenta are divided
+    by the reference momentum p0, and delta is (E_particle - E_ref)/(p0*c).
+    ``energy`` is the incoming reference total energy [GeV].
+
+    The returned 6-by-6 matrix J takes a small separation at the map entrance
+    to the corresponding separation at its exit. For a thin normal sextupole
+    of integrated strength K2L, J[1, 0] = -K2L*x in magnet coordinates on
+    the horizontal midplane. An off-axis beam therefore feels quadrupole focusing.
+
+    The second return value is None unless ``dispersion`` is supplied. For
+    an entrance dispersion vector D = d(orbit)/d(delta_in), it is the matrix
+    dJ(orbit + h*D)/dh at h = 0, with reference energy held fixed. The linac
+    dispersion response uses this change in focusing to calculate how a
+    corrector's effect at a monitor varies with the incoming energy deviation.
+    """
     if isinstance(tm, MultipoleTM):
         params = tm.get_params(energy)
         rotation = rot_mtx(params.tilt)

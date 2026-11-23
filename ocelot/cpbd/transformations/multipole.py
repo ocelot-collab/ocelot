@@ -9,10 +9,15 @@ from ocelot.cpbd.tm_utils import transform_vec_ent, transform_vec_ext
 
 
 class MultipoleTM(TransferMap):
-    """[summary]
-    Implementation of the Multipole Transformation.
-    The concrete element atom have to implement: 
-    create_multipole_tm_main_params(self) -> MultipoleParams
+    """Apply the zero-length kick of a :class:`~ocelot.cpbd.elements.multipole.Multipole`.
+
+    In magnet coordinates let ``z = x + i*y``. An integrated coefficient of
+    order n ≥ 1 contributes ``kn[n] * z**n / n!`` to the kick polynomial.
+    Its real part is subtracted from px and its imaginary part is added to py.
+    For a real ``kn[0] = theta``, the bend adds ``theta*delta/beta0`` to px
+    and ``theta*x/beta0`` to tau, where ``delta = (E-E0)/(p0*c)`` and
+    ``beta0 = v0/c``. Positions and kicks use the displaced, rolled magnet
+    axes before the particle returns to the beam coordinates.
     """
         
     def __init__(self, create_tm_param_func, delta_e_func, tm_type: TMTypes, length: float, delta_length: float = None, **params) -> None:

@@ -64,7 +64,7 @@ Versioning is date based: `YY.MM.patch`.
   coupling. Rolled quadrupoles and solenoids now transport cross-plane
   correlations and dispersion. Projected emittances and rms betatron sizes
   include coupling and the geometric emittance damping of accelerating maps.
-  Bunch generation from a coupled Twiss seed preserves its transverse correlations.
+  Generating a bunch from coupled entrance Twiss parameters preserves the specified transverse correlations.
 - Preserve particle energies and transverse momenta in
   `recalculate_ref_particle()` by rescaling normalized momentum coordinates
   when the reference energy changes.

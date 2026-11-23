@@ -105,8 +105,11 @@ one-turn matrix and matches the same first-order maps used for propagation.
 
 ### Optics about a displaced orbit
 
+See how a displaced quadrupole steers a particle into a sextupole and changes
+the focusing in the [misalignment and tracked-orbit optics tutorial](demos/docs/19_misalignment_and_orbit_optics.ipynb).
+
 Pass `reference_orbit=ocl.Particle()` to `twiss` to launch at zero coordinates
-using the energy in the Twiss seed. For a horizontal launch offset of 1 mm,
+at the beam energy given by `tws0.E`. For a horizontal launch offset of 1 mm,
 pass `ocl.Particle(x=1e-3)`. Ocelot tracks that particle and evaluates the
 focusing along its path. Choose a nonlinear tracking method for magnets whose feed-down you
 want to include. Here a steered orbit passes through a sextupole.
@@ -119,14 +122,14 @@ line = ocl.MagneticLattice(
      ocl.Drift(l=0.8), ocl.Sextupole(l=0.3, k2=80.0)],
     method={ocl.Sextupole: ocl.SecondTM},
 )
-seed = ocl.Twiss(E=1.0, beta_x=3.0, beta_y=2.0)
-optics = ocl.twiss(line, seed, reference_orbit=ocl.Particle())
+tws0 = ocl.Twiss(E=1.0, beta_x=3.0, beta_y=2.0)  # entrance Twiss parameters
+optics = ocl.twiss(line, tws0, reference_orbit=ocl.Particle())
 print(optics[-1].x, optics[-1].beta_x)
 ```
 
 For a fixed-momentum ring, `periodic_twiss(ring, reference_orbit="closed")`
 finds the transverse closed orbit and evaluates the one-turn Jacobian there.
-The seed emittances weight the horizontal-like and vertical-like normal modes.
+When supplied, the two geometric emittances weight the horizontal-like and vertical-like normal modes.
 The reported emittances, beta and alpha describe the projected beam ellipses.
 The phase of each mode follows its position projection in the corresponding
 plane. That projection can rotate backwards or vanish in a coupled lattice.

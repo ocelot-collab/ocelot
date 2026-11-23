@@ -1,4 +1,18 @@
-"""Linear optics along a tracked reference trajectory."""
+"""Twiss parameters and dispersion about the orbit a particle actually follows.
+
+Ordinary Twiss propagation uses the first-order design maps. A displaced
+quadrupole can steer the beam into a downstream sextupole, where the field
+gradient depends on the beam's horizontal and vertical position. To include
+this focusing, track a reference particle through the active maps and
+linearize each map where the particle enters it. The selected tracking
+method must include the field term responsible for the effect.
+
+Use ``twiss(lattice, tws0, reference_orbit=particle)`` for a given launch.
+Here ``tws0`` gives the entrance beam ellipse and dispersion. The particle
+gives the coordinates of the trajectory about which the optics are calculated.
+In a fixed-momentum ring, ``periodic_twiss(lattice, reference_orbit="closed")``
+finds the closed orbit and matches the transverse optics about it.
+"""
 
 from copy import deepcopy
 from dataclasses import dataclass
@@ -15,15 +29,25 @@ from ocelot.cpbd.transformations.transformation import Transformation
 
 @dataclass
 class _OrbitMap:
+    """Reference particle and linear transport from the entrance to its current face.
+
+    ``orbit`` holds (x, px, y, py, tau, delta) at ``s`` [m] and reference
+    energy ``energy`` [GeV]. ``matrix`` maps a small entrance perturbation
+    to its six-dimensional separation from this particle at the current face.
+    Both ``trace_orbit_optics`` and the one-turn search in ``closed_orbit_optics``
+    create this internal state at the lattice entrance with an identity matrix
+    and advance it through the tracking maps.
+    """
+
     orbit: np.ndarray
     matrix: np.ndarray
     energy: float
     s: float
 
     @classmethod
-    def entrance(cls, seed: Twiss) -> Self:
-        return cls(np.array([seed.x, seed.xp, seed.y, seed.yp, seed.tau, seed.p], dtype=float),
-                   np.eye(6), seed.E, seed.s)
+    def entrance(cls, tws0: Twiss) -> Self:
+        return cls(np.array([tws0.x, tws0.xp, tws0.y, tws0.yp, tws0.tau, tws0.p], dtype=float),
+                   np.eye(6), tws0.E, tws0.s)
 
     def advance(self, tm: Transformation) -> "_OrbitMap":
         jacobian, _ = map_derivatives(tm, self.energy, self.orbit)
@@ -32,18 +56,22 @@ class _OrbitMap:
         return _OrbitMap(orbit, jacobian @ self.matrix, self.energy + tm.get_delta_e(), self.s + length)
 
 
-def orbit_seed(tws: Twiss | None, particle: Particle) -> Twiss:
-    """Copy the optics and set the six entrance coordinates in the tracking frame."""
+def twiss_at_launch(tws: Twiss | None, particle: Particle) -> Twiss:
+    """Copy the entrance beam optics and set the reference orbit from the particle.
+
+    The Twiss parameters describe the beam around this trajectory. The particle
+    supplies its six launch coordinates and can also supply the reference energy.
+    """
     if not isinstance(particle, Particle):
         raise TypeError("For twiss(), pass reference_orbit=Particle() for a zero launch "
                         "or supply a Particle with entrance coordinates")
-    seed = deepcopy(tws) if tws is not None else Twiss()
-    if particle.E and seed.E and not np.isclose(particle.E, seed.E, rtol=1e-12, atol=0.):
+    tws0 = deepcopy(tws) if tws is not None else Twiss()
+    if particle.E and tws0.E and not np.isclose(particle.E, tws0.E, rtol=1e-12, atol=0.):
         raise ValueError("Particle and Twiss specify different reference energies")
-    seed.E = particle.E or seed.E
-    seed.x, seed.xp, seed.y, seed.yp = particle.x, particle.px, particle.y, particle.py
-    seed.tau, seed.p = particle.tau, particle.p
-    return seed
+    tws0.E = particle.E or tws0.E
+    tws0.x, tws0.xp, tws0.y, tws0.yp = particle.x, particle.px, particle.y, particle.py
+    tws0.tau, tws0.p = particle.tau, particle.p
+    return tws0
 
 
 def _matched_modes(matrix: np.ndarray) -> np.ndarray:
@@ -127,18 +155,24 @@ def _matched_modes(matrix: np.ndarray) -> np.ndarray:
 def closed_orbit_optics(
     lattice: MagneticLattice, tws: Twiss | None, reference: Particle | Literal["closed"]
 ) -> tuple[Twiss, np.ndarray]:
-    """Solve the fixed-momentum transverse fixed point of the active one-turn map."""
+    """Find the entrance orbit, matched optics and two transverse normal modes.
+
+    The particle's four transverse coordinates give the initial guess. The
+    solver varies them at fixed delta until they repeat after one turn.
+    Arrival time may slip in a magnetic ring.
+    The one-turn Jacobian supplies the matched dispersion and mode vectors.
+    """
     from scipy.optimize import root
 
     if isinstance(reference, str) and reference == "closed":
         reference = Particle()
     elif not isinstance(reference, Particle):
         raise TypeError('For periodic_twiss(), pass reference_orbit="closed" or supply a Particle as the initial guess')
-    seed = orbit_seed(tws, reference)
-    entrance = _OrbitMap.entrance(seed)
+    tws0 = twiss_at_launch(tws, reference)
+    orbit_guess = np.array([reference.x, reference.px, reference.y, reference.py], dtype=float)
 
-    def one_turn(x: np.ndarray, tau: float = seed.tau) -> _OrbitMap:
-        state = _OrbitMap(np.r_[x, tau, seed.p], np.eye(6), seed.E, seed.s)
+    def one_turn(x: np.ndarray, tau: float = tws0.tau) -> _OrbitMap:
+        state = _OrbitMap(np.r_[x, tau, tws0.p], np.eye(6), tws0.E, tws0.s)
         for element in lattice.sequence:
             for tm in element.tms:
                 state = state.advance(tm)
@@ -148,18 +182,18 @@ def closed_orbit_optics(
         turn = one_turn(x)
         return turn.orbit[:4] - x, turn.matrix[:4, :4] - np.eye(4)
 
-    solution = root(residual, entrance.orbit[:4], jac=True, tol=1e-11)
+    solution = root(residual, orbit_guess, jac=True, tol=1e-11)
     turn = one_turn(solution.x)
     if not np.allclose(turn.orbit[:4], solution.x, atol=1e-11, rtol=0.):
         raise ValueError(f"Transverse closed orbit did not converge: {solution.message}")
     matrix = turn.matrix
-    if (not np.isclose(turn.energy, seed.E, atol=1e-13, rtol=1e-12)
-            or not np.isclose(turn.orbit[5], seed.p, atol=1e-12, rtol=0.)
+    if (not np.isclose(turn.energy, tws0.E, atol=1e-13, rtol=1e-12)
+            or not np.isclose(turn.orbit[5], tws0.p, atol=1e-12, rtol=0.)
             or not np.allclose(matrix[5], np.eye(6)[5], atol=1e-9, rtol=0.)
             or not np.allclose(matrix[:4, 4], 0., atol=1e-9, rtol=0.)):
         raise ValueError("Closed-orbit Twiss requires a fixed-momentum ring with time-independent transverse motion")
 
-    tau_slip = turn.orbit[4] - seed.tau
+    tau_slip = turn.orbit[4] - tws0.tau
     if abs(tau_slip) > 1e-12:
         # A magnetic ring may slip in arrival time. A time-dependent kick at
         # a stationary phase can nevertheless vanish on the first turn and
@@ -176,15 +210,15 @@ def closed_orbit_optics(
     basis = np.eye(6)
     basis[:4, :4] = np.column_stack((modes[:, 0].real, modes[:, 0].imag,
                                       modes[:, 1].real, modes[:, 1].imag))
-    unit = Twiss(E=seed.E, beta_x=1., beta_y=1., emit_x=seed.emit_x, emit_y=seed.emit_y)
-    unit._pending_emit_xn = seed._pending_emit_xn
-    unit._pending_emit_yn = seed._pending_emit_yn
+    unit = Twiss(E=tws0.E, beta_x=1., beta_y=1., emit_x=tws0.emit_x, emit_y=tws0.emit_y)
+    unit._pending_emit_xn = tws0._pending_emit_xn
+    unit._pending_emit_yn = tws0._pending_emit_yn
     matched = Twiss.track(basis, unit)
     matched.Dx, matched.Dxp, matched.Dy, matched.Dyp = np.linalg.solve(
         np.eye(4) - matrix[:4, :4], matrix[:4, 5])
     matched.x, matched.xp, matched.y, matched.yp = solution.x
-    matched.tau, matched.p, matched.s = seed.tau, seed.p, seed.s
-    matched.mux, matched.muy = seed.mux, seed.muy
+    matched.tau, matched.p, matched.s = tws0.tau, tws0.p, tws0.s
+    matched.mux, matched.muy = tws0.mux, tws0.muy
     return matched, modes
 
 
@@ -207,19 +241,24 @@ def _projected_mode_advance(old: np.ndarray, new: np.ndarray, plane: int) -> flo
 
 def trace_orbit_optics(
     lattice: MagneticLattice,
-    seed: Twiss,
+    tws0: Twiss,
     n_points: int | None,
     targets: Iterable[tuple[OpticElement, int]],
     modes: np.ndarray | None = None,
 ) -> list[Twiss]:
-    """Transport the orbit and the full entrance-to-observation-point Jacobian."""
-    dispersion = np.array([seed.Dx, seed.Dxp, seed.Dy, seed.Dyp, 0., 1.])
-    last_phase = np.array([seed.mux, seed.muy], dtype=float)
+    """Track the reference particle and report linear optics along its path.
+
+    Each sample combines the reference orbit with the beam ellipse propagated
+    by the cumulative Jacobian. Dispersion gives the changes in transverse
+    position and momentum per unit change in the local relative energy coordinate.
+    """
+    dispersion = np.array([tws0.Dx, tws0.Dxp, tws0.Dy, tws0.Dyp, 0., 1.])
+    last_phase = np.array([tws0.mux, tws0.muy], dtype=float)
     last_modes = modes.copy() if modes is not None else None
 
     def sample(state: _OrbitMap, eid: str) -> Twiss:
         # The cumulative Jacobian retains longitudinal feedback from intervening maps.
-        out = Twiss.track(state.matrix, seed)
+        out = Twiss.track(state.matrix, tws0)
         out.x, out.xp, out.y, out.yp, out.tau, out.p = state.orbit
         out.s, out.E, out.id = state.s, state.energy, eid
         derivative = state.matrix @ dispersion
@@ -243,11 +282,11 @@ def trace_orbit_optics(
             out.mux, out.muy = phase
         return out
 
-    grid = None if n_points is None else seed.s + np.linspace(0., lattice.totalLen, n_points)
-    samples = [seed] if grid is None or len(grid) else []
+    grid = None if n_points is None else tws0.s + np.linspace(0., lattice.totalLen, n_points)
+    samples = [tws0] if grid is None or len(grid) else []
     point = 1
-    previous = seed
-    state = _OrbitMap.entrance(seed)
+    previous = tws0
+    state = _OrbitMap.entrance(tws0)
     exits = []
     for elem in lattice.sequence:
         entrance = state

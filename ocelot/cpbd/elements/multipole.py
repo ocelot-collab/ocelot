@@ -6,14 +6,15 @@ from ocelot.cpbd.transformations.multipole import MultipoleTM
 
 
 class Multipole(OpticElement):
-    """
-    Arbitrary multipole expansion element (dipole through high order).
+    """Zero-length magnet with integrated multipole strengths.
 
     Parameters
     ----------
-    kn : float or array-like, default=0
-        Multipole strength coefficients (list or single value)
-
+    kn : scalar or array-like, default=0
+        A real ``kn[1] = K1L`` [1/m] is the integrated quadrupole strength
+        (positive focuses in x). A real ``kn[2] = K2L`` [1/m²] is the
+        integrated sextupole strength. Higher orders follow in sequence.
+        ``kn[0]`` is the thin-bend angle [rad]. A scalar sets only this angle.
     tilt, dtilt : float, default=0
         Design and mechanical roll in radians about the axis at (dx, dy).
     dx, dy : float, default=0
@@ -21,22 +22,16 @@ class Multipole(OpticElement):
 
     Physics
     -------
-    Arbitrary multipole field expansion.
-    Tracking uses dedicated MultipoleTM algorithm
-    (not standard TransferMap).
+    For a normal thin sextupole, use ``Multipole(kn=[0., 0., K2L])``.
+    In magnet coordinates the kicks are ``Δpx = -K2L*(x²-y²)/2`` and
+    ``Δpy = K2L*x*y``, with momenta in units of the reference momentum.
+    A real bend angle supplies angular dispersion and the corresponding
+    path-length term. Its transverse kick vanishes on momentum.
 
-    Tracking Method
-    ----------------
-    Restricted to MultipoleTM only (cannot use TransferMap or SecondTM actively).
-    Linear optics path available via first_order_tms for Twiss/optics.
-
-    Architecture
-    ~~~~~~~~~~~~~
-    - Wrapper: Multipole (this class, restricted active TM)
-    - Atom: MultipoleAtom
-    - Default TM: MultipoleTM
-    - Supported TMs: {MultipoleTM} only (single active method)
-    - Edge-aware: No (single MAIN map)
+    Tracking uses ``MultipoleTM`` automatically. The default ``twiss`` uses
+    the first-order design map. To include the focusing of a sextupole at a
+    horizontal offset from its axis, pass the entrance particle to
+    ``twiss(line, tws0, reference_orbit=particle)``.
 
     See Also
     --------

@@ -100,7 +100,33 @@ moments `xy`, `xpy`, `ypx` and `pxpy` after subtracting dispersion.
 When both emittances are omitted, the projected optics assume equal entrance
 emittances. The beam sizes and physical emittances then remain zero. The
 plane phases `mux` and `muy` have their Courant–Snyder interpretation for
-uncoupled motion. The periodic solver also assumes uncoupled transverse planes.
+uncoupled motion. The design periodic solver also assumes uncoupled transverse planes.
+
+### Optics about a displaced orbit
+
+Pass `reference_orbit=ocl.Particle()` to `twiss` to launch at zero coordinates
+using the energy in the Twiss seed. For a horizontal launch offset of 1 mm,
+pass `ocl.Particle(x=1e-3)`. Ocelot tracks that particle and evaluates the
+focusing along its path. Choose a nonlinear tracking method for magnets whose feed-down you
+want to include. Here a steered orbit passes through a sextupole.
+
+```python
+import ocelot as ocl
+
+line = ocl.MagneticLattice(
+    [ocl.Quadrupole(l=0.2, k1=2.0, dx=1e-3),
+     ocl.Drift(l=0.8), ocl.Sextupole(l=0.3, k2=80.0)],
+    method={ocl.Sextupole: ocl.SecondTM},
+)
+seed = ocl.Twiss(E=1.0, beta_x=3.0, beta_y=2.0)
+optics = ocl.twiss(line, seed, reference_orbit=ocl.Particle())
+print(optics[-1].x, optics[-1].beta_x)
+```
+
+For a fixed-momentum ring, `periodic_twiss(ring, reference_orbit="closed")`
+finds the transverse closed orbit and evaluates the one-turn Jacobian there.
+Each returned Twiss sample includes the reference coordinates. Omitting
+`reference_orbit` selects the existing design-optics workflow.
 
 ## Repeated Elements and Position Lookups
 
@@ -139,6 +165,36 @@ print(q.tws.beta_x)  # Twiss at the exit of the unique q occurrence
 A selected repeated instance also raises because one `element.tws` attribute
 cannot represent several locations. Matcher results can address deliberate
 repetitions explicitly with `state.twiss_at(element, occurrence=n)`.
+
+### Magnet alignment errors
+
+`errors_seed` updates the lattice in place. Each targeted occurrence gets
+independent transverse offsets and a mechanical roll error. To give two slices
+of one physical magnet the same draw, pass their zero-based sequence indices
+in `shared_groups`.
+
+```python
+import ocelot as ocl
+from ocelot.cpbd.errors import errors_seed
+
+left = ocl.Quadrupole(l=0.2, k1=1.0)
+right = ocl.Quadrupole(l=0.2, k1=1.0)
+lat = ocl.MagneticLattice([left, ocl.Marker(), right])
+rms = {ocl.Quadrupole: {"offset": 100e-6, "dtilt": 0.0}}
+lat, records = errors_seed(lat, rms, shared_groups=[(0, 2)])
+assert records[0] == records[2] and records[1] is None
+```
+
+`records[i]` holds the absolute `dx` and `dy` in metres and `dtilt` in radians
+for `lat.sequence[i]`. A zero RMS sets that component to zero. Untargeted
+occurrences keep their alignment and have a `None` record. If a reused element
+object needs different alignments, Ocelot copies it, so later strength changes
+apply separately to each copy.
+
+Replay the draw with `ocelot.cpbd.errors.apply_alignment_errors(other_lat, records)`
+on a lattice in the same sequence order. For MPI tracking, pass `errors=records`
+to `track_nturns_mpi` on rank zero. With multiple superperiods, records and
+slice indices refer to the full repeated sequence.
 
 ---
 

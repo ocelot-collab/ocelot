@@ -4,7 +4,7 @@ __author__ = 'Sergey'
 from copy import deepcopy
 from numpy.linalg import inv
 import pandas as pd
-from typing import Iterable
+from typing import Iterable, Literal
 import numpy as np
 import logging
 
@@ -13,20 +13,25 @@ from ocelot.cpbd.transformations.transfer_map import TransferMap
 from ocelot.common.globals import m_e_GeV
 from ocelot.cpbd.tm_utils import SecondOrderMult
 from ocelot.cpbd.transformations.second_order import SecondTM
-from ocelot.cpbd.beam import Twiss, twiss_iterable_to_df
+from ocelot.cpbd.beam import Particle, Twiss, twiss_iterable_to_df
+from ocelot.cpbd.elements.optic_element import OpticElement
+from ocelot.cpbd.magnetic_lattice import MagneticLattice
 
 logger = logging.getLogger(__name__)
 
 class UnstableLatticeError(RuntimeError):
     """Raised when a lattice has no strictly stable periodic Twiss solution."""
 
-    def __init__(self, cos_mu_x, cos_mu_y):
+    def __init__(self, cos_mu_x: float, cos_mu_y: float, *, detail: str | None = None) -> None:
         self.cos_mu_x = cos_mu_x
         self.cos_mu_y = cos_mu_y
         unstable_planes = []
         for plane, cos_mu in (("x", cos_mu_x), ("y", cos_mu_y)):
             if not np.isfinite(cos_mu) or abs(cos_mu) >= 1:
                 unstable_planes.append(f"{plane}: |Tr(R)/2|={abs(cos_mu):.6g}")
+        if detail is not None:
+            super().__init__(f"No strictly stable periodic Twiss solution exists ({detail}).")
+            return
         details = ", ".join(unstable_planes)
         super().__init__(
             "No strictly stable periodic Twiss solution exists"
@@ -230,9 +235,16 @@ def _validate_twiss_seed(tws0):
         )
 
 
-def twiss(lattice, tws0, nPoints=None, return_df=False, attach2elem=False):
-    """
-    twiss parameters calculation
+def twiss(
+    lattice: MagneticLattice,
+    tws0: Twiss,
+    nPoints: int | None = None,
+    return_df: bool = False,
+    attach2elem: bool | Iterable[OpticElement] | None = False,
+    *,
+    reference_orbit: Particle | None = None,
+) -> list[Twiss] | pd.DataFrame:
+    """Propagate entrance Twiss parameters through a beamline.
 
     :param attach2elem: if True and nPoints=None, attach the exit Twiss to every
                         element as ``elem.tws``. An iterable attaches only to
@@ -240,13 +252,18 @@ def twiss(lattice, tws0, nPoints=None, return_df=False, attach2elem=False):
                         must identify exactly one lattice occurrence. This is
                         not recommended for standard use, but may be handy for
                         small scripts.
-    :param return_df:
-    :param lattice: lattice, MagneticLattice() object
+    :param return_df: return the samples as a pandas DataFrame.
+    :param lattice: beamline in tracking order.
     :param tws0: explicit initial Twiss parameters to propagate. ``beta_x``
                  and ``beta_y`` must be positive. Use :func:`periodic_twiss`
                  when the initial optics should be calculated from the lattice.
     :param nPoints: number of points per cell. If None, then twiss parameters are calculated at the end of each element.
-    :return: list of Twiss() objects
+    :param reference_orbit: Omit this argument or pass ``None`` for design optics.
+                 Pass ``Particle()`` to launch at zero entrance coordinates using
+                 ``tws0.E``, or e.g. ``Particle(x=1e-3)`` to launch 1 mm off axis.
+                 In both cases the active maps track the particle and transport
+                 small deviations about its trajectory.
+    :return: Twiss samples, or a DataFrame when ``return_df=True``.
     """
     attachment_targets = _resolve_attachment_targets(lattice, attach2elem)
     if attachment_targets and nPoints is not None:
@@ -254,8 +271,14 @@ def twiss(lattice, tws0, nPoints=None, return_df=False, attach2elem=False):
 
     _validate_twiss_seed(tws0)
 
-    attachment_elements = [element for element, _index in attachment_targets]
-    twiss_list = trace_obj(lattice, tws0, nPoints, attachment_elements)
+    if reference_orbit is None:
+        attachment_elements = [element for element, _index in attachment_targets]
+        twiss_list = trace_obj(lattice, tws0, nPoints, attachment_elements)
+    else:
+        from ocelot.cpbd.orbit_optics import orbit_seed, trace_orbit_optics
+
+        seed = orbit_seed(tws0, reference_orbit)
+        twiss_list = trace_orbit_optics(lattice, seed, nPoints, attachment_targets)
 
     if return_df:
         twiss_list = twiss_iterable_to_df(twiss_list)
@@ -263,17 +286,41 @@ def twiss(lattice, tws0, nPoints=None, return_df=False, attach2elem=False):
     return twiss_list
 
 
-def periodic_twiss(lattice, tws0=None, nPoints=None, return_df=False, attach2elem=False):
+def periodic_twiss(
+    lattice: MagneticLattice,
+    tws0: Twiss | None = None,
+    nPoints: int | None = None,
+    return_df: bool = False,
+    attach2elem: bool | Iterable[OpticElement] | None = False,
+    *,
+    reference_orbit: Particle | Literal["closed"] | None = None,
+) -> list[Twiss] | pd.DataFrame:
     """Calculate and propagate periodic Twiss parameters through a lattice.
 
     ``tws0`` may provide beam energy, emittance, and other seed values. Its
     transverse Twiss parameters are replaced by the periodic solution.
+
+    Omit ``reference_orbit`` or pass ``None`` for periodic design optics.
+    Pass ``"closed"`` to find the transverse closed orbit at fixed momentum,
+    starting the search at zero. Pass a ``Particle`` to supply the transverse
+    starting guess, entrance tau and relative momentum. In this mode the tunes follow the
+    transverse normal modes and beta and alpha describe the projected beam.
 
     Raises
     ------
     UnstableLatticeError
         If either transverse plane has no strictly stable periodic solution.
     """
+
+    if reference_orbit is not None:
+        from ocelot.cpbd.orbit_optics import closed_orbit_optics, trace_orbit_optics
+
+        targets = _resolve_attachment_targets(lattice, attach2elem)
+        if targets and nPoints is not None:
+            raise ValueError("attach2elem requires nPoints=None so element exits are available")
+        seed, modes = closed_orbit_optics(lattice, tws0, reference_orbit)
+        samples = trace_orbit_optics(lattice, seed, nPoints, targets, modes)
+        return twiss_iterable_to_df(samples) if return_df else samples
 
     periodic_seed = lattice.periodic_twiss(tws=tws0)
     return twiss(

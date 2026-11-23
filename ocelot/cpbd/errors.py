@@ -3,10 +3,12 @@ module for misalignment error generation
 Sergey Tomin
 """
 import copy
+from numbers import Integral
+
 from numpy.random import normal
 import scipy.stats as stats
 import numpy as np
-from ocelot.cpbd.elements import Sextupole, Quadrupole, SBend, RBend, Bend
+from ocelot.cpbd.elements import Sextupole
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 
 
@@ -52,54 +54,100 @@ def create_copy(lattice, nsuperperiods):
     return MagneticLattice(lat_copy_seg, method=lattice.method)
 
 
-def errors_seed(lattice, er_list):
+def _sample_alignment_errors(lattice, er_list, shared_groups):
+    sigmas = {}
+    for family, settings in er_list.items():
+        offset, roll = settings["offset"], settings["dtilt"]
+        if not (np.isfinite(offset) and offset >= 0 and np.isfinite(roll) and roll >= 0):
+            raise ValueError("Alignment RMS values must be finite and nonnegative")
+        sigmas[family] = (offset, roll)
 
-    #lat_seq_err = create_copy(lattice, nsuperperiods = nsuperperiods)
-    dx = []
-    dy = []
-    dtilt = []
-    the_same = 0
-    elem_dx = 0.
-    elem_dy = 0.
-    elem_dtilt = 0.
-    misal = {}
-    for elem in lattice.sequence:
-        elem.dx = 0
-        elem.dy = 0
-        elem.dtilt = 0
-        if elem.__class__ == Quadrupole:
-            elem.dx = tgauss(sigma=er_list[elem.__class__]["offset"])
-            elem.dy = tgauss(sigma=er_list[elem.__class__]["offset"])
-            elem.dtilt = tgauss(sigma=er_list[elem.__class__]["dtilt"])
-            if the_same == 1:
-                elem.dx = elem_dx
-                elem.dy = elem_dy
-                elem.dtilt = elem_dtilt
-                the_same = 0
+    sequence = lattice.sequence
+    leaders = {}
+    for group in shared_groups:
+        leader = None
+        for i in group:
+            if not isinstance(i, Integral) or not 0 <= i < len(sequence):
+                raise ValueError(f"Invalid slice index {i!r}")
+            if i in leaders:
+                raise ValueError(f"Slice index {i} belongs to more than one group or occurs twice")
+            if type(sequence[i]) not in sigmas:
+                raise ValueError(f"Slice index {i} is outside the configured magnet families")
+            if leader is None:
+                leader = i
+            elif sigmas[type(sequence[i])] != sigmas[type(sequence[leader])]:
+                raise ValueError("Slices of one magnet must have the same alignment RMS values")
+            leaders[i] = leader
 
-            elem_dx = elem.dx
-            elem_dy = elem.dy
-            elem_dtilt = elem.dtilt
+    records = [None] * len(sequence)
+    for i, elem in enumerate(sequence):
+        if type(elem) in sigmas:
+            leader = leaders.get(i, i)
+            if records[leader] is None:
+                offset, roll = sigmas[type(elem)]
+                records[leader] = dict(dx=tgauss(sigma=offset), dy=tgauss(sigma=offset),
+                                       dtilt=tgauss(sigma=roll))
+            if i != leader:
+                records[i] = records[leader].copy()
+    return records
 
-        elif elem.__class__ in [SBend, RBend, Bend]:
-            elem.dx = tgauss(sigma=er_list[elem.__class__]["offset"])
-            elem.dy = tgauss(sigma=er_list[elem.__class__]["offset"])
-            if the_same == 1:
-                elem.dtilt = elem_dtilt
-                the_same = 0
-            else:
-                elem.dtilt = tgauss(sigma=er_list[elem.__class__]["dtilt"])
 
-        misal[elem.id] = {"dx": elem.dx, "dy": elem.dy, "dtilt":elem.dtilt}
-        dx = np.append(dx, elem.dx)
-        dy = np.append(dy, elem.dy)
-        dtilt = np.append(dtilt, elem.dtilt)
-        if elem.l == 0:
-            the_same = 1
-        else:
-            the_same = 0
+def apply_alignment_errors(lattice, records):
+    """Apply absolute alignment values by sequence index and return the same lattice.
 
-    return lattice.update_transfer_maps(), misal
+    Supply one entry per occurrence in the original sequence order. Each entry
+    is either None (keep its alignment) or a dict with dx, dy [m] and dtilt
+    [rad]. If a reused element needs different alignments, the affected
+    occurrences receive independent copies, including their magnet strengths.
+    """
+    if len(records) != len(lattice.sequence):
+        raise ValueError("Expected one alignment record per lattice occurrence")
+
+    occurrences = {}
+    for i, (elem, record) in enumerate(zip(lattice.sequence, records)):
+        values = None
+        if record is not None:
+            if not hasattr(elem.element, "dtilt"):
+                raise ValueError(f"{type(elem).__name__} at index {i} does not support mechanical roll")
+            values = tuple(float(record[key]) for key in ("dx", "dy", "dtilt"))
+            if not np.isfinite(values).all():
+                raise ValueError(f"Nonfinite alignment at index {i}")
+        occurrences.setdefault(elem, {}).setdefault(values, []).append(i)
+
+    assignments = []
+    for elem, groups in occurrences.items():
+        # Keep the original for untouched occurrences, or for the first draw.
+        original = None if None in groups else next(iter(groups))
+        for values, indices in groups.items():
+            if values is None:
+                continue
+            target = elem if values == original else copy.deepcopy(elem)
+            assignments.append((target, values, indices))
+
+    for target, values, indices in assignments:
+        target.dx, target.dy, target.dtilt = values
+        for i in indices:
+            lattice.sequence[i] = target
+    # Alignment setters invalidate the affected maps, including first-order optics.
+    lattice._refresh_element_lookup()
+    return lattice
+
+
+def errors_seed(lattice, er_list, *, shared_groups=()):
+    """Seed magnet alignments in place and return (lattice, records).
+
+    er_list maps exact element classes to {"offset": sigma_xy, "dtilt": sigma_roll}.
+    Each transverse offset [m] and the mechanical roll [rad] are independent
+    zero-mean Gaussian draws truncated at two sigma. Zero sigma sets that
+    component to zero. Other element families keep their existing alignments.
+
+    Occurrences are independent by default. Pass groups of zero-based sequence
+    indices, e.g. shared_groups=[(0, 2)], to give slices of one physical magnet
+    the same three values. records[i] is the alignment dict for sequence[i],
+    or None for an untargeted occurrence. Replay it with apply_alignment_errors.
+    """
+    records = _sample_alignment_errors(lattice, er_list, shared_groups)
+    return apply_alignment_errors(lattice, records), records
 
 
 if __name__ == "__main__":

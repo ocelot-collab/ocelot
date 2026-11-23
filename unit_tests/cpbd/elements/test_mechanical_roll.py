@@ -87,7 +87,7 @@ def test_roll_only_random_seed_reaches_cached_bend_maps():
     lattice = MagneticLattice([bend])
     lattice.transfer_maps(1.)
     _, errors = errors_seed(lattice, {SBend: {"offset": 0., "dtilt": .001}})
-    assert errors["B"]["dtilt"] == bend.element.dtilt
+    assert errors[0]["dtilt"] == bend.element.dtilt
     assert bend.dx == bend.dy == 0.
     assert bend.tilt == .3
     assert lattice.transfer_maps(1.)[0][3, 0] == pytest.approx(

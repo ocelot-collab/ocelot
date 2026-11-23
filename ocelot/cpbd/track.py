@@ -17,7 +17,7 @@ import numpy as np
 from ocelot.cpbd.transformations.transformation import TMTypes
 from ocelot.cpbd.optics import periodic_twiss, twiss
 from ocelot.cpbd.beam import Particle, ParticleArray, Twiss, get_envelope, twiss_iterable_to_df
-from ocelot.cpbd.errors import create_copy, errors_seed
+from ocelot.cpbd.errors import _sample_alignment_errors, apply_alignment_errors, create_copy
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.elements import Drift, Marker
 from ocelot.cpbd.io import is_an_mpi_process, ParameterScanFile
@@ -313,24 +313,31 @@ def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True, prin
     return np.array(track_list_const)
 
 
-def track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors=None, nsuperperiods=1, save_track=True):
+def track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors=None, nsuperperiods=1, save_track=True,
+                     *, shared_groups=()):
+    """Track particles on private copies of the expanded lattice.
+
+    On rank zero, errors can be an errors_seed family configuration or its
+    returned record list. For a configuration, shared_groups selects slices
+    exactly as in errors_seed. Both records and indices refer to the full
+    sequence after repeating the input lattice nsuperperiods times. Workers
+    may leave errors at None.
+    """
     size = mpi_comm.Get_size()
     rank = mpi_comm.Get_rank()
-    lat_copy = create_copy(lat, nsuperperiods = nsuperperiods)
+    lat = create_copy(lat, nsuperperiods=nsuperperiods)
     nsuperperiods = 1
-    if errors != None:
-        if rank == 0:
-            lat, errors = errors_seed(lat_copy, errors)
-        else:
-            errors = None
-
-        errors = mpi_comm.bcast(errors, root=0)
-        for i, elem in enumerate(lat_copy.sequence):
-            elem.dx = errors[0][i]
-            elem.dy = errors[1][i]
-            elem.dtilt = errors[2][i]
-
-    lat = MagneticLattice(lat_copy.sequence, method=lat_copy.method)
+    if rank == 0 and isinstance(errors, Mapping):
+        try:
+            errors = _sample_alignment_errors(lat, errors, shared_groups)
+        except (KeyError, TypeError, ValueError) as exc:
+            # All ranks must finish the broadcast even if the RMS setup is invalid.
+            errors = exc
+    records = mpi_comm.bcast(errors, root=0)
+    if isinstance(records, Exception):
+        raise records
+    if records is not None:
+        apply_alignment_errors(lat, records)
 
     if size == 1:
         # it is made to prevent memory crash in mpi_comm.gather() for one-tread case and for case of big pxy_list
@@ -389,13 +396,14 @@ def fma(lat, nturns, x_array, y_array, nsuperperiods = 1):
         return ctr_da.reshape(ny,nx), da_mux.reshape(ny,nx), da_muy.reshape(ny,nx)
 
 
-def da_mpi(lat, nturns, x_array, y_array, errors=None, nsuperperiods=1):
+def da_mpi(lat, nturns, x_array, y_array, errors=None, nsuperperiods=1, *, shared_groups=()):
     from mpi4py import MPI
     mpi_comm = MPI.COMM_WORLD
     rank = mpi_comm.Get_rank()
 
     track_list = create_track_list(x_array, y_array, p_array=[0])
-    track_list = track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors=errors, nsuperperiods=nsuperperiods, save_track=False)
+    track_list = track_nturns_mpi(mpi_comm, lat, nturns, track_list, errors=errors,
+                                  nsuperperiods=nsuperperiods, save_track=False, shared_groups=shared_groups)
 
     if rank == 0:
         da = np.array(map(lambda track: track.turn, track_list))#.reshape((len(y_array), len(x_array)))

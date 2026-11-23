@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ocelot.cpbd import beam
 from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.elements.element import Element
 from ocelot.cpbd.elements.marker import Marker
@@ -14,7 +15,7 @@ from ocelot.common.globals import m_e_GeV
 import logging
 import re
 from collections import defaultdict
-from typing import Mapping, Sequence, Tuple, Callable, Any, Generator, Iterator, Type, TypeVar, List
+from typing import Mapping, Sequence, Tuple, Callable, Any, Generator, Iterator, Type, TypeVar, List, Literal
 import numpy as np
 
 _logger = logging.getLogger(__name__)
@@ -214,7 +215,9 @@ class MagneticLattice:
         self.sequence = self.get_sequence_part(start, stop)
 
         self.update_transfer_maps()
+        self._refresh_element_lookup()
 
+    def _refresh_element_lookup(self):
         self._elem_map = {e: e for e in self.sequence}
 
     def __getitem__(self, el):
@@ -616,11 +619,21 @@ class MagneticLattice:
             lines.append(line)
         return lines
 
-    def periodic_twiss(self, tws=None):
-        from ocelot.cpbd.beam.core import Twiss
+    def periodic_twiss(
+        self,
+        tws: beam.Twiss | None = None,
+        *,
+        reference_orbit: beam.Particle | Literal["closed"] | None = None,
+    ) -> beam.Twiss:
+        """Return periodic entrance optics. Pass ``"closed"`` or a particle guess for closed-orbit optics."""
+        if reference_orbit is not None:
+            from ocelot.cpbd.orbit_optics import closed_orbit_optics
+
+            return closed_orbit_optics(self, tws, reference_orbit)[0]
+
         from ocelot.cpbd.optics import _periodic_twiss_from_matrix
 
-        tws = Twiss(tws)
+        tws = beam.Twiss(tws)
         R = self.transfer_maps(energy=tws.E)[1]
         tw_periodic = _periodic_twiss_from_matrix(tws, R)
         return tw_periodic

@@ -3,22 +3,17 @@ from ocelot.cpbd.elements.element import Element
 
 
 class RungeKuttaGlobalTM(TransferMap):
-    """[summary]
-    Runge-Kutta transformation in the fixed Cartesian field frame.
+    """Track particles between fixed Cartesian Z planes in a magnetic field.
 
-    ParticleArray slots contain mechanical momenta / p0, not slopes. The
-    longitudinal coordinate is tau=ct-Z/beta0 with its entrance offset retained.
-    This does not automatically place successive fields in a surveyed lab.
+    Use this method to obtain positions in the field frame, for example when
+    comparing an orbit to a measured field map. A reference electron bends
+    in a dipole even if all its entrance coordinates are zero. ParticleArray
+    stores mechanical transverse momenta divided by the reference momentum.
+    Arrival time is tau=ct-Z/beta0 in metres, including the entrance delay.
 
-    This is the historical ``RungeKuttaTM`` behavior.  It is useful when the
-    output should remain in the Cartesian coordinates used by the field
-    integrator, for example trajectory generation for SR/CSR-style workflows.
-
-    The concrete element atom have to implement: 
-    create_runga_kutta_main_params(self) -> RungeKuttaParams
-    If the element has edges is also have to implement:
-    create_runga_kutta_entrance_params(self) -> RungeKuttaParams
-    create_runga_kutta_exit_params(self) -> RungeKuttaParams
+    Use RungeKuttaOcelotTM to follow the beam in the moving reference frame
+    through a bend. Laboratory placement of successive elements requires
+    their survey geometry.
     """
 
     def __init__(self, create_tm_param_func, delta_e_func, tm_type: TMTypes, length: float, delta_length: float = 0.0, **params) -> None:
@@ -31,17 +26,7 @@ class RungeKuttaGlobalTM(TransferMap):
 
     @classmethod
     def from_element(cls, element: Element, tm_type: TMTypes = TMTypes.MAIN, delta_l=None, **params):
-        """[summary]
-        :param element: An Element which implement at least 'create_runga_kutta_main_params(self) -> RungeKuttaParams'. If the element has edges 
-        'create_runga_kutta_entrance_params(self) -> RungeKuttaParams' and 'create_runga_kutta_exit_params(self) -> RungeKuttaParams' have to be implemented as well.
-        :type element: Element
-        :param tm_type: Type of Transformation can be TMTypes.ENTRANCE, TMTypes.MAIN or TMTypes.EXIT, defaults to TMTypes.MAIN
-        :type tm_type: TMTypes, optional
-        :param delta_l: If the parameter is set, just a section of the element is taken into account for the tm calculation, defaults to None
-        :type delta_l: [type], optional
-        :return: [description]
-        :rtype: [type]
-        """
+        """Bind the field callback for the requested element body or edge."""
         return cls.create(entrance_tm_params_func=element.create_runge_kutta_entrance_params if element.has_edge else None,
                           delta_e_func=element.create_delta_e,
                           main_tm_params_func=element.create_runge_kutta_main_params,

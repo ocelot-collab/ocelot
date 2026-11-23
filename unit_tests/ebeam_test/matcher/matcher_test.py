@@ -824,3 +824,52 @@ def test_match_optics_benchmark(t3_module):
         max_slowdown = float(os.environ.get("MATCHER_BENCH_MAX_SLOWDOWN", "1.25"))
         assert bench["case1_sec"] <= baseline["case1_sec"] * max_slowdown
         assert bench["case2_sec"] <= baseline["case2_sec"] * max_slowdown
+
+
+def test_constant_penalty_on_unstable_ring_cannot_satisfy_strict_success():
+    lat, _, drift, _ = _simple_drift_lattice()
+    problem = MatchProblem(lat, _twiss_seed(), periodic=True)
+    problem.vary_element(drift, "l", limits=(0.5, 2.))
+    problem.minimize_function(lambda state: 0.)
+    result = problem.solve()
+    assert result.optimize_result.success
+    assert not result.success
+    assert "No periodic Twiss solution" in result.message
+
+
+def test_vector_objective_keeps_its_dimension_at_an_unstable_trial(monkeypatch):
+    from types import SimpleNamespace
+    from ocelot.cpbd import matcher
+
+    lat, _, qf, _, _, _ = _fodo_lattice(k1=.5)
+    problem = MatchProblem(lat, _twiss_seed(), periodic=True)
+    problem.vary_element(qf, "k1")
+    problem.minimize_function(lambda state: [state.twiss_end.beta_x, state.twiss_end.beta_y])
+
+    def try_unstable_strength(fun, x0, **kwargs):
+        initial = fun(x0)
+        penalty = fun(np.array([30.]))
+        assert initial.shape == penalty.shape == (2,)
+        assert min(penalty) > 1e8
+        return SimpleNamespace(x=x0, fun=initial, success=True, message="", nfev=2)
+
+    monkeypatch.setattr(matcher, "least_squares", try_unstable_strength)
+    assert problem.solve().success
+
+
+def test_least_squares_recovers_when_only_its_first_trial_has_no_periodic_optics():
+    from ocelot.cpbd.elements import Matrix
+
+    # At k1=0 the horizontal cell is a drift. The first positive focusing
+    # trial has a periodic solution, so the two-component objective becomes available.
+    q = Quadrupole(l=.1, k1=0.)
+    turn = Matrix()
+    turn.r = np.eye(6)
+    turn.r[2:4, 2:4] = [[0., 1.], [-1., 0.]]
+    problem = MatchProblem(MagneticLattice([q, Drift(l=1.), turn]), Twiss(E=1.), periodic=True)
+    problem.vary_element(q, "k1")
+    problem.minimize_function(lambda state: [state.twiss_end.beta_x - 3., state.twiss_end.beta_y - 1.])
+    result = problem.solve()
+    assert result.success and q.k1 > 0.
+    assert result.optimize_result.fun.shape == (1,)
+    assert result.optimize_result.fun[0]**2 == pytest.approx(problem.evaluate()[0])

@@ -26,9 +26,13 @@ class Cavity(OpticElement):
 
     Physics
     -------
-    RF acceleration with transverse dispersion from coupler kicks.
-    Energy gain via voltage and RF phase.
-    Edge-aware (ENTRANCE coupler → MAIN cavity → EXIT coupler).
+    In a pi-mode standing wave the alternating transverse RF force produces
+    net focusing even at the zero crossing (phi = ±90 degrees), where the
+    reference energy gain v*cos(phi) vanishes. The transverse matrix uses the
+    relativistic Rosenzweig–Serafini approximation. The longitudinal model
+    holds the entrance RF phase fixed for each slice and includes the changing
+    particle speed in its time of flight. The two end couplers can give
+    additional transverse kicks.
 
     Tracking Method
     ----------------

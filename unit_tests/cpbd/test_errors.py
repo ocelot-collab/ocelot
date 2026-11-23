@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from ocelot.cpbd import errors, track
-from ocelot.cpbd.elements import Marker, Quadrupole, SBend, Sextupole
+from ocelot.cpbd.elements import Drift, Marker, Quadrupole, SBend, Sextupole
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 from ocelot.cpbd.transformations import SecondTM
 
@@ -51,6 +51,15 @@ def test_independent_occurrences_shared_slices_and_map_replay(monkeypatch, famil
     errors.apply_alignment_errors(replay, records)
     for actual, expected in zip(replay.transfer_maps(1.), lattice.transfer_maps(1.)):
         np.testing.assert_array_equal(actual, expected)
+
+
+def test_record_equal_to_existing_alignment_preserves_shared_strength():
+    quad = Quadrupole(l=.4, k1=2., dx=.001)
+    line = MagneticLattice([quad, quad, quad])
+    errors.apply_alignment_errors(line, [None, dict(dx=.001, dy=0., dtilt=0.), dict(dx=.002, dy=0., dtilt=0.)])
+    assert line.find_element_indices(quad) == [0, 1]
+    quad.k1 = 3.
+    assert [element.k1 for element in line.sequence] == [3., 3., 2.]
 
 
 def test_replay_preserves_untouched_occurrence_of_a_reused_element():
@@ -121,3 +130,43 @@ def test_mpi_workers_replay_root_draws_on_expanded_lattice(monkeypatch):
     assert lattice.sequence[0].dtilt == 0.
     with pytest.raises(ValueError, match="per lattice occurrence"):
         track.track_nturns_mpi(comm, lattice, 1, [0, 1], errors=records)
+
+
+def test_mpi_output_grids_follow_launch_order(monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    comm = SimpleNamespace(Get_rank=lambda: 0)
+    monkeypatch.setitem(sys.modules, "mpi4py", SimpleNamespace(MPI=SimpleNamespace(COMM_WORLD=comm)))
+
+    def tracked(comm, lattice, turns, particles, **kwargs):
+        for i, particle in enumerate(particles):
+            particle.turn = i
+            particle.mux, particle.muy = particle.x, particle.y
+        return particles
+
+    def tunes(particles, lattice, turns, harm, nsuperperiods):
+        assert nsuperperiods == 3
+        return particles
+
+    monkeypatch.setattr(track, "track_nturns_mpi", tracked)
+    monkeypatch.setattr(track, "freq_analysis", tunes)
+    xs, ys = [-1., 1., 2.], [-2., 2.]
+    np.testing.assert_array_equal(track.da_mpi(None, 2, xs, ys), [[0, 1, 2], [3, 4, 5]])
+    _, qx, qy = track.fma(None, 2, xs, ys, nsuperperiods=3)
+    np.testing.assert_array_equal(qx, [xs, xs])
+    np.testing.assert_array_equal(qy, [[-2.] * 3, [2.] * 3])
+
+
+def test_empty_tracking_chunk_returns_no_particles():
+    assert track.track_nturns(MagneticLattice([Drift(l=1.)]), 3, []).size == 0
+
+
+def test_turn_tracking_with_rolled_quadrupole():
+    drift = Drift(l=.5)
+    line = MagneticLattice([Quadrupole(l=.2, k1=1.3, dtilt=.005), drift,
+                            Quadrupole(l=.2, k1=-1.3), drift])
+    particles = track.create_track_list([1e-4], [2e-4], [0.])
+    tracked = track.track_nturns(line, 3, particles, print_progress=False)
+    assert tracked[0].turn == 2
+    assert np.all(np.isfinite(tracked[0].p_list))

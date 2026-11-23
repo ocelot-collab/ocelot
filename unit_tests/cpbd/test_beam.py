@@ -313,3 +313,24 @@ def test_Twiss_from_series(a_twiss_dictionary):
     twiss = Twiss.from_series(series)
     for key, value in a_twiss_dictionary.items():
         assert getattr(twiss, key) == value
+
+
+def test_particle_list_conversion_preserves_weights_and_reference():
+    bunch = ParticleArray(2)
+    bunch.E, bunch.s = 0.2, 3.1
+    bunch.q_array[:] = [1e-12, 3e-12]
+    restored = ParticleArray()
+    restored.list2array(bunch.array2list())
+    np.testing.assert_array_equal(restored.q_array, bunch.q_array)
+    assert (restored.E, restored.s) == (bunch.E, bunch.s)
+
+
+def test_invalid_new_energy_preserves_particle_coordinates():
+    bunch = ParticleArray(2)
+    bunch.E = 0.001
+    bunch.p()[:] = [-0.8, 0.1]
+    before = bunch.rparticles.copy()
+    with pytest.raises(ValueError, match="new reference energy"):
+        recalculate_ref_particle(bunch)
+    np.testing.assert_array_equal(bunch.rparticles, before)
+    assert bunch.E == 0.001

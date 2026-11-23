@@ -87,3 +87,31 @@ def test_both_zero_crossings_have_the_correct_parity(energy):
     t_minus = np.array(rf_long_t_terms(**args, phi=-np.pi / 2.))
     np.testing.assert_allclose(r_minus, r_plus * [-1., 1., -1., 1.], rtol=1e-14)
     np.testing.assert_allclose(t_minus, t_plus * [1., -1., 1.], rtol=1e-14)
+
+
+@pytest.mark.parametrize("phase", [-90., 90., 90. + 1e-10, 90. - 1e-10])
+def test_standing_wave_zero_crossing_keeps_ponderomotive_focusing(phase):
+    # With zero reference gain, the averaged transverse equation is the
+    # constant-strength oscillator x'' + (V/(sqrt(8)*E*L))**2 * x = 0.
+    from scipy.linalg import expm
+
+    length, energy, voltage = 0.8, 0.050, 0.030
+    k = (voltage / (np.sqrt(8.) * energy * length)) ** 2
+    expected = expm(length * np.array([[0., 1.], [-k, 0.]]))
+    cavity = Cavity(l=length, v=voltage, phi=phase, freq=1.3e9)
+    matrix = cavity.R(energy)[1]
+    np.testing.assert_allclose(matrix[:2, :2], expected, atol=2e-12, rtol=0)
+    np.testing.assert_allclose(matrix[2:4, 2:4], expected, atol=2e-12, rtol=0)
+
+
+@pytest.mark.parametrize("cavity_type", [Cavity, TWCavity])
+def test_powered_cavity_cannot_decelerate_reference_below_rest_energy(cavity_type):
+    cavity = cavity_type(l=0.8, v=0.0008, phi=180.)
+    with pytest.raises(ValueError, match="rest energy"):
+        cavity.R(0.001)
+
+
+@pytest.mark.parametrize("cavity_type", [TWCavity, Cavity])
+def test_default_unpowered_cavity_is_identity(cavity_type):
+    for matrix in cavity_type().R(0.):
+        np.testing.assert_array_equal(matrix, np.eye(6))

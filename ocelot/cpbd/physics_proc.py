@@ -731,7 +731,7 @@ class IBS(PhysProc):
         self.sigma_dgamma0 = None
         self.Clog_used = None
 
-    def get_beam_params(self, p_array):
+    def get_beam_params(self, p_array: ParticleArray) -> None:
         """
         Compute transverse moments and the energy spread after removing linear chirp.
 
@@ -782,7 +782,7 @@ class IBS(PhysProc):
         pc = np.sqrt(p_array.E ** 2 - m_e_GeV ** 2)
         self.sigma_dgamma0 = np.std(residual) * pc / m_e_GeV
 
-    def estimate_Clog(self):
+    def estimate_Clog(self) -> float:
         """
         Huang's high-energy estimate without the Gaussian-core cutoff.
 
@@ -791,7 +791,7 @@ class IBS(PhysProc):
         Clog = np.log(self.emit_n * self.emit_n / (ro_e * self.sigma_xy))
         return Clog
 
-    def apply(self, p_array, dz):
+    def apply(self, p_array: ParticleArray, dz: float) -> None:
         """
         Apply the IBS process to a particle array over a given path length.
 

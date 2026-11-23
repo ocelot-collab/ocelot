@@ -1,27 +1,32 @@
-from typing import Optional
-
 import beamphysics as pmd
 import numpy as np
 
+from ocelot.common.globals import m_e_eV
 from ocelot.cpbd.beam import ParticleArray
 
 
 def particle_group_to_parray(pgroup: pmd.ParticleGroup) -> ParticleArray:
-    """Construct an Ocelot ParticleArray from an openPMD-beamphysics ParticleGroup.
-    The particle type is assumed to be electrons.
-    The longitudinal coordinates use opposite signs: ``tau = -z``, matching
-    :func:`particle_array_to_particle_group`.
+    """Import an electron bunch with Cartesian momenta in eV/c.
 
-    :param pgroup: ParticleGroup from which to construct the ParticleArray
-    :return: ParticleArray corresponding to the provided ParticleGroup
-    :rtype: ParticleArray
+    Choose the charge-weighted mean total energy as the reference. Derive
+    electron energies from the input momenta with Ocelot's electron mass so
+    that conversion back to Cartesian momenta preserves the mass shell.
 
+    The longitudinal convention is tau = -z (metres). A ParticleGroup with
+    arrival times at a screen must first be converted to a spatial bunch.
+    This longitudinal convention assumes an ultrarelativistic bunch.
     """
+    if pgroup.species != "electron":
+        raise ValueError("The Ocelot ParticleArray adaptor requires electrons.")
+    if np.any(pgroup.pz < 0):
+        raise ValueError("Ocelot tracks forward-moving particles and requires pz >= 0.")
     parray = ParticleArray(pgroup.n_particle)
-
-    # These are in eV, but so are px and py so this is OK.
-    reference_momentum = pgroup.avg("p")
-    reference_energy = pgroup.avg("energy")
+    energies = np.hypot(pgroup.p, m_e_eV)
+    reference_energy = np.average(energies, weights=pgroup.weight)
+    parray.E = reference_energy * 1e-9
+    if parray.E <= m_e_eV * 1e-9:
+        raise ValueError("The reference momentum must be positive.")
+    reference_momentum = parray.p0c * 1e9
 
     rpart = parray.rparticles
     rpart[0] = pgroup.x
@@ -29,9 +34,8 @@ def particle_group_to_parray(pgroup: pmd.ParticleGroup) -> ParticleArray:
     rpart[2] = pgroup.y
     rpart[3] = pgroup.py / reference_momentum
     rpart[4] = -pgroup.z
-    rpart[5] = (pgroup.energy - reference_energy) / reference_momentum
+    rpart[5] = (energies - reference_energy) / reference_momentum
 
-    parray.E = reference_energy * 1e-9  # Convert eV to GeV
     parray.q_array = pgroup.weight
 
     return parray
@@ -42,6 +46,7 @@ def load_pmd(filename: str) -> ParticleArray:
 
 
 def particle_array_to_particle_group(parray: ParticleArray) -> pmd.ParticleGroup:
+    """Export Cartesian momenta in eV/c and a spatial bunch with z = -tau in metres."""
     px = parray.px() * parray.p0c * 1e9  # to eV
     py = parray.py() * parray.p0c * 1e9  # to eV
     pz = parray.pz * parray.p0c * 1e9  # to eV

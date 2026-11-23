@@ -516,3 +516,93 @@ def test_coherent_radiation_keeps_initial_arrival_offsets(monkeypatch):
     monkeypatch.setattr(radiation_module, 'radiation_py', lambda *args: None)
     radiation_module.coherent_radiation(MagneticLattice([undulator]), screen, particles, verbose=False)
     np.testing.assert_allclose(particles.rparticles, expected, atol=2e-14, rtol=0)
+
+
+def test_coherent_fields_include_each_sources_optical_path_and_arrival_time():
+    # Linearity of Maxwell's equations: two displaced and delayed sources on
+    # one spectral image must give the sum of their separate complex fields.
+    from ocelot.common.globals import q_e
+
+    lattice = MagneticLattice([Undulator(lperiod=.02, nperiods=3, Kx=1., npoints=37)])
+    geometry = [(0., 0., 0.), (0.3e-3, -0.2e-3, 3e-7)]
+
+    def electric_field(sources):
+        particles = ParticleArray(n=len(sources))
+        particles.E = 0.1
+        particles.q_array[:] = q_e
+        particles.rparticles[[0, 2, 4]] = np.asarray(sources).T
+        screen = Screen()
+        screen.z = 3.
+        screen.nx, screen.ny, screen.num_energy = 3, 2, 4
+        screen.size_x, screen.size_y = 2e-3, 1e-3
+        screen.start_energy, screen.end_energy = 1., 2.
+        radiation_module.coherent_radiation(lattice, screen, particles, verbose=False)
+        return np.array([screen.arReEx + 1j * screen.arImEx,
+                         screen.arReEy + 1j * screen.arImEy])
+
+    np.testing.assert_allclose(electric_field(geometry),
+                               sum(electric_field([s]) for s in geometry), rtol=1e-12)
+
+
+def test_radiation_transport_preserves_rf_energy_and_the_selected_transport_method():
+    from ocelot.common.globals import m_e_GeV, speed_of_light
+    from ocelot.cpbd.elements import TWCavity
+    from ocelot.cpbd.transformations.exact_drift import ExactDriftTM
+
+    initial_energy, voltage, tau, frequency = 0.1, 0.01, 0.001, 1.3e9
+    cavity = TWCavity(l=0.01, v=voltage, freq=frequency, phi=25.)
+    drift = Drift(l=.02)
+    undulator = Undulator(lperiod=.02, nperiods=1, Kx=0., npoints=5)
+    lattice = MagneticLattice([cavity, drift, undulator], method={Drift: ExactDriftTM})
+    particles = ParticleArray(n=1)
+    particles.E, particles.tau()[:] = initial_energy, tau
+    screen = Screen()
+    screen.z = 10.
+    # With short, high-energy RF slices, phase advance due to beta variation
+    # is negligible. The energy is set by the particle's actual arrival time.
+    radiation_module.coherent_radiation(lattice, screen, particles, accuracy=.05, verbose=False)
+    assert isinstance(drift.tms[0], ExactDriftTM)
+    expected_ref = initial_energy + voltage * np.cos(np.deg2rad(25.))
+    assert particles.E == pytest.approx(expected_ref, abs=1e-14)
+    energy = particles.E + np.sqrt(particles.E**2 - m_e_GeV**2) * particles.p()[0]
+    expected = initial_energy + voltage * np.cos(np.deg2rad(25.) - 2*np.pi*frequency*tau/speed_of_light)
+    assert energy == pytest.approx(expected, abs=1e-9)
+
+
+def test_rotated_planar_undulator_gives_independent_energy_fluctuations(monkeypatch):
+    from ocelot.common.globals import m_e_GeV, ro_e
+    from scipy.constants import physical_constants
+
+    # Eq. (1) and (2) of Tomin et al., doi:10.1038/s41598-023-28813-8.
+    # Choose deterministic draws to check individual energy kicks and units.
+    energy, period, K = 12., .04, 2.
+    und = Undulator(lperiod=period, nperiods=2, Kx=0., Ky=K, npoints=17)
+    particles = ParticleArray(n=2)
+    particles.E = energy
+    monkeypatch.setattr(np.random, "normal", lambda size: np.array([-1., 1.]))
+    radiation_module.track4rad_beam(particles, MagneticLattice([und]), energy_loss=True, quantum_diff=True)
+    gamma = energy / m_e_GeV
+    k = 2 * np.pi / period
+    reduced_compton = physical_constants["reduced Compton wavelength"][0]
+    f = 1.20 * K + 1 / (1 + 1.33*K + 0.40*K**2)
+    sigma_energy = m_e_GeV * np.sqrt(7/15 * ro_e * reduced_compton * gamma**4 * k**3 * K**2 * f * und.l)
+    mean_loss = ro_e * m_e_GeV * gamma**2 * k**2 * K**2 * und.l / 3
+    assert particles.E == pytest.approx(energy - mean_loss, abs=1e-14)
+    spread = particles.p() * np.sqrt(particles.E**2 - m_e_GeV**2)
+    np.testing.assert_allclose(spread, [sigma_energy, -sigma_energy], rtol=2e-7, atol=0)
+    assert radiation_module.sigma_gamma_quat(energy, 0., period, und.l) == 0.
+
+
+def test_thin_steerers_survive_radiation_trajectory_segmentation():
+    from ocelot.cpbd.elements import Hcor
+
+    undulator = Undulator(lperiod=.02, nperiods=1, Kx=0.)
+    kick = 2e-3
+    lattice = MagneticLattice([Hcor(angle=kick), undulator, Hcor(angle=-kick)])
+    particles = ParticleArray(n=1)
+    particles.E = 1.
+    # The spline-based radiation integral needs at least four z samples.
+    segments, _ = radiation_module.track4rad_beam(particles, lattice, accuracy=.001)
+    assert segments[0].shape == (4 * 9, 1)
+    assert particles.x()[0] == pytest.approx(undulator.l * kick / np.sqrt(1. - kick**2))
+    assert particles.px()[0] == pytest.approx(0., abs=1e-14)

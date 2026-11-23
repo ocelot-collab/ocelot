@@ -289,3 +289,30 @@ def test_attach2elem_rejects_sampled_twiss_output():
 
     with pytest.raises(ValueError, match="requires nPoints=None"):
         twiss(lattice, _optics_seed(), nPoints=10, attach2elem=True)
+
+
+def test_periodic_accelerating_cell_matches_shape_and_design_dispersion():
+    from ocelot.cpbd.elements import Matrix
+
+    # A thin dispersive map after a low-energy accelerating cavity gives
+    # an affine fixed point for dispersion as well as a periodic ellipse.
+    cavity = TWCavity(l=.3, v=.002, phi=0., freq=1.3e9)
+    source = Matrix()
+    source.r = np.eye(6)
+    source.r[0, 5] = .01
+    line = MagneticLattice([cavity, source])
+    start, *_, end = periodic_twiss(line, Twiss(E=.002))
+    for key in ("beta_x", "alpha_x", "beta_y", "alpha_y", "Dx", "Dxp"):
+        assert getattr(start, key) == pytest.approx(getattr(end, key), abs=4e-14)
+    # The geometric emittance damps by pi/pf. Dividing the raw transfer
+    # block by sqrt(pi/pf) gives the unit-area matrix for periodic CS optics.
+    p_ratio = np.sqrt((start.E**2 - m_e_GeV**2) / (end.E**2 - m_e_GeV**2))
+    raw = line.transfer_maps(start.E)[1][:2, :2]
+    cos_mu = np.trace(raw) / (2 * np.sqrt(p_ratio))
+    assert start.beta_x == pytest.approx(raw[0, 1] / np.sqrt(p_ratio * (1. - cos_mu**2)))
+
+
+@pytest.mark.parametrize("bad_beta", [np.nan, np.inf])
+def test_twiss_rejects_nonfinite_entrance_beta(bad_beta):
+    with pytest.raises(ValueError, match="beta_x and tws0.beta_y"):
+        twiss(MagneticLattice([Drift(l=1.)]), Twiss(beta_x=bad_beta, beta_y=1.))

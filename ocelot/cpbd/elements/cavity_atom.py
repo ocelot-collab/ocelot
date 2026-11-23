@@ -1,16 +1,11 @@
-import logging
-
 import numpy as np
 
-from ocelot.cpbd.transformations.cavity import CavityTM
-from ocelot.cpbd.high_order import m_e_GeV
+from ocelot.common.globals import m_e_GeV
 from ocelot.cpbd.rf_maps import rf_long_r_terms
 from ocelot.cpbd.r_matrix import uni_matrix
 from ocelot.cpbd.elements.element import Element
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
 from ocelot.cpbd.tm_params.cavity_params import CavityParams
-
-logger = logging.getLogger(__name__)
 
 
 class CavityAtom(Element):
@@ -60,92 +55,55 @@ class CavityAtom(Element):
         s += 'eid="' + str(self.id) + '")' if self.id is not None else ")"
         return s
 
-    def _R_edge_matrix(self, energy: float, vxx: float, vxy: float):
+    def _R_edge_matrix(self, energy: float, vxx: complex, vxy: complex) -> np.ndarray:
+        """Linear gradient of the coupler kick at the local RF phase."""
+        matrix = np.eye(6)
+        if self.v:
+            if energy <= m_e_GeV:
+                raise ValueError("Cavity reference energy must exceed the rest energy")
+            voltage = self.v * np.exp(1j * np.deg2rad(self.phi))
+            matrix[1, 0] = (vxx * voltage).real / energy
+            matrix[3, 2] = -matrix[1, 0]
+            matrix[1, 2] = matrix[3, 0] = (vxy * voltage).real / energy
+        return matrix
 
-        def ck_matrix(v, phi, vxx, vxy, energy):
-            """
-            matrix for coupler kick
-
-            :param v: voltage of the cavity in GV
-            :param phi: phase [deg] of the cavity
-            :param vxx: first order coefficients of the coupler kicks
-            :param vxy: first order coefficients of the coupler kicks
-            :param energy: beam energy in GeV
-            :return:
-            """
-            phi = phi * np.pi / 180.
-            m21 = (vxx * v * np.exp(1j * phi)).real / energy
-            m43 = - m21
-            m23 = (vxy * v * np.exp(1j * phi)).real / energy
-
-            coupl_kick = np.array([[1, 0., 0., 0., 0., 0.],
-                                   [m21, 1, m23, 0., 0., 0.],
-                                   [0., 0., 1, 0., 0., 0.],
-                                   [m23, 0., m43, 1, 0., 0.],
-                                   [0., 0., 0., 0., 1., 0.],
-                                   [0., 0., 0., 0., 0., 1]])
-            return coupl_kick
-
-        r_z_e = ck_matrix(v=self.v, phi=self.phi,
-                          vxx=vxx, vxy=vxy, energy=energy)
-        return r_z_e
-
-    def _R_main_matrix(self, energy: float, length: float):
-
-        def cavity_R_z(z, V, E, freq, phi=0.):
-            """
-            :param z: length
-            :param de: delta E
-            :param freq: frequency
-            :param E: initial energy
-            :return: matrix
-            """
-
-            phi = phi * np.pi / 180.
-            de = V * np.cos(phi)
-            # pure pi-standing-wave case
-            eta = 1
-            # gamma = (E + 0.5 * de) / m_e_GeV
-            Ei = E / m_e_GeV
-            Ef = (E + de) / m_e_GeV
-            Ep = (Ef - Ei) / z  # energy derivative
-            if Ei == 0:
-                logger.error("CAVITY: Initial energy is 0, check ParticleArray.E or Twiss.E OR cavity.v must be 0")
-
-            cos_phi = np.cos(phi)
-            alpha = np.sqrt(eta / 8.) / cos_phi * np.log(Ef / Ei)
-            sin_alpha = np.sin(alpha)
-
-            cos_alpha = np.cos(alpha)
-            r11 = (cos_alpha - np.sqrt(2. / eta) * cos_phi * sin_alpha)
-
-            if abs(Ep) > 1e-10:
-                r12 = np.sqrt(8. / eta) * Ei / Ep * cos_phi * sin_alpha
-            else:
-                r12 = z
-            r21 = -Ep / Ef * (cos_phi / np.sqrt(2. * eta) + np.sqrt(eta / 8.) / cos_phi) * sin_alpha
-
-            r22 = Ei / Ef * (cos_alpha + np.sqrt(2. / eta) * cos_phi * sin_alpha)
-            # print(f"z = {z}, V = {V}, E = {E}, phi = {phi}, alpha = {alpha}, r11 = {r11}")
-
-            r55_cor, r56, r65, r66 = rf_long_r_terms(z=z, V=V, E=E, freq=freq, phi=phi)
-            cav_matrix = np.array([[r11, r12, 0., 0., 0., 0.],
-                                   [r21, r22, 0., 0., 0., 0.],
-                                   [0., 0., r11, r12, 0., 0.],
-                                   [0., 0., r21, r22, 0., 0.],
-                                   [0., 0., 0., 0., 1. + r55_cor, r56],
-                                   [0., 0., 0., 0., r65, r66]]).real
-
-            return cav_matrix
-
+    def _R_main_matrix(self, energy: float, length: float) -> np.ndarray:
+        """Standing-wave focusing and time of flight through a cavity slice."""
         if self.v == 0.:
-            R = uni_matrix(length, 0., hx=0., sum_tilts=self.tilt, energy=energy)
-        else:
-            R = cavity_R_z(length, V=self.v * length / self.l, E=energy, freq=self.freq,
-                           phi=self.phi)
-        return R
+            return uni_matrix(length, 0., hx=0., sum_tilts=self.tilt, energy=energy)
+        if self.l == 0:
+            raise ValueError("A powered standing-wave cavity requires nonzero length")
+        gradient = self.v / self.l
+        voltage = gradient * length
+        phi = np.deg2rad(self.phi)
+        cos_phi = np.cos(phi)
+        energy_out = energy + voltage * cos_phi
+        if min(energy, energy_out) <= m_e_GeV:
+            raise ValueError("Cavity entrance and exit total energies must exceed the rest energy")
 
-    def kick_b(self, v, vx, vy, phi, energy):
+        # Rosenzweig–Serafini pi-mode matrix (relativistic transverse model).
+        # At the RF zero crossing the mean energy gain vanishes, while the
+        # alternating transverse field still focuses. alpha remains V/(E sqrt(8)).
+        gain_fraction = voltage * cos_phi / energy
+        log_ratio = np.log1p(gain_fraction) / gain_fraction if gain_fraction else 1.
+        alpha = voltage / (np.sqrt(8.) * energy) * log_ratio
+        sin_alpha, cos_alpha = np.sin(alpha), np.cos(alpha)
+        edge = np.sqrt(2.) * cos_phi * sin_alpha
+        r11 = cos_alpha - edge
+        r12 = length * log_ratio * np.sinc(alpha / np.pi)
+        r21 = -gradient / energy_out * (1. + 2. * cos_phi**2) / np.sqrt(8.) * sin_alpha
+        r22 = energy / energy_out * (cos_alpha + edge)
+
+        transverse = np.array([[r11, r12], [r21, r22]])
+        r55_cor, r56, r65, r66 = rf_long_r_terms(length, voltage, energy, self.freq, phi)
+        matrix = np.eye(6)
+        matrix[:2, :2] = matrix[2:4, 2:4] = transverse
+        matrix[4:, 4:] = [[1. + r55_cor, r56], [r65, r66]]
+        return matrix
+
+    def kick_b(self, v: float, vx: complex, vy: complex, phi: float, energy: float) -> np.ndarray:
+        if not v:
+            return np.zeros((6, 1))
         phi = phi * np.pi / 180.
         dxp = (vx * v * np.exp(1j * phi)).real / energy
         dyp = (vy * v * np.exp(1j * phi)).real / energy

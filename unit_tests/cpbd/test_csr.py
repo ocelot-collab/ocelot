@@ -280,3 +280,77 @@ def test_safer_csr_warning_does_not_divide_by_rounded_zero(caplog):
     process = SaferCSR(sigma_min=1e-14, apply_kick=False)
     process.query_bunch_length(1e-15)
     assert "Bunch is too small" in caplog.text
+
+
+@pytest.mark.parametrize("n", [1, 10])
+def test_integrated_ultrarelativistic_kernel_on_circle(n):
+    # At angular distance phi behind the observer the chord is 2*rho*sin(phi/2).
+    # Its two endpoint tangents have the same projection on the chord, hence
+    # K = -sin(phi/2)/rho and integral_s^0 K ds = -4*sin(phi/4)**2.
+    rho = 2.
+    angle = 0.01 * np.arange(n + 1)
+    zero = np.zeros_like(angle)
+    trajectory = np.array([rho * angle, rho * (1 - np.cos(angle)), zero,
+                           rho * np.sin(angle), np.sin(angle), zero, np.cos(angle)])
+    process = CSR()
+    _, integral = process.K0_inf_anf(n, trajectory, -1.)
+    expected = -4 * np.sin((angle[-1] - angle[:-1]) / 4)**2
+    np.testing.assert_allclose(integral, expected, rtol=3e-6, atol=0)
+    # Check the finite-energy integration backends at their common endpoint.
+    for integrate in (process.k0_fin_anf.integrate_kernel_np, process.k0_fin_anf.integrate_kernel_jit):
+        s = rho * (angle[:-1] - angle[-1])
+        np.testing.assert_allclose(integrate(s, s), -s**2 / 2, rtol=2e-14)
+
+
+def test_spatial_deposition_and_readback_share_the_same_origin(csr, monkeypatch):
+    # At beta=0.6, a delay of c*dt = h / beta puts an electron h metres behind.
+    # A pure zero-lag kernel should reproduce the local mesh charge exactly.
+    p = ParticleArray(3)
+    p.E = 1.25 * m_e_GeV
+    h = 3e-4
+    z = np.array([-h, 0., h])
+    p.tau()[:] = -z / 0.6
+    p.q_array[:] = 1e-12
+    deposited = np.array([2., 5., 1.]) * 1e-12
+
+    def subbins(q, positions, *args):
+        np.testing.assert_allclose(positions, z, atol=1e-18)
+        return None, None
+
+    monkeypatch.setattr(csr.sub_bin, "subbin_bound", subbins)
+    monkeypatch.setattr(csr.bin_smoth, "Q2EQUI", lambda *args: (-h, 2*h, 3, deposited))
+    monkeypatch.setattr(csr, "CSR_K1", lambda *args, **kw: np.array([0., 0., 1.]))
+    ds = 0.01
+    csr.apply(p, ds)
+    np.testing.assert_allclose(p.p() * p.p0c * 1e9, deposited * ds / h, rtol=2e-14)
+
+
+def test_gaussian_wake_matches_free_space_steady_state():
+    from scipy.integrate import quad
+    from scipy.special import ndtri
+    from ocelot.common.globals import epsilon_0
+
+    rho, sigma, charge = 4., 100e-6, 100e-12
+    bend, end = Bend(l=2., angle=2./rho), Marker()
+    line = MagneticLattice([bend, end])
+    proc = CSR(n_bin=80, traj_step=.002, apply_step=.002, sigma_min=.03*sigma)
+    Navigator(line).add_physics_proc(proc, bend, end)
+    bunch = ParticleArray(30000)
+    bunch.E = 1.
+    bunch.q_array[:] = charge / bunch.n
+    z = ndtri((np.arange(bunch.n) + .5) / bunch.n)
+    bunch.tau()[:] = -sigma * z
+    proc.z0 = bend.l
+    ds = .005
+    proc.apply(bunch, ds)
+
+    # Integrate the continuum steady-state point wake against the derivative
+    # of a Gaussian density. z and u in the quadrature are in units of sigma.
+    voltage = charge / (4*np.pi*epsilon_0 * rho**(2/3) * sigma**(4/3))
+    measured = bunch.p() * bunch.p0c * 1e9 / (ds * voltage)
+    locations = [-2., -1., 0., 1., 2.]
+    expected = []
+    for x in locations:
+        area = quad(lambda u: (x-u) * np.exp(-(x-u)**2/2) * u**(-1/3), 0., 15.)[0]
+        expected.append(2 * area / (3**(1/3) * np.sqrt(2*np.pi)))
+    np.testing.assert_allclose(np.interp(locations, z, measured), expected, atol=.003, rtol=0)

@@ -1,10 +1,8 @@
 # Explicit re-exports used by existing simulation scripts.
 from ocelot.cpbd.elements import Quadrupole as Quadrupole
 
-from ocelot.cpbd.navi import Navigator
 from ocelot.cpbd.beam import Twiss
 from ocelot.cpbd.match import closed_orbit
-from ocelot.cpbd.track import tracking_step
 from ocelot.cpbd.elements import Cavity, Hcor, TWCavity
 from ocelot.cpbd.beam import Particle
 from ocelot.common.globals import m_e_GeV
@@ -30,36 +28,52 @@ class MeasureResponseMatrix:
     def calculate(self):
         pass
 
-    def read_virtual_orbit(self, p_init=None, write2bpms=True):
-        """Track to BPM positions and return X and Y arrays in the requested BPM order."""
+    def read_virtual_orbit(self, p_init: Particle | None = None,
+                           write2bpms: bool = True) -> tuple[np.ndarray, np.ndarray]:
+        """Return horizontal and vertical positions [m] in the requested BPM order.
+
+        A lattice BPM reads at its centre. Lattice order distinguishes BPMs
+        separated by a thin element at the same s. A detached position probe
+        uses its s [m] from the lattice entrance, downstream of thin elements
+        at that position. With no launch particle, use the closed orbit.
+        """
         self.particle0 = closed_orbit(self.lat) if p_init is None else p_init
         p = copy.copy(self.particle0)
-        navi = Navigator(self.lat)
-        positions = []
-        for bpm in self.bpms:
-            # Standalone position probes may supply s without belonging to
-            # the lattice. A reused physical monitor has no unique reading.
-            if hasattr(bpm, "s") and len(self.lat.find_element_indices(bpm)) < 2:
-                positions.append(bpm.s)
+        sequence = self.lat.sequence
+        boundaries = np.r_[0., np.cumsum([elem.l for elem in sequence])]
+        samples = []
+        for row, bpm in enumerate(self.bpms):
+            if self.lat.find_element_indices(bpm) or not hasattr(bpm, "s"):
+                index = self.lat.resolve_element_index(bpm)
+                offset = bpm.l / 2.
             else:
-                i = self.lat.resolve_element_index(bpm)
-                positions.append(sum(e.l for e in self.lat.sequence[:i]) + bpm.l / 2.)
-        X = np.empty(len(positions))
-        Y = np.empty(len(positions))
-        previous = 0.
-        for i in np.argsort(positions, kind="stable"):
-            bpm = self.bpms[i]
-            tracking_step(self.lat, [p], positions[i] - previous, navi)
-            previous = positions[i]
+                if not 0. <= bpm.s <= boundaries[-1]:
+                    raise ValueError("BPM position must lie inside the lattice")
+                index = min(np.searchsorted(boundaries, bpm.s, side="right") - 1, len(sequence))
+                offset = bpm.s - boundaries[index]
+            samples.append((index, offset, row))
+
+        X, Y = np.empty(len(samples)), np.empty(len(samples))
+        current = 0
+        for index, target, row in sorted(samples):
+            while current < index:
+                for tm in sequence[current].tms:
+                    tm.apply(p)
+                current += 1
+            reading = p
+            if target > 0.:
+                # A measurement inside a magnet must not change its downstream
+                # trajectory. Splitting a numerical map can change its kicks.
+                reading = copy.copy(p)
+                for tm in sequence[index].get_section_tms(target):
+                    tm.apply(reading)
             if write2bpms:
-                bpm.x = p.x
-                bpm.y = p.y
-                bpm.E = p.E
-                bpm.p = p.p
-            X[i], Y[i] = p.x, p.y
+                bpm = self.bpms[row]
+                bpm.x, bpm.y, bpm.E, bpm.p = reading.x, reading.y, reading.E, reading.p
+            X[row], Y[row] = reading.x, reading.y
         return X, Y
 
-    def read_virtual_dispersion(self, E0, write2bpms=True):
+    def read_virtual_dispersion(self, E0: float, write2bpms: bool = True) -> tuple[np.ndarray, np.ndarray]:
         """Track BPM dispersion using entrance Particle.p values of 0 and 0.01.
 
         Both particles use the same entrance reference energy E0 [GeV].
@@ -319,7 +333,8 @@ class LinacDisperseTmatrixRM(MeasureResponseMatrix):
         return response
 
 
-def _cavity_exit_reference(entrance, nominal_exit, scanned_exit, length):
+def _cavity_exit_reference(entrance: float, nominal_exit: float, scanned_exit: float,
+                           length: float) -> tuple[float, float, float]:
     """Convert scanned RF output to the nominal momentum and reference clock."""
     energies = np.array([entrance, nominal_exit, scanned_exit])
     p0, pn, ps = np.sqrt((energies - m_e_GeV) * (energies + m_e_GeV))
@@ -417,7 +432,7 @@ class LinacCavityScanRM(MeasureResponseMatrix):
                 bpm.Dx, bpm.Dy = dispersion[:, i]
         return dispersion, (scanned_response - nominal_response) / span
 
-    def read_virtual_dispersion(self, E0, write2bpms=True):
+    def read_virtual_dispersion(self, E0: float, write2bpms: bool = True) -> tuple[np.ndarray, np.ndarray]:
         """Return horizontal and vertical BPM dispersion [m] for this RF scan."""
         (dx, dy), _ = self._scan(E0, with_response=False, write2bpms=write2bpms)
         return dx, dy

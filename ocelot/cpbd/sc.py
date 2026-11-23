@@ -4,6 +4,9 @@ Created on 27.03.2015
 Revision on 01.06.2017: coordinate transform to the velocity direction
 2019: Added LSC: S. Tomin and I. Zagorodnov
 """
+# Configure optional worker pools before beam and physics-process imports can load them.
+from ocelot.common import conf
+
 import numpy as np
 import scipy.ndimage as ndimage
 import time
@@ -15,7 +18,6 @@ from scipy.special import exp1, k1
 from ocelot.cpbd.physics_proc import PhysProc
 from ocelot.common.math_op import conj_sym
 from ocelot.cpbd.beam import s_to_cur, signal_to_spectrum
-from ocelot.common import conf
 from ocelot.cpbd.elements import Undulator
 from scipy.interpolate import interp1d
 import logging

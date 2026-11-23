@@ -3,13 +3,12 @@ __author__ = 'Sergey'
 
 from copy import deepcopy
 import pandas as pd
-from typing import Iterable, Literal
+from typing import Iterable, Literal, TypeVar
 import numpy as np
 import logging
 
 from ocelot.cpbd.transformations.transfer_map import TransferMap
 
-from ocelot.common.globals import m_e_GeV
 from ocelot.cpbd.tm_utils import SecondOrderMult
 from ocelot.cpbd.transformations.second_order import SecondTM
 from ocelot.cpbd.beam import Particle, Twiss, twiss_iterable_to_df
@@ -17,6 +16,10 @@ from ocelot.cpbd.elements.optic_element import OpticElement
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
 
 logger = logging.getLogger(__name__)
+
+class _CoupledDesignOpticsError(ValueError):
+    """A pair of independent transverse ellipses cannot match this one-turn map."""
+
 
 class UnstableLatticeError(RuntimeError):
     """Raised when a lattice has no strictly stable periodic Twiss solution."""
@@ -60,45 +63,68 @@ def lattice_transfer_map(lattice, energy):
     return Ra
 
 
-def trace_z(lattice, obj0, z_array):
-    """
-    Z-dependent tracer (twiss(z) and particle(z))
-    usage: twiss = trace_z(lattice, twiss_0, [1.23, 2.56, ...]) ,
-    to calculate Twiss params at 1.23m, 2.56m etc.
+_TraceObject = TypeVar("_TraceObject", Particle, Twiss)
 
-    Positions are measured from the lattice entrance. Each sample is
-    propagated independently from its element's entrance state, without
-    modifying obj0.
+
+def _continue_design_phase(point: Twiss, previous: Twiss, element: OpticElement, energy: float) -> None:
+    """Recover complete oscillations resolved by earlier samples inside this element."""
+    missed = np.array([previous.mux - point.mux, previous.muy - point.muy])
+    if max(missed) <= 1e-12:
+        return
+    # In an uncoupled element Courant–Snyder phase increases with s. The
+    # phase of an arbitrary coupled position projection may move backwards.
+    for tm in element.first_order_tms:
+        R = tm.get_params(energy).get_rotated_R()
+        if R[:2, 2:4].any() or R[2:4, :2].any():
+            return
+        energy += tm.get_delta_e()
+    turns = np.maximum(0., np.ceil((missed - 1e-12) / (2 * np.pi)))
+    point.mux += turns[0] * 2 * np.pi
+    point.muy += turns[1] * 2 * np.pi
+
+
+def trace_z(lattice: MagneticLattice, obj0: _TraceObject, z_array: Iterable[float]) -> list[_TraceObject]:
+    """Sample first-order design transport at distances from the entrance [m].
+
+    At zero return the supplied entrance state. At a downstream boundary,
+    report the state after the exit face and all thin elements there. Preserve
+    the input object and the order of the requested positions.
     """
-    eps = 1e-12
-    obj_list = []
+    positions = list(z_array)
+    samples = [None] * len(positions)
+    entrance = deepcopy(obj0)
+    previous_partial = None
+    start = 0.
     i = 0
-    elem = lattice.sequence[i]
-    L = elem.l
-    obj_elem = deepcopy(obj0)
-    for z in z_array:
-        while z > L + eps and i + 1 < len(lattice.sequence):
-            for tm in lattice.sequence[i].first_order_tms:
-                obj_elem = tm * obj_elem
-            i += 1
+    for index in np.argsort(positions, kind="stable"):
+        z = positions[index]
+        if z <= 0.:
+            samples[index] = deepcopy(obj0)
+            continue
+        while i < len(lattice.sequence):
             elem = lattice.sequence[i]
-            L += elem.l
-
-        delta_l = z - (L - elem.l)
-        if delta_l < 0:   # safeguard against floating-point issues
-            delta_l = 0.0
-        elif delta_l > elem.l:
-            delta_l = elem.l
-        first_order_tms = elem.get_section_tms(start_l=0.0, delta_l=delta_l, first_order_only=True)
-
-        # Particle transfer-map multiplication modifies its input before
-        # returning a copy. Preserve the entrance state for later samples.
-        obj_z = deepcopy(obj_elem)
-        for tm in first_order_tms:
-            obj_z = tm * obj_z
-
-        obj_list.append(obj_z)
-    return obj_list
+            end = start + elem.l
+            if z < end - 1e-12:
+                break
+            energy = entrance.E
+            for tm in elem.first_order_tms:
+                entrance = tm * entrance
+            if previous_partial is not None:
+                _continue_design_phase(entrance, previous_partial, elem, energy)
+                previous_partial = None
+            i += 1
+            start = end
+        sample = deepcopy(entrance)
+        if i < len(lattice.sequence) and z > start:
+            elem = lattice.sequence[i]
+            for tm in elem.get_section_tms(z - start, first_order_only=True):
+                sample = tm * sample
+            if isinstance(sample, Twiss):
+                if previous_partial is not None:
+                    _continue_design_phase(sample, previous_partial, elem, entrance.E)
+                previous_partial = sample
+        samples[index] = sample
+    return samples
 
 
 def _resolve_attachment_targets(lattice, attach2elem):
@@ -155,7 +181,12 @@ def trace_obj(lattice, obj, nPoints=None, attach2elem=False):
         element_exit_objects = []
         for e in lattice.sequence:
             for tm in e.first_order_tms:
-                obj = tm * obj
+                if isinstance(obj, Particle):
+                    # Particle tracking is in-place. Each observation needs its own state.
+                    obj = deepcopy(obj)
+                    tm.apply(obj)
+                else:
+                    obj = tm * obj
                 obj.id = e.id
                 obj_list.append(obj)
             element_exit_objects.append(obj)
@@ -170,23 +201,27 @@ def trace_obj(lattice, obj, nPoints=None, attach2elem=False):
     return obj_list
 
 
-def _periodic_twiss_from_matrix(tws, R):
-    """Match two uncoupled Courant–Snyder ellipses to the design map."""
+def _periodic_twiss_from_matrix(tws: Twiss, R: np.ndarray, dispersion_map: np.ndarray) -> Twiss:
+    """Match two uncoupled design ellipses and solve the affine dispersion fixed point."""
     tws = Twiss(tws)
-    roundoff = 64 * np.finfo(float).eps * max(1., np.linalg.norm(R[:4, :4]))
+    roundoff = 64 * np.finfo(float).eps * max(1., np.linalg.norm(R))
     if np.any(abs(R[:2, 2:4]) > roundoff) or np.any(abs(R[2:4, :2]) > roundoff):
-        raise ValueError("Periodic design optics requires an uncoupled transverse one-turn map; "
-                         "use periodic_twiss(..., reference_orbit='closed') for coupled rings")
+        raise _CoupledDesignOpticsError(
+            "Periodic design optics requires an uncoupled transverse one-turn map; "
+            "use periodic_twiss(..., reference_orbit='closed') for coupled rings"
+        )
 
-    if R[5, 5] != 1:
-        if tws.E == 0:
-            raise TypeError("Lattice is contained Cavity. Argument 'tws' must be Twiss class with non zero energy 'tws.E'")
-
-        g0 = tws.E / m_e_GeV
-        g1 = np.sqrt(g0 ** 2 - 1 + R[5, 5] ** 2) / R[5, 5]
-        k = np.sqrt(g1 / g0)
-        R = R.copy()
-        R[:4, :4] *= k
+    # Match the ellipse shape after removing the actual area damping of
+    # each plane. At low energy the travelling-wave map damps by pi/pf.
+    R = R.copy()
+    for plane in (slice(0, 2), slice(2, 4)):
+        block = R[plane, plane]
+        area = np.linalg.det(block)
+        if not np.isfinite(area) or area <= 0.:
+            raise UnstableLatticeError(np.trace(R[:2, :2]) / 2., np.trace(R[2:, 2:]) / 2.,
+                                       detail="nonpositive or nonfinite transverse map determinant")
+        if abs(area - 1.) > 1e-14:
+            block /= np.sqrt(area)
 
     cosmx = (R[0, 0] + R[1, 1]) / 2.
     cosmy = (R[2, 2] + R[3, 3]) / 2.
@@ -209,7 +244,7 @@ def _periodic_twiss_from_matrix(tws, R):
     tws.xy = tws.xpy = tws.ypx = tws.pxpy = 0.
     tws._unit_moments = None
     tws._update_plane_moments()
-    tws.Dx, tws.Dxp, tws.Dy, tws.Dyp = np.linalg.solve(np.eye(4) - R[:4, :4], R[:4, 5])
+    tws.Dx, tws.Dxp, tws.Dy, tws.Dyp = np.linalg.solve(np.eye(4) - dispersion_map[:, :4], dispersion_map[:, 4])
     return tws
 
 
@@ -217,7 +252,7 @@ def _prepare_entrance_twiss(tws0: Twiss, reference_orbit: Particle | None = None
     """Form the entrance optics sample while preserving the caller's beam moments."""
     if not isinstance(tws0, Twiss):
         raise TypeError(f"tws0 must be a Twiss instance, got {type(tws0).__name__}")
-    if tws0.beta_x <= 0 or tws0.beta_y <= 0:
+    if not (0. < tws0.beta_x < np.inf and 0. < tws0.beta_y < np.inf):
         raise ValueError(
             "tws0.beta_x and tws0.beta_y must be positive; "
             "use periodic_twiss(lattice, ...) to calculate periodic optics"
@@ -248,11 +283,24 @@ def twiss(
     that particle and transports the beam ellipse with the derivative of the
     selected tracking map at each point on its trajectory. For example, an
     off-axis sextupole contributes linear focusing when its tracking map
-    includes the sextupole field.
+    includes the sextupole field. To measure RK trajectories against surveyed
+    element faces, use RungeKuttaOcelotTM with reference="nominal". A global
+    RK bend returns positions on a fixed Cartesian Z plane.
 
     In an uncoupled line, ``mux`` and ``muy`` are the Courant–Snyder phase
-    advances [rad]. To obtain normal-mode phases in a coupled ring, use
+    advances [rad]. A single map determines phase modulo 2π. To resolve
+    multiple oscillations inside a long focusing element, request enough
+    samples that consecutive phases advance by less than 2π.
+    To obtain normal-mode phases in a coupled ring, use
     :func:`periodic_twiss` with ``reference_orbit="closed"``.
+
+    Across acceleration the design calculation retains Ocelot’s historical
+    dispersion convention. For each energy-changing map with transverse
+    block A, it transports incoming dispersion by A / det(A)**(1/4) and
+    adds the map's dispersion column. With a reference particle, dispersion
+    instead gives d(x, px, y, py)/d(delta_local) for fixed entrance arrival
+    time, including time-of-flight and RF feedback along the beamline.
+    Here delta_local = (E_particle - E_ref)/(p_ref c).
 
     :param lattice: beamline in tracking order.
     :param tws0: entrance optics with positive ``beta_x`` and ``beta_y`` [m].
@@ -304,11 +352,17 @@ def periodic_twiss(
     """Match the entrance optics to one turn and propagate it around the ring.
 
     The default uses the design maps and requires an uncoupled transverse
-    one-turn matrix. For a coupled ring or a distorted orbit, pass
-    ``reference_orbit="closed"``. The active tracking maps then determine the
+    one-turn matrix. In an accelerating cell it matches the ellipse shapes
+    for a single pass at the supplied entrance energy. For a coupled ring or
+    a distorted orbit, pass ``reference_orbit="closed"``. The active tracking maps then determine the
     transverse closed orbit and the two normal modes of small oscillations
     about it. This calculation assumes fixed momentum and time-independent
     transverse motion. The arrival time may slip from turn to turn.
+
+    The mode with larger horizontal symplectic action fraction receives the
+    first emittance. At equal participation the smaller fractional tune comes
+    first. Near coincident tunes the mode directions can be sensitive to small
+    changes in the map, even when the two tunes and emittances are accurate.
 
     :param lattice: one turn of the ring or one repeating cell.
     :param tws0: optional beam parameters giving the energy [GeV] and

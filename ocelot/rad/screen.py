@@ -105,31 +105,20 @@ class Screen:
         self.Yph = np.linspace(self.y_start, self.y_start + self.y_step*(self.ny - 1), self.ny)
         self.Eph = np.linspace(self.e_start, self.e_start + self.e_step*(self.ne - 1), self.ne)
 
+    def _source_phase(self, x0: float, y0: float, z0: float) -> np.ndarray:
+        """Fresnel entrance-to-screen phase [rad] for a source position in mm."""
+        hc = 1.239841874330e-3  # eV mm, as used by the radiation integrator
+        distance2 = (self.Xph - x0)**2 + (self.Yph[:, None] - y0)**2
+        phase = np.pi * self.Eph[:, None, None] / hc * distance2 / (self.Distance - z0)
+        return phase.ravel()
+
     def rebuild_efields(self, x0=0, y0=0, z0=0):
+        """Restore the entrance-to-screen phase for wavefront propagation.
+
+        The source coordinates x0, y0 and z0 are in mm. Component arrays
+        are updated in place to preserve their views of the screen buffer.
         """
-        the method recalculates the field phase and electrical fields to obtain the correct values that can be used
-        to propagate the wave front.
-
-        Field values are updated in place so the component arrays remain views
-        of ``memory_screen``.
-
-        :param x0: initial the electron coordinate
-        :param y0: initial the electron coordinate
-        :param z0: initial the electron coordinate
-        :return:
-        """
-        hc = 1.239841874330e-3  # h_eV_s*speed_of_light*1000  // mm
-        shape_array = [self.ne, self.ny, self.nx]
-
-        Xscr = np.linspace(self.x_start, self.x_start + self.x_step * (self.nx - 1), num=self.nx)
-        Yscr = np.linspace(self.y_start, self.y_start + self.y_step * (self.ny - 1), num=self.ny)
-        Yscr = Yscr.reshape((self.ny, 1))
-        Erad = np.linspace(self.e_start, self.e_start + self.e_step * (self.ne - 1), num=self.ne)
-        Erad = Erad.reshape((self.ne, 1, 1))
-        prXconst = Xscr - x0
-        prYconst = Yscr - y0
-        phaseConstIn = np.pi * Erad / hc * (prXconst * prXconst + prYconst * prYconst) / (self.Distance - z0)
-        phaseConstIn = phaseConstIn.reshape(-1)
+        phaseConstIn = self._source_phase(x0, y0, z0)
         self.arPhase += phaseConstIn
         cosf = np.cos(phaseConstIn)
         sinf = np.sin(phaseConstIn)

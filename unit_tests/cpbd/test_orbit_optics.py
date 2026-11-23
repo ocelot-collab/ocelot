@@ -145,10 +145,11 @@ def test_design_periodic_match_uses_the_propagated_design_maps():
     assert abs(closed.beta_x - start.beta_x) > .01
 
 
-def test_grid_resolves_more_than_one_oscillation_in_a_single_element():
+@pytest.mark.parametrize("reference", [None, Particle()])
+def test_grid_resolves_more_than_one_oscillation_in_a_single_element(reference):
     seed = Twiss(beta_x=1., beta_y=1., mux=.2)
     line = MagneticLattice([Quadrupole(l=7., k1=1.), Drift(l=.5)])
-    grid = twiss(line, seed, nPoints=16, reference_orbit=Particle())
+    grid = twiss(line, seed, nPoints=16, reference_orbit=reference)
     # The matched focusing-plane oscillator has a phase advance of one radian per metre.
     np.testing.assert_allclose([point.mux for point in grid[:-1]], [.2 + point.s for point in grid[:-1]],
                                atol=2e-14)

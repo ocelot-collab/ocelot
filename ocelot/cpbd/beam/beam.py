@@ -73,16 +73,22 @@ class BeamFormFactor:
         self.frequency = self.frequency[:idx]
 
 
-def recalculate_ref_particle(p_array):
+def recalculate_ref_particle(p_array: particle.ParticleArray) -> particle.ParticleArray:
     """Use the first particle as the energy and longitudinal reference in place.
 
     Preserve particle energies and physical momenta by rescaling all normalized
     momentum coordinates to the new reference momentum. The first particle's
     energy deviation and ``tau`` become zero. Return the updated ParticleArray.
     """
-    pref = np.sqrt(p_array.E ** 2 / glb.m_e_GeV ** 2 - 1) * glb.m_e_GeV
+    if p_array.n == 0:
+        raise ValueError("The reference particle must belong to a nonempty beam.")
+    if not np.isfinite(p_array.E) or p_array.E <= glb.m_e_GeV:
+        raise ValueError("The old reference energy must exceed the electron rest energy.")
+    pref = p_array.p0c
     Enew = p_array.p()[0] * pref + p_array.E
-    pref_new = np.sqrt(Enew ** 2 / glb.m_e_GeV ** 2 - 1) * glb.m_e_GeV
+    if not np.isfinite(Enew) or Enew <= glb.m_e_GeV:
+        raise ValueError("The new reference energy must exceed the electron rest energy.")
+    pref_new = np.sqrt(Enew**2 - glb.m_e_GeV**2)
     s_new = p_array.s - p_array.tau()[0]
     p_array.rparticles[5, :] -= p_array.p()[0]
     momentum_scale = pref / pref_new

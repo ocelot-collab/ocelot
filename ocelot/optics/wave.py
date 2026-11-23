@@ -226,18 +226,16 @@ class RadiationField:
     def scale_kx(self):  # scale in meters or meters**-1
         if self.domain_xy == 's':  # space domain
             return np.linspace(-self.Lx() / 2, self.Lx() / 2, self.Nx())
-        elif self.domain_xy == 'k':  # inverse space domain
-            k = 2 * np.pi / self.dx
-            return np.linspace(-k / 2, k / 2, self.Nx())
+        elif self.domain_xy == 'k':  # angular wavenumber of each shifted DFT bin [rad/m]
+            return 2 * np.pi * np.fft.fftshift(np.fft.fftfreq(self.Nx(), d=self.dx))
         else:
             raise AttributeError('Wrong domain_xy attribute')
 
     def scale_ky(self):  # scale in meters or meters**-1
         if self.domain_xy == 's':  # space domain
             return np.linspace(-self.Ly() / 2, self.Ly() / 2, self.Ny())
-        elif self.domain_xy == 'k':  # inverse space domain
-            k = 2 * np.pi / self.dy
-            return np.linspace(-k / 2, k / 2, self.Ny())
+        elif self.domain_xy == 'k':  # angular wavenumber of each shifted DFT bin [rad/m]
+            return 2 * np.pi * np.fft.fftshift(np.fft.fftfreq(self.Ny(), d=self.dy))
         else:
             raise AttributeError('Wrong domain_xy attribute')
 
@@ -2163,14 +2161,25 @@ def dfl_gen_undulator_mp(dfl, z, L_w, E_ph, N_b=1, N_e=1, sig_x=0, sig_y=0, sig_
 
     return dfl
 
-def dfl_gen_undulator_serval(E_ph=1042, L_w=1, shape=(51, 51, 100), dgrid=(1e-3, 1e-3, 50e-6), 
-                             sig_x=0, sig_y=0, sig_xp=0, sig_yp=0, jitter_kx=0, jitter_ky=0,
-                             k_support ='intensity', s_support='intensity', seed=None, showfig=False):
-    '''
-    Creates SR radiation using SERVAL (C) algorithmn
+def dfl_gen_undulator_serval(E_ph: float = 1042, L_w: float = 1, shape=(51, 51, 100),
+                             dgrid=(1e-3, 1e-3, 50e-6), sig_x: float = 0, sig_y: float = 0,
+                             sig_xp: float = 0, sig_yp: float = 0, jitter_kx=0, jitter_ky=0,
+                             k_support: str = 'intensity', s_support: str = 'intensity',
+                             seed: int | None = None, showfig: bool = False) -> RadiationField:
+    """Generate a partially coherent undulator field at resonance with SERVAL.
 
-    :param showfig: display the initial noise field for diagnostics (default: False).
-    '''
+    Filter complex Gaussian noise on the source plane and in angle. E_ph is
+    the photon energy [eV], L_w is the undulator length [m], and shape and
+    dgrid give the sample counts and window lengths [m] in (x, y, z) order.
+    sig_x/y are rms beam sizes [m] and sig_xp/yp are rms divergences [rad].
+    jitter_kx/ky are pointing angles [rad], scalar or one per slice.
+
+    Choose 'intensity' to convolve powers, 'amplitude' to convolve fields,
+    or 'beam' to apply the electron distribution alone. A point 'beam' in
+    angular space occupies the nearest resolved Fourier bin(s). The result
+    is in frequency and transverse Fourier space, in arbitrary amplitude
+    units. showfig plots the initial noise.
+    """
     _logger.info('Generating undulator field with SERVAL algorithm')
     
     w_0 = E_ph / hr_eV_s 
@@ -2183,95 +2192,84 @@ def dfl_gen_undulator_serval(E_ph=1042, L_w=1, shape=(51, 51, 100), dgrid=(1e-3,
     dfl.xlamds = xlamds
     dfl.filePath = 'filePath'
     dfl.to_domain('sf')
-    
-    
-    if seed is not None: 
-        np.random.seed(seed)
 
-    dfl.fld = np.random.randn(dfl.Nz(), dfl.Ny(), dfl.Nx()) + 1j * np.random.randn(dfl.Nz(), dfl.Ny(), dfl.Nx()) # Gaussian noise
-    
-    np.random.seed(None)
+    rng = np.random if seed is None else np.random.RandomState(seed)
+    dfl.fld = rng.normal(size=dfl.fld.shape) + 1j * rng.normal(size=dfl.fld.shape)
 
     if showfig:
         from ocelot.gui.dfl_plot import plot_dfl
         plot_dfl(dfl, line_off_xy = False, fig_name = '1-X_noise')
     
-    dfl.to_domain('sf')    
+    def beam_amplitude(distance: np.ndarray, sigma: float, axis: int) -> np.ndarray:
+        if not np.isfinite(sigma) or sigma < 0:
+            raise ValueError("Electron beam rms widths must be finite and nonnegative")
+        radius2 = distance**2
+        radius2 -= np.min(radius2, axis=axis, keepdims=True)
+        if sigma == 0:
+            return (radius2 == 0).astype(float)
+        return np.exp(-radius2 / (4 * sigma**2))
 
-    x, y = np.meshgrid(dfl.scale_x(), dfl.scale_y())#, indexing='ij')
-    
-    mask_xy_ebeam = np.exp(- x**2 / 4 / sig_x**2 - y**2 / 4 / sig_y**2) # 4 because amplitude, not intensity
-    mask_xy_ebeam /= np.sum(mask_xy_ebeam)
-    mask_xy_radiation = 1j*(np.pi - 2*scipy.special.sici(w_0*(x**2 + y**2)/speed_of_light/L_w)[0])
+    def convolve_support(beam: np.ndarray, radiation: np.ndarray, support: str) -> np.ndarray:
+        # The response is sampled at every possible output-minus-source
+        # separation. The valid convolution then gives exactly the output grid.
+        if support == "intensity":
+            power = scipy.signal.fftconvolve(beam**2, abs(radiation)**2, mode="valid", axes=(-2, -1))
+            return np.sqrt(np.maximum(power, 0.))
+        if support == "amplitude":
+            return scipy.signal.fftconvolve(beam, radiation, mode="valid", axes=(-2, -1))
+        raise ValueError("Support must be intensity, amplitude or beam")
 
-    if s_support == 'intensity':
-        _logger.info(ind_str +'s_support == "intensity"')
-        mask_xy = scipy.signal.fftconvolve(mask_xy_radiation**2, mask_xy_ebeam**2, mode='same')
-        mask_xy = np.sqrt(mask_xy)
-    elif s_support == 'amplitude':
-        _logger.info(ind_str +'s_support == "amplitude"')
-        mask_xy = scipy.signal.fftconvolve(mask_xy_radiation, mask_xy_ebeam, mode='same')
-    elif s_support == '"beam':
-        _logger.info(ind_str +'s_support == "beam"')
-        mask_xy = mask_xy_ebeam
+    def source_and_separations(grid: np.ndarray, sigma: float) -> tuple[np.ndarray, np.ndarray]:
+        # A point electron at the origin is well defined even on a real-space
+        # mesh with an even number of observation pixels and no central pixel.
+        if sigma == 0:
+            return np.zeros(1), grid
+        return grid, np.linspace(grid[0] - grid[-1], grid[-1] - grid[0], 2 * len(grid) - 1)
+
+    x, y = dfl.scale_x(), dfl.scale_y()
+    # Preserve exact mirror symmetry for a point source between two pixels.
+    x, y = (x - x[::-1]) / 2, (y - y[::-1]) / 2
+    if s_support == "beam":
+        mask_xy = beam_amplitude(x[None, :], sig_x, -1) * beam_amplitude(y[:, None], sig_y, -2)
+        mask_xy /= np.sum(mask_xy)
     else:
-        raise ValueError('k_support should be either "intensity", "amplitude" or "beam"')
-
-    _logger.info(ind_str +'Multiplying by real space mask')
+        source_x, offset_x = source_and_separations(x, sig_x)
+        source_y, offset_y = source_and_separations(y, sig_y)
+        beam = beam_amplitude(source_x[None, :], sig_x, -1) * beam_amplitude(source_y[:, None], sig_y, -2)
+        beam /= np.sum(beam)
+        r2 = offset_x[None, :]**2 + offset_y[:, None]**2
+        radiation = 1j * (np.pi - 2 * scipy.special.sici(w_0 * r2 / (speed_of_light * L_w))[0])
+        mask_xy = convolve_support(beam, radiation, s_support)
     dfl.fld *= mask_xy
-    # dfl.fld *= np.sqrt(mask_xy)
-    _logger.info(2*ind_str +'done')
-
-                
     dfl.to_domain('kf')
 
-    k_x, k_y = np.meshgrid(dfl.scale_x(), dfl.scale_y())
-    
-    jitter_kx_isarray = isinstance(jitter_kx, (np.ndarray, list, tuple))
-    jitter_ky_isarray = isinstance(jitter_ky, (np.ndarray, list, tuple))
-    
-    if jitter_kx_isarray or jitter_ky_isarray: #TODO: check if reasonable
-        if jitter_kx_isarray and not jitter_ky_isarray:
-            jitter_ky = np.full_like(jitter_kx, jitter_ky)
-        elif not jitter_kx_isarray and jitter_ky_isarray:
-            jitter_kx = np.full_like(jitter_ky, jitter_kx)
-            
-        mask_kxky_ebeam = np.exp(-(k_y[np.newaxis, :, :] - jitter_ky[:, np.newaxis])**2 / 4 / sig_yp**2 - (k_x[np.newaxis, :, :] - jitter_kx[:, np.newaxis])**2 / 4 / sig_xp**2 ) # 4 because amplitude, not intensity
-        mask_kxky_radiation = np.sinc(w_0 * L_w * ((k_x[np.newaxis, :, :] - jitter_kx[:, np.newaxis])**2 + (k_y[np.newaxis, :, :] - jitter_ky[:, np.newaxis])**2) / 4 / speed_of_light / np.pi)# Geloni2018 Eq.3, domega/omega = 2dgamma/gamma, divided by pi due to np.sinc definition
-        axes=(1,2)
+    angle_x, angle_y = dfl.scale_x(), dfl.scale_y()
+    jitter_x, jitter_y = np.broadcast_arrays(jitter_kx, jitter_ky)
+    if (jitter_x.shape not in ((), (1,), (dfl.Nz(),)) or
+            not np.all(np.isfinite(jitter_x)) or not np.all(np.isfinite(jitter_y))):
+        raise ValueError("Pointing offsets must be finite, scalar or one value per slice")
+    def angular_axis(grid: np.ndarray, jitter: np.ndarray, sigma: float, step: float, axis: int):
+        shape = (1, -1, 1) if axis == -2 else (1, 1, -1)
+        relative_angle = grid.reshape(shape) - jitter.reshape(-1, 1, 1)
+        if sigma == 0 and k_support != 'beam':
+            # A point electron's diffraction pattern shifts continuously,
+            # including when its direction lies between two observation bins.
+            return np.ones((1, 1, 1)), relative_angle
+        beam = beam_amplitude(relative_angle, sigma, axis)
+        offsets = step * np.arange(1 - len(grid), len(grid))
+        return beam, offsets.reshape(shape)
+
+    beam_x, delta_x = angular_axis(angle_x, jitter_x, sig_xp, xlamds / dfl.Lx(), -1)
+    beam_y, delta_y = angular_axis(angle_y, jitter_y, sig_yp, xlamds / dfl.Ly(), -2)
+    beam = beam_x * beam_y
+    beam /= np.sum(beam, axis=(-2, -1), keepdims=True)
+    if k_support == 'beam':
+        mask_angle = beam
     else:
-        mask_kxky_ebeam = np.exp(-(k_y - jitter_ky)**2 / 4 / sig_yp**2 - (k_x - jitter_kx)**2 / 4 / sig_xp**2 ) # 4 because amplitude, not intensity
-        mask_kxky_radiation = np.sinc(w_0 * L_w * ((k_x - jitter_kx)**2 + (k_y - jitter_ky)**2) / 4 / speed_of_light / np.pi)# Geloni2018 Eq.3, domega/omega = 2dgamma/gamma, divided by pi due to np.sinc definition
-        axes=None
-
-    mask_kxky_ebeam /= np.sum(mask_kxky_ebeam)
-
-    if k_support == 'intensity':
-        _logger.info(ind_str +'k_support == "intensity"')
-        mask_kxky = scipy.signal.fftconvolve(mask_kxky_ebeam**2, mask_kxky_radiation**2, mode='same', axes=axes)
-
-        if jitter_kx is None:
-            mask_kxky = np.sqrt(mask_kxky[np.newaxis, :, :])
-        else:
-            mask_kxky = np.sqrt(mask_kxky)
-
-        mask_kxky /= np.sum(mask_kxky)
-    elif k_support == 'amplitude':
-        _logger.info(ind_str +'k_support == "amplitude"')
-        mask_kxky = scipy.signal.fftconvolve(mask_kxky_ebeam, mask_kxky_radiation, mode='same', axes=axes)
-        mask_kxky /= np.sum(mask_kxky)
-    elif k_support == 'amplitude':
-        _logger.info(ind_str +'k_support == "beam"')
-        mask_kxky = mask_kxky_ebeam
-    else:
-        raise ValueError('k_support should be either "intensity" or "amplitude"')
-    
-    # dfl.fld *= mask_kxky[np.newaxis, :, :]
-    _logger.info(ind_str +'Multiplying by inverse space mask')
-
-    dfl.fld *= mask_kxky
-    _logger.info(2*ind_str +'done')
-    
+        radiation = np.sinc(w_0 * L_w * (delta_x**2 + delta_y**2) / (4 * speed_of_light * np.pi))
+        mask_angle = convolve_support(beam, radiation, k_support)
+        mask_angle /= np.sum(mask_angle, axis=(-2, -1), keepdims=True)
+    dfl.fld *= mask_angle
     return dfl
 
 def calc_phase_delay_poly(coeff, w, w0):
@@ -2902,7 +2900,7 @@ def dfl_waistscan(dfl, z_pos, projection=0, **kwargs):
     return sc_res
 
 
-def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(None, None), method='cubic', return_result=1, **kwargs):
+def dfl_interp(dfl: RadiationField, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(None, None), method='cubic', return_result=1, **kwargs) -> RadiationField | None:
     """
     2d interpolation of the coherent radiation distribution
     interpN and interpL define the desired interpolation coefficients for
@@ -2912,6 +2910,10 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     coordinate convention is (x,y)
     method selects 'linear', 'cubic', or 'quintic' spline interpolation;
     points outside the original transverse grid are filled with zeros.
+    Resampling preserves the power in each slice. For a smaller aperture,
+    each input pixel contributes in proportion to its area inside the aperture.
+    Raises ValueError if the coarser output grid misses all retained field
+    within floating-point precision, since its phase then cannot be recovered.
     """
 
     _logger.info('interpolating radiation file')
@@ -3022,12 +3024,14 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     xscale2 = np.linspace(-Lx2 / 2, Lx2 / 2, Nx2)
     yscale2 = np.linspace(-Ly2 / 2, Ly2 / 2, Ny2)
 
-    ix_min = np.where(xscale1 >= xscale2[0])[0][0]
-    ix_max = np.where(xscale1 <= xscale2[-1])[-1][-1]
-    iy_min = np.where(yscale1 >= yscale2[0])[0][0]
-    iy_max = np.where(yscale1 <= yscale2[-1])[-1][-1]
-    _logger.debug(ind_str + 'energy before interpolation ' + str(dfl.E()))
-    # interp_func = rgi((zscale1,yscale1,xscale1), dfl.fld, fill_value=0, bounds_error=False, method='nearest')
+    # RadiationField stores power per pixel. A fractional boundary pixel
+    # contributes its illuminated area when the new window crops the beam.
+    def pixel_fractions(length: float, count: int, aperture: float) -> np.ndarray:
+        edges = np.linspace(-length / 2, length / 2, count + 1)
+        return np.diff(np.clip(edges, -aperture / 2, aperture / 2)) / (length / count)
+
+    fraction_x = pixel_fractions(Lx1, Nx1, Lx2)
+    fraction_y = pixel_fractions(Ly1, Ny1, Ly2)
     from scipy.interpolate import RectBivariateSpline
 
     spline_orders = {'linear': 1, 'cubic': 3, 'quintic': 5}
@@ -3045,15 +3049,13 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
         fslice2 = (re_func(xscale2, yscale2) + 1j * im_func(xscale2, yscale2)).T
         fslice2[:, outside_x] = 0
         fslice2[outside_y, :] = 0
-        P1 = sum(sum(abs(fslice[iy_min:iy_max, ix_min:ix_max]) ** 2))
-        P2 = sum(sum(abs(fslice2) ** 2))
-        # print(P1, P2)
-        _logger.log(5, ind_str + 'P1,P2 = %e %e' % (P1, P2))
-
-        if P2 != 0:
-            fslice2 = fslice2 * np.sqrt(P1 / P2)
-        else:
-            fslice2 = fslice2 * 0
+        retained_power = fraction_y @ (abs(fslice) ** 2) @ fraction_x
+        interpolated_power = np.sum(abs(fslice2) ** 2)
+        if retained_power > 0 and interpolated_power <= np.finfo(float).eps**2 * retained_power:
+            raise ValueError(f"Output grid does not resolve the retained field in slice {nslice}. "
+                             "Increase the transverse sample count or reduce the output window.")
+        if interpolated_power:
+            fslice2 *= np.sqrt(retained_power / interpolated_power)
 
         fld2.append(fslice2)
 
@@ -3069,7 +3071,8 @@ def dfl_interp(dfl, interpN=(1, 1), interpL=(1, 1), newN=(None, None), newL=(Non
     # dfl2.fileName=dfl.fileName+'i'
     # dfl2.filePath=dfl.filePath+'i'
     E2 = dfl2.E()
-    _logger.info(ind_str + '%.2f%% energy cut' % ((E1 - E2) / E1 * 100))
+    if E1:
+        _logger.info(ind_str + '%.2f%% energy cut' % ((E1 - E2) / E1 * 100))
     _logger.debug(ind_str + 'energy after interpolation ' + str(E2))
     _logger.debug(ind_str + 'done in %.2f sec' % (time.time() - start_time))
 

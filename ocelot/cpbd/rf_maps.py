@@ -18,7 +18,7 @@ import numpy as np
 from ocelot.common.globals import m_e_GeV, speed_of_light
 
 
-def _tof_derivatives(g0, g1):
+def _tof_derivatives(g0: float, g1: float) -> tuple[float, ...]:
     """Momenta and derivatives of F = integral_0^1 du / beta(g0+(g1-g0)*u).
 
     F = (g0+g1)/(p0+p1), where p_i = sqrt(g_i**2-1). Write
@@ -27,6 +27,8 @@ def _tof_derivatives(g0, g1):
     F_ij = C*F/(p_i*p_j) + Kronecker_ij*C*g_i/p_i**3.
     Both reference energies must be above the rest energy.
     """
+    if not (g0 > 1. and g1 > 1.):
+        raise ValueError("Cavity entrance and exit total energies must exceed the rest energy")
     p0 = np.sqrt((g0 - 1.) * (g0 + 1.))
     p1 = np.sqrt((g1 - 1.) * (g1 + 1.))
     ps = p0 + p1
@@ -39,7 +41,7 @@ def _tof_derivatives(g0, g1):
     return p0, p1, f0, f1, f00, f01, f11
 
 
-def rf_long_r_terms(z, V, E, freq, phi):
+def rf_long_r_terms(z: float, V: float, E: float, freq: float, phi: float) -> tuple[float, float, float, float]:
     """Return (R55 - 1, R56, R65, R66) for a cavity body or slice.
 
     V and z are the slice voltage and length; E is its entrance total energy.
@@ -55,7 +57,7 @@ def rf_long_r_terms(z, V, E, freq, phi):
     return z * a * f1, z * p0 * (f0 + f1), a / p1, p0 / p1
 
 
-def rf_long_t_terms(z, V, E, freq, phi):
+def rf_long_t_terms(z: float, V: float, E: float, freq: float, phi: float) -> tuple[float, float, float]:
     """Return (T566, T556, T555) in tau1 += T566*delta0**2
     + T556*tau0*delta0 + T555*tau0**2.
 
@@ -77,7 +79,8 @@ def rf_long_t_terms(z, V, E, freq, phi):
     return T566, T556, T555
 
 
-def rf_longitudinal_kick(X, X4, X5, E, V, z, freq, phi):
+def rf_longitudinal_kick(X: np.ndarray, X4: np.ndarray, X5: np.ndarray, E: float, V: float,
+                         z: float, freq: float, phi: float) -> np.ndarray:
     """Apply the nonlinear longitudinal map after the linear (R, B) map.
 
     X is modified in place. X4 and X5 are copies of entrance tau and delta,

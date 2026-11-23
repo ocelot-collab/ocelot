@@ -11,9 +11,11 @@ from copy import deepcopy
 import pytest
 import numpy as np
 try:
-    from wake_t.driver_witness import LaserPulse
-    from wake_t.beamline_elements import (Beamline, PlasmaStage, PlasmaLens,
-                                          Drift as WtDrift)
+    try:
+        from wake_t import GaussianPulse, ActivePlasmaLens, Beamline, PlasmaStage, Drift as WtDrift
+    except ImportError:  # older Wake-T releases
+        from wake_t.driver_witness import LaserPulse as GaussianPulse
+        from wake_t.beamline_elements import Beamline, PlasmaStage, PlasmaLens as ActivePlasmaLens, Drift as WtDrift
     from wake_t.utilities.bunch_generation import get_gaussian_bunch_from_twiss
     wake_t_installed = True
 except ImportError:
@@ -37,7 +39,7 @@ def test_conversion():
     # Generate Wake-T bunch.
     bunch = get_gaussian_bunch_from_twiss(
         en_x=1e-6, en_y=1e-6, a_x=0, a_y=0, b_x=0.3e-3, b_y=0.3e-3, ene=600,
-        ene_sp=0.1, s_t=3, xi_c=20e-6, q_tot=20, n_part=1e4)
+        ene_sp=0.1, s_t=3, xi_c=20e-6, q_tot=20, n_part=10000)
 
     # Convert to Ocelot ParticleArray.
     p_array = wake_t_beam_to_parray(bunch)
@@ -65,7 +67,7 @@ def test_conversion_with_beamline():
     # Generate Wake-T bunch.
     orig_bunch = get_gaussian_bunch_from_twiss(
         en_x=1e-6, en_y=1e-6, a_x=0, a_y=0, b_x=0.3e-3, b_y=0.3e-3, ene=600,
-        ene_sp=0.1, s_t=3, xi_c=20e-6, q_tot=20, n_part=1e4)
+        ene_sp=0.1, s_t=3, xi_c=20e-6, q_tot=20, n_part=10000)
 
     # Track beamline only with Wake-T.
     bunch_1 = deepcopy(orig_bunch)
@@ -82,13 +84,13 @@ def test_conversion_with_beamline():
 def track_beamline_only_wake_t(bunch):
     """ Track test beamline only with Wake-T. """
     # Create laser driver.
-    laser = LaserPulse(100e-6, l_0=800e-9, w_0=30e-6, a_0=3, tau=30e-15)
+    laser = GaussianPulse(100e-6, l_0=800e-9, w_0=30e-6, a_0=3, tau=30e-15)
 
     # Create beamline elements.
     plasma = PlasmaStage(
         1e-2, 1e23, laser=laser, wakefield_model='simple_blowout', n_out=10)
     dr = WtDrift(0.1, n_out=10)
-    p_lens = PlasmaLens(1e-2, 1000, n_out=5)
+    p_lens = ActivePlasmaLens(1e-2, 1000, n_out=5)
     bl = Beamline([plasma, dr, p_lens])
 
     # Do tracking.
@@ -102,7 +104,7 @@ def track_beamline_wake_t_and_ocelot(bunch):
     # ---------------------------------
 
     # Create laser driver.
-    laser = LaserPulse(100e-6, l_0=800e-9, w_0=30e-6, a_0=3, tau=30e-15)
+    laser = GaussianPulse(100e-6, l_0=800e-9, w_0=30e-6, a_0=3, tau=30e-15)
 
     # Define plasma stage.
     plasma = PlasmaStage(
@@ -142,7 +144,7 @@ def track_beamline_wake_t_and_ocelot(bunch):
     bunch = parray_to_wake_t_beam(p_array_f)
 
     # Define plasma lens.
-    p_lens = PlasmaLens(1e-2, 1000, n_out=5)
+    p_lens = ActivePlasmaLens(1e-2, 1000, n_out=5)
 
     # Track through plasma lens.
     p_lens.track(bunch)

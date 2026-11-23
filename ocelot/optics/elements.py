@@ -203,18 +203,17 @@ class Detector:
         self.matrix = np.zeros([self.nx,self.ny], dtype=np.double)
         self.id = id
 
-    def hit(self, r):
-        i1 = (self.size[0] + r[0])*self.nx / (2*self.size[0])
-        i2 = (self.size[1] + r[1])*self.nx / (2*self.size[1])
-        if (0 <= i1) and (i1 < self.nx) and (0 <= i2) and (i2 < self.ny):
-            self.matrix[i1, i2] += 1
-    
-    def clear(self):
-        for i1 in xrange(self.nx):
-            for i2 in xrange(self.ny):
-                self.matrix[i1, i2] = 0
-                
-                
+    def hit(self, r: np.ndarray) -> None:
+        """Count a ray in the pixel containing its local impact position [m]."""
+        x = (1 + r[0] / self.size[0]) * self.nx / 2
+        y = (1 + r[1] / self.size[1]) * self.ny / 2
+        if 0 <= x < self.nx and 0 <= y < self.ny:
+            self.matrix[int(x), int(y)] += 1
+
+    def clear(self) -> None:
+        self.matrix.fill(0)
+
+
 class Geometry():
     def __init__(self, geo=[]):
         self.geo = []

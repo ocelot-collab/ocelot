@@ -336,7 +336,7 @@ class FunctionObjective(Objective):
         val = self.func(state)
         arr = np.atleast_1d(np.asarray(val, dtype=float))
         if not np.all(np.isfinite(arr)):
-            return np.array([1.0e6], dtype=float)
+            return np.where(np.isfinite(arr), arr, 1.0e6)
         return arr
 
     def residuals(self, state: MatchState) -> np.ndarray:
@@ -1574,7 +1574,7 @@ class MatchProblem:
 
         arr = np.asarray(residuals, dtype=float)
         if not np.all(np.isfinite(arr)):
-            return np.array([1.0e9], dtype=float)
+            return np.where(np.isfinite(arr), arr, 1.0e9)
         return arr
 
     def _build_target_reports(self, state: MatchState) -> List[TargetReport]:
@@ -1652,7 +1652,10 @@ class MatchProblem:
             ``lbfgsb``, ``l-bfgs-b``, ``slsqp``.
             Bound constraints are not supported by ``ls_lm``, ``bfgs``, ``cg``.
             If any active variable has finite bounds and solver has no bound
-            support, :class:`ValueError` is raised.
+            support, :class:`ValueError` is raised. If the initial optics fails,
+            least squares uses the norm of the residuals for the entire solve.
+            This keeps the sum-of-squares merit defined when vector objectives
+            can only be evaluated after a later trial reaches stable optics.
         max_iter:
             Maximum iterations/function evaluations depending on solver.
         tol:
@@ -1718,19 +1721,32 @@ class MatchProblem:
             for i, var in enumerate(active_vars):
                 var.set(float(x[i]))
 
+        solver_key = solver.strip().lower()
+        ls_methods = {"ls_trf": "trf", "ls_dogbox": "dogbox", "ls_lm": "lm", "least_squares": "trf"}
+        initial_failed = None
+        residual_count = 1
+
         def _residual_fun(x: np.ndarray) -> np.ndarray:
+            nonlocal initial_failed, residual_count
             _apply_x(x)
             state = self._compute_state()
-            return self._build_residual_vector(state)
+            if initial_failed is None:
+                initial_failed = state.failed
+            if initial_failed and solver_key in ls_methods:
+                # At an unstable seed we cannot know a user objective's output
+                # dimension. Its norm retains the merit and has a fixed size.
+                # LM requires at least as many rows as varying parameters.
+                combined = np.zeros(x.size if solver_key == "ls_lm" else 1)
+                combined[0] = np.linalg.norm(self._build_residual_vector(state))
+                return combined
+            if state.failed:
+                return np.full(residual_count, 1.0e9)
+            residuals = self._build_residual_vector(state)
+            residual_count = residuals.size
+            return residuals
 
-        solver_key = solver.strip().lower()
-        if solver_key in {"ls_trf", "ls_dogbox", "ls_lm", "least_squares"}:
-            ls_method = {
-                "ls_trf": "trf",
-                "ls_dogbox": "dogbox",
-                "ls_lm": "lm",
-                "least_squares": "trf",
-            }[solver_key]
+        if solver_key in ls_methods:
+            ls_method = ls_methods[solver_key]
 
             if ls_method == "lm" and has_bounds:
                 raise ValueError(
@@ -1808,7 +1824,10 @@ class MatchProblem:
 
         if strict_success:
             unmet = [report for report in target_reports if not report.met]
-            if success and unmet:
+            if success and _state.failed:
+                success = False
+                message = f"Matching failed: {_state.failure_reason}. Solver reported: {message}"
+            elif success and unmet:
                 success = False
                 unmet_str = "\n - ".join(f"{t.name}: {t!r}" for t in unmet)
                 message = (

@@ -3153,12 +3153,14 @@ def get_beam_peak(beam):
     return beam[idx]
     
 
-def find_transform(g1, g2):
+def find_transform(g1: np.ndarray, g2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     '''
     Find transforms between Twiss matrices g1 and g2.
 
-    Return (Mi, M) as ndarrays; use matrix multiplication with @:
-    x -> M @ x, g -> Mi.T @ g @ Mi.
+    Inputs use the Genesis layout [[beta, alpha], [alpha, gamma]].
+    The first result transforms these matrices as Mi.T @ g1 @ Mi = g2.
+    The second transports particle coordinates (x, x') to the new beam
+    ellipse, whose covariance has -alpha in the off-diagonal entries.
     '''
     g1, g2 = np.asarray(g1), np.asarray(g2)
     l1, u1 = np.linalg.eig(g1)
@@ -3179,13 +3181,14 @@ def find_transform(g1, g2):
     M2 = np.array([[d, 0],
                     [0, 1.0 / d]])
 
-    M2d = np.array([[1. / d, 0],
-                     [0, d]])
 
     M3 = np.array([[u2[0, 0], -u2[1, 0]],
                     [u2[1, 0], u2[0, 0]]])
 
-    return np.linalg.inv(M3 @ M2 @ M1), M3 @ M2d @ M1
+    twiss_map = np.linalg.inv(M3 @ M2 @ M1)
+    momentum_sign = np.diag([1., -1.])
+    particle_map = momentum_sign @ twiss_map.T @ momentum_sign
+    return twiss_map, particle_map
 
 
 def write_beam_file(filePath, beam, debug=0):

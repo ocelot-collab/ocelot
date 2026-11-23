@@ -5,7 +5,7 @@ from ocelot.cpbd.elements.magnet import Magnet
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
 
 
-def _quadrupole_functions(k, length):
+def _quadrupole_functions(k: float, length: float) -> tuple[float, float]:
     """Cosine- and sine-like solutions of u'' + k*u = 0, including k=0."""
     phase = np.sqrt(abs(k)) * length
     if k > 0:
@@ -15,7 +15,7 @@ def _quadrupole_functions(k, length):
     return 1.0, length
 
 
-def _arrival_integral(k, length, c, s):
+def _arrival_integral(k: float, length: float, c: float, s: float) -> float:
     """Integral of z*C(z)*S(z), evaluated regularly near k=0."""
     v = k * length**2
     if abs(v) < 0.1:
@@ -28,7 +28,7 @@ def _arrival_integral(k, length, c, s):
     return length * s**2 / 2.0 - (length - c * s) / (4.0 * k)
 
 
-def _s_minus_lc(k, length, c, s):
+def _s_minus_lc(k: float, length: float, c: float, s: float) -> float:
     """S(L)-L*C(L), avoiding cancellation for small k*L**2."""
     v = k * length**2
     if abs(v) < 0.1:
@@ -40,7 +40,7 @@ def _s_minus_lc(k, length, c, s):
     return s - length * c
 
 
-def _angle_arrival_integral(k, length, c, s):
+def _angle_arrival_integral(k: float, length: float, c: float, s: float) -> float:
     """Integral of S(z)*(S(z)-z*C(z))/k for the angle-squared timing term.
 
     Its regular limit is L**5/15 - 4*k*L**7/315 + ... . The closed
@@ -101,7 +101,7 @@ class XYQuadrupoleAtom(Magnet):
         s += 'eid="' + str(self.id) + '")' if self.id is not None else ")"
         return s
 
-    def _linear_map(self, length, energy):
+    def _linear_map(self, length: float, energy: float) -> np.ndarray:
         """Entrance-to-length map, revised v4 Eqs. (37)-(42), in tau coordinates."""
         self._validate_angles()
         # As for other Ocelot magnetic maps, energy=0 denotes beta=1.
@@ -139,7 +139,8 @@ class XYQuadrupoleAtom(Magnet):
     def get_T_z_e_func(self):
         return lambda z, energy: np.zeros((6, 6, 6))
 
-    def create_first_order_main_params(self, energy: float, delta_length=None, *, start_length=0.0):
+    def create_first_order_main_params(self, energy: float, delta_length: float | None = None,
+                                       *, start_length: float = 0.0) -> FirstOrderParams:
         length = self.l if delta_length is None else delta_length
         if length == 0:
             r = np.eye(6)

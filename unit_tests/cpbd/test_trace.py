@@ -93,3 +93,27 @@ def test_trace_z_twiss_matches_drift_optics_without_modifying_input():
         np.testing.assert_allclose([getattr(t, "alpha_" + plane) for t in samples],
                                    alpha - gamma * z)
     assert vars(seed) == vars(initial)
+
+
+def test_cavity_entrance_and_thin_exit_samples_in_requested_order():
+    from ocelot.cpbd.elements import Multipole
+
+    cavity = Cavity(l=.3, v=.002, phi=0., freq=1.3e9)
+    lens = Multipole(kn=[0., 2.])
+    line = MagneticLattice([cavity, lens])
+    seed = Twiss(E=.002, beta_x=2., beta_y=3.)
+    after_cavity = trace_obj(MagneticLattice([cavity]), seed)[-1]
+    end, start = trace_z(line, seed, [line.totalLen, 0.])
+    assert start.beta_x == seed.beta_x and start.E == seed.E
+    assert end.alpha_x == pytest.approx(after_cavity.alpha_x + 2. * after_cavity.beta_x)
+    assert end.alpha_y == pytest.approx(after_cavity.alpha_y - 2. * after_cavity.beta_y)
+
+
+def test_unsampled_particle_trace_preserves_entrance_and_previous_observations():
+    drift = Drift(l=.5)
+    line = MagneticLattice([drift, drift])
+    p = Particle(x=.001, px=.002, E=1.)
+    points = trace_obj(line, p)
+    np.testing.assert_allclose([point.x for point in points], [.001, .002, .003])
+    np.testing.assert_allclose([point.s for point in points], [0., .5, 1.])
+    assert p.s == 0. and p.x == .001

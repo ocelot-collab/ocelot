@@ -39,10 +39,10 @@ def test_dfl_interp_complex_polynomial_and_zero_fill(method, degree, new_length,
             rtol=1e-12, atol=1e-14,
         )
     np.testing.assert_array_equal(result.fld[:, outside], 0)
-    # Preserve the legacy normalization, which excludes the final grid row/column.
+    # The new aperture contains every input pixel, so every slice keeps its power.
     np.testing.assert_allclose(
         np.sum(abs(result.fld) ** 2, axis=(1, 2)),
-        np.sum(abs(original[:, :-1, :-1]) ** 2, axis=(1, 2)),
+        np.sum(abs(original) ** 2, axis=(1, 2)),
         rtol=1e-12,
     )
     assert result.fld.shape == (2, 11, 13)
@@ -53,15 +53,15 @@ def test_dfl_interp_complex_polynomial_and_zero_fill(method, degree, new_length,
     np.testing.assert_array_equal(dfl.fld, original)
 
 
-def test_dfl_interp_cropped_grid_uses_existing_power_normalization():
+def test_uniform_field_transmits_the_geometric_aperture_fraction():
     dfl = RadiationField((1, 7, 9))
     dfl.dx, dfl.dy, dfl.dz = 4.0 / 9, 2.0 / 7, 1e-6
     dfl.fld[:] = 1 + 2j
 
     result = dfl_interp(dfl, newN=(5, 3), newL=(2.0, 1.0))
 
-    # The old crop selects four x samples and two y samples for normalization.
-    np.testing.assert_allclose(result.fld, (1 + 2j) * np.sqrt(8 / 15))
+    # Halving both dimensions transmits one quarter of the incident power.
+    np.testing.assert_allclose(result.E(), dfl.E() / 4)
 
 
 def test_dfl_interp_zero_slice_stays_zero():
@@ -82,3 +82,14 @@ def test_dfl_interp_rejects_unsupported_method():
 
     with pytest.raises(ValueError, match="linear.*cubic.*quintic"):
         dfl_interp(dfl, newN=(13, 11), method="nearest")
+
+
+def test_undersampled_bright_spot_reports_the_unresolved_slice():
+    field = RadiationField((2, 9, 9))
+    field.dx = field.dy = field.dz = 1.
+    field.fld[1, 2, 2] = 1j
+    # The output aperture contains the whole input, but none of the three
+    # output samples per axis intersects the compact linear interpolant.
+    with pytest.raises(ValueError, match="grid does not resolve.*slice 1"):
+        dfl_interp(field, newN=(3, 3), method="linear")
+    assert field.fld[1, 2, 2] == 1j

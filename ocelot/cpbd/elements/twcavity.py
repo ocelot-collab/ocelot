@@ -28,7 +28,8 @@ class TWCavity(OpticElement):
     (Rosenzweig & Serafini, PRE 49, 1599 (1994)). The body is written in
     momentum, R12 = p0 l [asinh(p1) - asinh(p0)] / dgamma and R22 = p0/p1,
     which matters below ~10 MeV where the beta -> 1 form is several percent
-    off. This reproduces elegant's default RFCA matrix to 1e-12.
+    off. The transverse body coefficients correspond to the RFCA momentum-ramp
+    model. The end lenses still use the relativistic thin-edge approximation.
 
     The longitudinal map is identical to the standing-wave Cavity and is
     shared through ocelot.cpbd.rf_maps.

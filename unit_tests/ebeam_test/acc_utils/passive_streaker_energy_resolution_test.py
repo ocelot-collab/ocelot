@@ -145,3 +145,15 @@ def test_legacy_energy_resolution_is_nonnegative_for_negative_dispersion():
         energy=1.0,
     )
     assert np.all(energy_resolution[:, 1] >= 0.0)
+
+
+def test_slice_energy_spread_from_particle_kicks():
+    # Four-point Gauss-Hermite quadrature integrates these Gaussian moments exactly.
+    nodes, weights = np.polynomial.hermite.hermgauss(4)
+    x, y = np.meshgrid(np.sqrt(2) * 0.20 * nodes, np.sqrt(2) * 0.10 * nodes)
+    charge = np.outer(weights, weights) / np.pi
+    kick = 2. * (-1. + 3. * y + 2.5 * (x**2 - y**2))
+    mean = np.sum(charge * kick)
+    rms = np.sqrt(np.sum(charge * (kick - mean)**2))
+    np.testing.assert_allclose(passive_streaker_energy_effects(-1., 3., 5., .2, .1, 2.),
+                               [mean, rms], rtol=2e-15)

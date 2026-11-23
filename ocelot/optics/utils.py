@@ -35,30 +35,31 @@ class Signal3D(object):
 
 
 
-def read_signal(file_name, E_ref, npad = 10):
-    s = Signal()
-    data = np.loadtxt(file_name, dtype = complex)
-    s.f = data[:,2]
-    s.t = np.real(data[:,0])
-    
-    ''' spectrum with finer resolution '''
-    s.nslice = n = len(s.f)
-    s.npad = npad
+def read_signal(file_name, E_ref: float, npad: int = 10) -> Signal:
+    """Read time [fs] and complex field from columns 1 and 3 of a text file.
 
-    s.f_ = np.zeros((2*npad+1)*n, dtype=complex)
-    s.f_[npad*n:(npad+1)*n] = s.f  
-    s.f = s.f_      
-    s.t = (npad+1)*np.linspace(s.t[0], s.t[-1], len(s.f)) 
-    
-    spec = fft.fft(s.f)
-    dt = (s.t[1] - s.t[0]) * 1.e-15
-    k0 = E_ref / (hbar * c)  
-    s.freq_k = 2*pi*(fft.fftfreq(len(spec), d=dt) / c )
-    s.freq_k = -np.roll(s.freq_k, len(spec)/2) + k0 # take into account s/t
+    Keep the time step when zero-padding each end by npad times the input
+    length. An envelope proportional to exp(-i omega t) has photon energy
+    E_ref + hbar omega [eV].
+    """
+    data = np.loadtxt(file_name, dtype=complex)
+    times = data[:, 0].real
+    dt = times[1] - times[0]
+    if dt <= 0 or not np.allclose(np.diff(times), dt, rtol=1e-7, atol=0):
+        raise ValueError("Signal times must increase with uniform spacing [fs]")
+    s = Signal()
+    s.nslice = len(times)
+    s.npad = npad
+    padding = npad * s.nslice
+    s.f_ = np.pad(data[:, 2], padding)
+    s.f = s.f_
+    s.t = times[0] + (np.arange(len(s.f)) - padding) * dt
+    frequencies = fft.fftshift(fft.fftfreq(len(s.f), d=dt * 1e-15))
+    s.freq_k = E_ref / (hbar * c) - 2 * pi * frequencies / c
     s.freq_ev = s.freq_k * hbar * c
-    s.sp = np.roll(spec, len(spec)/2)
-    
+    s.sp = fft.fftshift(fft.fft(s.f))
     return s
+
 
 
 def plot_signal(s): 

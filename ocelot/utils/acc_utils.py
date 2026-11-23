@@ -389,14 +389,18 @@ def convolve_beam(current, wake):
     return wake_kick.T
 
 
-def passive_streaker_energy_effects(w_l, w_ld, w_lq, sigma_x, sigma_y, length=1.0):
+def passive_streaker_energy_effects(
+        w_l: ArrayLike, w_ld: ArrayLike, w_lq: ArrayLike, sigma_x: ArrayLike,
+        sigma_y: ArrayLike, length: float = 1.0) -> tuple[np.ndarray | np.floating, np.ndarray | np.floating]:
     """Calculate passive-streaker mean energy change and induced slice spread.
 
     The supplied wake potentials are the convolutions of the bunch line-charge
     density with the longitudinal wake, the longitudinal derivative of the
     transverse dipole wake, and the longitudinal derivative of the transverse
     quadrupole wake, respectively. They must not already include the structure
-    length.
+    length. The transverse slice model assumes centred, independent Gaussian
+    x and y coordinates. Correlations and non-Gaussian fourth moments
+    change the induced spread.
 
     Parameters
     ----------
@@ -443,11 +447,11 @@ def passive_streaker_energy_effects(w_l, w_ld, w_lq, sigma_x, sigma_y, length=1.
 
 
 def passive_streaker_energy_resolution(
-        spectrometer_resolution,
-        time_resolution,
-        incoming_energy_chirp,
-        induced_energy_spread=0.0,
-        passive_streaker_energy_chirp=0.0):
+        spectrometer_resolution: ArrayLike,
+        time_resolution: ArrayLike,
+        incoming_energy_chirp: ArrayLike,
+        induced_energy_spread: ArrayLike = 0.0,
+        passive_streaker_energy_chirp: ArrayLike = 0.0) -> np.ndarray | np.floating:
     """Combine the terms of the updated passive-streaker energy resolution.
 
     Parameters

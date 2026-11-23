@@ -411,37 +411,24 @@ def energy_loss_und(energy, Kx, lperiod, L, energy_loss=False):
     return U
 
 
-def sigma_gamma_quat(energy, Kx, lperiod, L):
+def sigma_gamma_quat(energy: float, Kx: float, lperiod: float, L: float) -> float:
+    """RMS relative energy spread acquired in a planar undulator.
+
+    The input is total electron energy [GeV], deflection parameter K, period
+    [m] and magnetic length [m]. The returned sigma_E/E is dimensionless.
     """
-    rate of energy diffusion
+    from ocelot.cpbd.physics_proc import SpontanRadEffects
 
-    :param energy: electron beam energy
-    :param Kx: undulator parameter
-    :param lperiod: undulator period
-    :param L: length
-    :return: sigma_gamma/gamma
-    """
-    gamma = energy / m_e_GeV
-    lambda_compt = 2.4263102389e-12  # m
-    lambda_compt_r = lambda_compt / 2. / pi
-    def f(K): return 1.2 + 1. / (K + 1.33 * K * K + 0.4 * K ** 3)
-    delta_Eq2 = 56. * pi ** 3 / 15. * lambda_compt_r * ro_e * gamma ** 4 / lperiod ** 3 * Kx ** 3 * f(Kx) * L
-    sigma_Eq = np.sqrt(delta_Eq2 / (gamma * gamma))
-    return sigma_Eq
+    return SpontanRadEffects.sigma_gamma_quant(energy, L, abs(Kx), lperiod)
 
 
-def quantum_diffusion(energy, Kx, lperiod, L, quantum_diff=False):
-    if quantum_diff:
-        # gamma = energy/m_e_GeV
-        # lambda_compt = 2.4263102389e-12 # h_eV_s/m_e_eV*speed_of_light
-        # lambda_compt_r = lambda_compt/2./pi
-        # f = lambda K: 1.2 + 1./(K + 1.33*K*K + 0.4*K**3)
-        # delta_Eq2 = 56.*pi**3/15.*lambda_compt_r*ro_e*gamma**4/lperiod**3*Kx**3*f(Kx)*L
-        sigma_Eq = sigma_gamma_quat(energy, Kx, lperiod, L)  # sqrt(delta_Eq2/(gamma*gamma))
-        U = sigma_Eq * np.random.randn() * energy
-    else:
-        U = 0.
-    return U
+def quantum_diffusion(energy: float, Kx: float, lperiod: float, L: float,
+                      quantum_diff: bool = False, *, size: int | None = None) -> float | np.ndarray:
+    """Sample zero-mean energy kicks [GeV], one per electron when size is given."""
+    if not quantum_diff:
+        return 0.
+    sigma = energy * sigma_gamma_quat(energy, Kx, lperiod, L)
+    return sigma * np.random.normal(size=size)
 
 
 def field_map2field_func(z, By):
@@ -958,9 +945,11 @@ def calculate_radiation(
         :class:`~ocelot.cpbd.beam.Beam` supplying electron coordinates,
         reference energy in GeV, and current in amperes.
     energy_loss
-        Apply one aggregate classical energy correction per undulator.
+        Apply the mean planar-undulator loss once per element. The loss and
+        diffusion estimates use the specified deflection parameters and period,
+        including when a custom field supplies the trajectory.
     quantum_diff
-        Apply one stochastic energy correction per undulator.
+        Sample an independent energy fluctuation for each particle at each undulator exit.
     accuracy
         Scale the automatically estimated trajectory-point count. Explicit
         undulator ``npoints`` values override this scale.
@@ -1024,7 +1013,7 @@ def calculate_radiation(
             screen.arImEy += weight * screen_copy.arImEy
         screen.arPhase += screen_copy.arPhase
     screen.distPhoton(gamma_normalization, current=ebeam.I)
-    screen.Ef_electron = p_array.E
+    screen.Ef_electron = p_array.E + p_array.p()[0] * np.sqrt(p_array.E**2 - m_e_GeV**2)
     screen.motion = U
     beam_traj = BeamTraject(beam_trajectories=U, end_particle_array=p_array)
     screen.beam_traj = beam_traj
@@ -1069,7 +1058,7 @@ def coherent_radiation(
         Include the aggregate classical energy loss for each undulator
         element.
     quantum_diff
-        Apply a stochastic energy kick for each undulator element.
+        Apply an independent Gaussian energy kick to every particle at each undulator exit.
     accuracy
         Scale factor applied to the default number of trajectory samples.
     verbose
@@ -1134,18 +1123,23 @@ def coherent_radiation(
         raise TypeError("'p_array' must be a ParticleArray instance")
 
     tau0 = np.copy(p_array.tau())
-    p_array.tau()[:] = 0
-
     U, E = track4rad_beam(p_array, lat, energy_loss=energy_loss, quantum_diff=quantum_diff, accuracy=accuracy)
-    p_array.tau()[:] += tau0
     # plt.plot(U[0][4::9, :], U[0][::9, :])
     # plt.show()
     screen_copy = _screen_field_workspace(screen)
     wavelengths = h_eV_s * speed_of_light / screen.Eph
     electron_counts = p_array.q_array / q_e
+    source = _trajectory_start_mm(U[0])
+    common_phase = screen._source_phase(*source)
     for i in range(p_array.n):
-        # print("%i/%i" % (i, p_array.n))
-        screen_copy.arPhase[:] = tau0[i] / wavelengths * 2 * np.pi
+        phase = screen_copy.arPhase.reshape(screen.ne, screen.ny, screen.nx)
+        phase[:] = (2 * np.pi * tau0[i] / wavelengths)[:, None, None]
+        # The kernel removes each particle's own entrance optical path. Restore
+        # relative source phases before adding fields from different positions.
+        if i:
+            position = _trajectory_start_mm(U[0], i)
+            if position != source:
+                screen_copy.arPhase += screen._source_phase(*position) - common_phase
         # Number of electrons represented by this macroparticle.
         n_e = electron_counts[i]
 
@@ -1172,7 +1166,7 @@ def coherent_radiation(
             sys.stdout.write("\r" + "n: " + str(i) + " / " + str(p_array.n - 1))
             sys.stdout.flush()
     screen.coherent_photon_dist()
-    screen.rebuild_efields(*_trajectory_start_mm(U[0]))
+    screen.rebuild_efields(*source)
 
     screen.Ef_electron = p_array.E
     screen.motion = U
@@ -1207,7 +1201,7 @@ def _undulator_trajectory_points(elem: Undulator, accuracy: float) -> int:
     if npoints is None:
         npoints = getattr(elem, "_kwargs", {}).get("npoints")
     if npoints is None:
-        return int((elem.l * 1500 + 100) * accuracy)
+        return max(4, int((elem.l * 1500 + 100) * accuracy))
     if isinstance(npoints, bool) or not isinstance(npoints, numbers.Integral):
         raise TypeError("Undulator npoints must be an integer")
     if npoints < 4:
@@ -1233,12 +1227,16 @@ def _track_non_undulator_segment(
     if not elements:
         return None, z_start
 
-    section = mlattice.MagneticLattice(elements)
+    # Reuse the active maps already selected by the caller.
+    section = mlattice.MagneticLattice(elements, method={})
     if section.totalLen == 0:
+        for elem in elements:
+            for tm in elem.tms:
+                tm.apply(p_array)
         return None, z_start
 
     navigator = Navigator(section)
-    n_points = int((section.totalLen * 2000 + 150) * accuracy)
+    n_points = max(4, int((section.totalLen * 2000 + 150) * accuracy))
     trajectory = np.zeros(
         (n_points * 9, np.shape(p_array.rparticles)[1])
     )
@@ -1281,9 +1279,11 @@ def track4rad_beam(
         Magnetic lattice containing the radiating elements. Undulator
         subclasses are recognized as radiating elements.
     energy_loss
-        Apply one aggregate classical energy correction per undulator.
+        Apply the mean planar-undulator loss once per element. The loss and
+        diffusion estimates use the specified deflection parameters and period,
+        including when a custom field supplies the trajectory.
     quantum_diff
-        Apply one stochastic energy correction per undulator.
+        Sample an independent energy fluctuation for each particle at each undulator exit.
     accuracy
         Scale the automatically estimated trajectory-point count. For an
         undulator with an explicit ``npoints`` transformation parameter,
@@ -1296,11 +1296,13 @@ def track4rad_beam(
     -------
     trajectories
         List of arrays with shape ``(9 * n_points, n_particles)``. Every
-        nine-row block stores ``x, x', y, y', z, relative_momentum,
+        nine-row block stores ``x, x', y, y', z, (E_particle-E_ref)/(p_ref*c),
         Bx, By, Bz``. Consecutive non-undulator elements form one segment;
         this includes a non-undulator section after the final undulator.
     energies
-        Reference energy in GeV for each trajectory segment.
+        Entrance reference energy in GeV for each segment. The radiation
+        integral uses one energy per segment, so its phase inside accelerating
+        sections is approximate. Undulators use their actual entrance energy.
 
     Raises
     ------
@@ -1314,17 +1316,17 @@ def track4rad_beam(
     if "end_poles" in kwargs:
         _logger.warning("The argument 'end_poles' is obsolete. It has been moved to the Undulator element.")
     energy = p_array.E
-    # Y0 = [beam.x, beam.xp, beam.y, beam.yp, 0, 0]
-    # p = Particle(x=beam.x, px=beam.xp, y=beam.yp, py=beam.yp, E=beam.E)
+    if not np.isfinite(accuracy) or accuracy <= 0:
+        raise ValueError("Radiation accuracy must be positive and finite")
     L = 0.
     U = []
     E = []
     non_u = []
     for elem in lat.sequence:
-        if elem.l == 0:
-            continue
         if not isinstance(elem, Undulator):
             non_u.append(elem)
+            continue
+        if elem.l == 0:
             continue
 
         u, L = _track_non_undulator_segment(
@@ -1337,22 +1339,14 @@ def track4rad_beam(
         if u is not None:
             U.append(u)
             E.append(energy)
+        energy = p_array.E  # a preceding RF section can change the rigidity
         non_u = []
 
-        energy_correction = energy_loss_und(
-            energy,
-            elem.Kx,
-            elem.lperiod,
-            elem.l,
-            energy_loss,
-        )
-        energy_correction += quantum_diffusion(
-            energy,
-            elem.Kx,
-            elem.lperiod,
-            elem.l,
-            quantum_diff,
-        )
+        # The analytical Kx and Ky fields have the same longitudinal phase:
+        # on axis they describe one planar field with a rotated polarization.
+        strength = np.hypot(elem.Kx, elem.Ky)
+        mean_loss = energy_loss_und(energy, strength, elem.lperiod, elem.l, energy_loss)
+        noise = quantum_diffusion(energy, strength, elem.lperiod, elem.l, quantum_diff, size=p_array.n)
 
         mag_length = elem.l
         mag_field = elem.element.create_runge_kutta_main_params(energy).mag_field
@@ -1376,21 +1370,22 @@ def track4rad_beam(
         L += s
         U.append(u)
         E.append(energy)
-        if energy_correction != 0:
-            # The existing radiation model removes the same energy from each
-            # particle along its direction, once at the undulator exit.
+        if mean_loss or quantum_diff:
+            # The reference follows the mean classical loss. Independent
+            # quantum kicks broaden the beam at fixed momentum direction.
             p0_before = np.sqrt(energy**2 - m_e_GeV**2)
             particle_energy = energy + p_array.p() * p0_before
             momentum_before = np.sqrt(particle_energy**2 - m_e_GeV**2)
-            new_energy = energy - energy_correction
-            if new_energy <= m_e_GeV or np.any(particle_energy - energy_correction <= m_e_GeV):
+            new_energy = energy - mean_loss
+            particle_energy_after = particle_energy - mean_loss - noise
+            if new_energy <= m_e_GeV or np.any(particle_energy_after <= m_e_GeV):
                 raise ValueError("Radiation energy loss leaves a particle below rest energy")
             p0_after = np.sqrt(new_energy**2 - m_e_GeV**2)
-            momentum_after = np.sqrt((particle_energy - energy_correction)**2 - m_e_GeV**2)
+            momentum_after = np.sqrt(particle_energy_after**2 - m_e_GeV**2)
             factor = momentum_after / momentum_before * p0_before / p0_after
             p_array.px()[:] *= factor
             p_array.py()[:] *= factor
-            p_array.p()[:] *= p0_before / p0_after
+            p_array.p()[:] = (p_array.p() * p0_before - noise) / p0_after
             energy = new_energy
         p_array.E = energy
 

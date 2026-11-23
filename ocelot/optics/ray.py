@@ -39,8 +39,8 @@ def find_intersections(ray, geo):
     """
     s = np.inf
     obj = None
-    r_loc = np.array([0,0])
-    no = None
+    hit_local = np.zeros(3)
+    hit_normal = None
     for o in geo():
         debug('checking intersection:', o.id, o.r, o.no)
         nk = np.dot(o.no, ray.k[-1])
@@ -60,10 +60,19 @@ def find_intersections(ray, geo):
                 debug('r_loc unrotated=', r_loc)
                 
                 
-                phi = np.arccos(o.no[2]/ np.linalg.norm(o.no))
-                r_loc[1] = r_loc[1] * np.cos(phi) + r_loc[2] * np.sin(phi)
-                r_loc[2] = r_loc[2] * np.cos(phi) - r_loc[1] * np.sin(phi)
-                                
+                normal = np.asarray(o.no) / np.linalg.norm(o.no)
+                if hasattr(o, "z_ax"):
+                    # A mirror carries its longitudinal surface axis through roll and yaw.
+                    along = np.asarray(o.z_ax).ravel()
+                    across = np.cross(normal, along)
+                else:
+                    # Fix the in-plane orientation of a detector by projecting lab x.
+                    axis = np.array([1., 0., 0.]) if abs(normal[0]) < .99 else np.array([0., 1., 0.])
+                    across = axis - (axis @ normal) * normal
+                    across /= np.linalg.norm(across)
+                    along = np.cross(normal, across)
+                r_loc = np.array([r_loc @ across, r_loc @ along, r_loc @ normal])
+
                 debug('r_loc=', r_loc, 'size=',o.size)
                 
                 # correct intersection for curved elements
@@ -129,12 +138,13 @@ def find_intersections(ray, geo):
                 if (r_loc[0]/o.size[0])**2 + (r_loc[1]/o.size[1])**2 <= 1:
                     s = s_int
                     obj = o
+                    hit_local, hit_normal = r_loc, no
                     debug('fits aperture')
                 else:
                     debug('fits aperture not')
                 
     
-    return s, obj, r_loc, no
+    return s, obj, hit_local, hit_normal
 
 
 def refl_matrix(no):

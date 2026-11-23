@@ -37,7 +37,7 @@ A raw trajectory has shape `(9 * n_points, n_particles)`. Each nine-row block
 contains:
 
 ```text
-x, x', y, y', z, relative momentum, Bx, By, Bz
+x, x', y, y', z, (E_particle - E_ref)/(p_ref*c), Bx, By, Bz
 ```
 
 ## Public calculations
@@ -78,9 +78,11 @@ numerically equivalent to assuming one bunch per second. For repetition rate
 photons_per_second = photons_per_bunch * f_rep
 ```
 
-Both the supplied `Screen` and `ParticleArray` are mutated. Initial `tau`
-coordinates define the coherent phase; final tracked coordinates are written
-back to the particle array.
+Both the supplied `Screen` and `ParticleArray` are mutated. The entrance
+phase contains both the particle arrival delay and its source-to-observer
+optical path. Transversely separated particles can therefore interfere
+differently across a screen. Each photon energy has its own phase at every
+pixel. The particle array retains the final tracked coordinates.
 
 ### Integrating a spectrum
 
@@ -125,7 +127,19 @@ required because radiation tracking calls `rk_track_in_field` directly rather
 than using the normal lattice transformation path.
 
 Non-undulator sections before, between, and after undulators are included as
-separate trajectory segments.
+separate trajectory segments. Tracking uses their selected transformations,
+including thin kicks. An accelerating section changes the entrance energy of
+the next undulator. Within each sampled segment the radiation integral uses a
+single Lorentz factor per electron, so its phase in an accelerating section
+is approximate.
+
+With `energy_loss=True` the reference energy follows the mean classical
+loss once per undulator. With `quantum_diff=True` each particle receives an
+independent zero-mean energy fluctuation along its direction of travel. Both
+estimates use the specified period and deflection parameters. The analytic
+field's two transverse components are in phase, giving a planar oscillation
+with strength `hypot(Kx, Ky)`. For a custom field, these estimates still
+assume a planar undulator with the supplied strength and period.
 
 ## Current implementation status
 
@@ -167,9 +181,9 @@ seeding.
 
 ### Input validation
 
-`accuracy` should be validated as finite and positive. Very short or malformed
-trajectory arrays should also produce descriptive exceptions before cubic
-interpolation.
+The automatic grid requires positive finite `accuracy` and uses at least
+four samples. A user-supplied trajectory array passed directly to the field
+integral should also be checked before cubic interpolation.
 
 ### Zero-current beam behavior
 

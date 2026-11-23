@@ -417,7 +417,10 @@ class MagneticLattice:
 
         B is the exit orbit of the element maps for zero input at the start of
         the selected segment. R and T are the linear and quadratic coefficients
-        for perturbations of that input.
+        for perturbations of that input. This composes the polynomial maps exposed
+        by each element (quadratic for SecondTM, first-order design maps otherwise).
+        To linearize a kick or field tracker along its actual orbit, use
+        twiss(..., reference_orbit=particle).
         If `output_at_each_step` is set to `True`, it also returns the intermediate transfer maps after each element.
 
         :param start: (Element, optional): Element from which to start the transfer map calculation. Defaults to beginning.
@@ -651,13 +654,18 @@ class MagneticLattice:
         tws = beam.Twiss(tws)
         # Match the same design maps used by twiss(). The quadratic lattice
         # map can include sextupole feed-down along a displaced trajectory.
-        R = np.eye(6)
+        transverse = np.eye(4)
+        dispersion = np.eye(4, 5)  # [A | b] in D_out = A D_in + b
         energy = tws.E
         for elem in self.sequence:
             for tm in elem.first_order_tms:
-                R = tm.get_params(energy).get_rotated_R() @ R
-                energy += tm.get_delta_e()
-        return _periodic_twiss_from_matrix(tws, R)
+                R = tm.get_params(energy).get_rotated_R()
+                delta_e = tm.get_delta_e()
+                transverse = R[:4, :4] @ transverse
+                dispersion = beam.Twiss._design_dispersion_block(R, delta_e) @ dispersion
+                dispersion[:, 4] += R[:4, 5]
+                energy += delta_e
+        return _periodic_twiss_from_matrix(tws, transverse, dispersion)
 
 
 def merge_drifts(cell):

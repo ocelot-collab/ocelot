@@ -454,7 +454,7 @@ def t_nnn_transport(L, h, k1, k2, energy=0):
     return T
 
 
-def _mad_focusing(L, k2):
+def _mad_focusing(L: float, k2: float) -> tuple[float, float, float, float]:
     """MAD8 c, s, d and f functions, including their zero-strength limits."""
     if k2 == 0:
         return 1., L, L * L / 2, L ** 3 / 6
@@ -517,10 +517,12 @@ def _mad_mixed_integrals(L, kx2, ky2, cx, sx, dx, fx):
     return jc, js, jd, jf
 
 
-def t_nnn_mad(L, h, k1, k2, energy=0):
+def t_nnn_mad(L: float, h: float, k1: float, k2: float, energy: float = 0.) -> np.ndarray:
     """
-    Universal function to return second order matrix.
-    Here are used the following set of variables: x, px/p0, y, py/p0, tau, dE/(p0c).
+    Second-order geometric and chromatic aberrations of a sector magnet body.
+
+    Coordinates are x, px/p0, y, py/p0, tau and dE/(p0*c). Each mixed
+    monomial coefficient occurs once in the upper input-index triangle.
     See https://nbviewer.jupyter.org/github/ocelot-collab/ocelot/blob/master/demos/ipython_tutorials/2_tracking.ipynb
 
     :param L: length in [m]

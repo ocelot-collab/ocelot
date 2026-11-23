@@ -96,7 +96,7 @@ class ParticleArray:
         self.delete_particles(p_idxs)
         return p_idxs
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int | slice) -> "Particle | ParticleArray":
         """Extract a particle or a subset with the same reference energy and position.
 
         Slices share coordinate and charge arrays with the original beam and
@@ -123,6 +123,7 @@ class ParticleArray:
         self.rparticles[3, idx] = p.py
         self.rparticles[4, idx] = p.tau
         self.rparticles[5, idx] = p.p
+        self.q_array[idx] = p.q
         self.s = p.s
 
     def list2array(self, p_list):
@@ -151,6 +152,7 @@ class ParticleArray:
             p.p = self.rparticles[5, i]
             p.E = self.E
             p.s = self.s
+            p.q = self.q_array[i]
         return p_list
 
     def size(self):
@@ -187,7 +189,7 @@ class ParticleArray:
         return np.shape(self.rparticles)[1]
 
     @property
-    def pz(self) -> float:
+    def pz(self) -> np.ndarray:
         """pz/p0 - the z-components of the macroparticle momenta normalised with
         respect to the reference momentum p0."""
         return np.sqrt((self.momenta / self.p0c) ** 2 - self.px() ** 2 - self.py() ** 2)
@@ -198,22 +200,22 @@ class ParticleArray:
         return np.sqrt(self.E ** 2 - glb.m_e_GeV ** 2)
 
     @property
-    def energies(self) -> float:
+    def energies(self) -> np.ndarray:
         """Get all macroparticle energies in GeV."""
         return self.p() * self.p0c + self.E
 
     @property
-    def momenta(self) -> float:
+    def momenta(self) -> np.ndarray:
         """Get all macroparticle momenta in GeV/c."""
         return np.sqrt(self.energies ** 2 - glb.m_e_GeV ** 2)
 
     @property
-    def gamma(self) -> float:
+    def gamma(self) -> np.ndarray:
         """Get all macroparticle relativistic gamma factors."""
         return self.energies / glb.m_e_GeV
 
     @property
-    def beta(self) -> float:
+    def beta(self) -> np.ndarray:
         """Get all macroparticle relativistic betas (v/c)."""
         return np.sqrt(1 - self.gamma ** -2)
 

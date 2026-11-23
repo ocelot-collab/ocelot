@@ -11,7 +11,7 @@ import numpy as np
 
 from ocelot.common import math_op
 from ocelot.common.globals import m_e_GeV, pi, speed_of_light
-from ocelot.cpbd.beam import s_to_cur
+from ocelot.cpbd.beam import ParticleArray, s_to_cur
 from ocelot.cpbd.elements.bend import Bend
 from ocelot.cpbd.elements.rbend import RBend
 from ocelot.cpbd.elements.sbend import SBend
@@ -488,11 +488,12 @@ class K0_fin_anf:
             self.eval = self.K0_fin_anf_np
 
     @staticmethod
-    def integrate_kernel_np(K, s):
+    def integrate_kernel_np(K: np.ndarray, s: np.ndarray) -> np.ndarray:
+        """Integrate from each upstream s < 0 to the observer, where K(0) = 0."""
         N = K.shape[0]
         a = np.empty(N, dtype=K.dtype)
         a[:-1] = 0.5 * (K[:-1] + K[1:]) * np.diff(s)
-        a[-1] = 0.5 * K[-1] * s[-1]
+        a[-1] = 0.5 * K[-1] * (-s[-1])
         KS = np.cumsum(a[::-1])[::-1]
         return KS
 
@@ -502,7 +503,7 @@ class K0_fin_anf:
         a = np.empty(N, dtype=K.dtype)
         for k in range(N-1):
             a[k] = 0.5 * (K[k] + K[k+1]) * (s[k+1] - s[k])
-        a[N-1] = 0.5 * K[N-1] * s[N-1]
+        a[N-1] = 0.5 * K[N-1] * (-s[N-1])
         # Cumulative sum in reverse order
         KS = np.empty(N, dtype=K.dtype)
         total = 0.0
@@ -580,11 +581,7 @@ class K0_fin_anf:
         w = w[j:]
 
         K = self.K0_1(i, j, R, n, traj[4], traj[5], traj[6], w, gamma)
-        if len(K) > 1:
-            KS = self.integrate_kernel(K, s)
-        else:
-            KS = 0.5 * K[-1] * s[-1]
-        return w, KS
+        return w, self.integrate_kernel(K, s)
 
     def K0_fin_anf_np(self, i, traj, wmin, gamma):
         g2i = 1. / gamma ** 2
@@ -617,11 +614,7 @@ class K0_fin_anf:
               - b2 * (1. - (t4 * t_i[0] + t5 * t_i[1] + t6 * t_i[2]))
               - g2i) * R_inv
              - (1. - beta * x) / w * g2i)
-        if len(K) > 1:
-            KS = self.integrate_kernel_np(K, s)
-        else:
-            KS = 0.5 * K[-1] * s[-1]
-        return w, KS
+        return w, self.integrate_kernel_np(K, s)
 
     def K0_fin_anf_numexpr(self, i, traj, wmin, gamma):
         g2i = 1. / gamma ** 2
@@ -662,11 +655,7 @@ class K0_fin_anf:
             '((beta*(x - n0*t4i - n1*t5i - n2*t6i) -'
             '  b2*(1. - t4*t4i - t5*t5i - t6*t6i) - g2i)/R -'
             ' (1. - beta*x)/w*g2i)')
-        if len(K) > 1:
-            KS = self.integrate_kernel_np(K, s)
-        else:
-            KS = 0.5 * K[-1] * s[-1]
-        return w, KS
+        return w, self.integrate_kernel_np(K, s)
 
     def estimate_start_index(self, i, traj, w_min, beta, i_min=1000, n_test=10):
         """
@@ -855,15 +844,7 @@ class CSR(PhysProc):
               traj[5, ra]*traj[5, i] -
               traj[6, ra]*traj[6, i])) / R[ra]
 
-        # integrated kernel: KS=int_s^0{K(u)*du}=int_0^{-s}{K(-u)*du}
-        if np.shape(K)[0] > 1:
-            a = np.append(0.5*(K[0:-1] + K[1:])*np.diff(s), 0.5*K[-1]*s[-1])
-            KS = np.cumsum(a[::-1])[::-1]
-            #KS = np.fliplr(np.cumsum(np.fliplr([0.5*(K[1:-1] + K[2:])*np.diff(s), 0.5*K[-1]*s[-1]])))
-        else:
-            KS = 0.5*K[-1]*s[-1]
-
-        return w, KS
+        return w, self.k0_fin_anf.integrate_kernel_np(K, s)
 
     def K0_fin_inf(self, i, traj, w_range, gamma):
         """
@@ -927,11 +908,11 @@ class CSR(PhysProc):
         aup = -Rv1 + winfms1*ev1
         a2 = np.dot(aup, aup)
         a = np.sqrt(a2)
-        uup = aup/a
         winf = s1 + winfms1
 
         Nvalid = np.where(winf < w_range)[0]
         if len(Nvalid) > 0:
+            uup = aup/a
             Nvalid = Nvalid[0]
             w = w_range[Nvalid:]
             s = (winf+w)/2. + a2/2./(winf-w)
@@ -1150,7 +1131,8 @@ class CSR(PhysProc):
             # np.savetxt("trajectory_cos.txt", self.csr_traj)
         return self.csr_traj
 
-    def apply(self, p_array, delta_s):
+    def apply(self, p_array: ParticleArray, delta_s: float) -> None:
+        """Apply the longitudinal wake integrated over a Navigator step of delta_s metres."""
         if p_array.n == 0 or delta_s == 0:
             return
         if not np.isfinite(delta_s) or delta_s < 0:
@@ -1160,7 +1142,10 @@ class CSR(PhysProc):
         lattice_s = self.z0 - self.z_csr_start
         s_prev, s_cur = self._lattice_to_trajectory_s([lattice_s - delta_s, lattice_s])
         path_length = s_cur - s_prev
-        z = -p_array.tau()
+        # At the observation time the source has moved beta*R since emission.
+        # The kernel uses the spatial separation w = s_source - s_observer + beta*R.
+        beta = p_array.p0c / p_array.E
+        z = -beta * p_array.tau()
 
         ind_z_sort = np.argsort(z)
         z_sort = z[ind_z_sort]
@@ -1172,12 +1157,8 @@ class CSR(PhysProc):
         s1, s2, Ns, lam_ds = self.bin_smoth.Q2EQUI(q_sort, B_params, SBINB, NBIN)
 
         st = (s2 - s1) / Ns
-        sa = s1 + st / 2.
         Ndw = [Ns - 1, st]
 
-        #print(Ndw, z[ind_z_sort][-1] - z[ind_z_sort][0], len(lam_ds), z[ind_z_sort].max() - z[ind_z_sort].min(), s1, s2)
-        #plt.plot(lam_ds)
-        #plt.show()
         s_array = self.csr_traj[0, :]
         indx = (np.abs(s_array - s_cur)).argmin()
         indx_prev = (np.abs(s_array - s_prev)).argmin()
@@ -1189,29 +1170,17 @@ class CSR(PhysProc):
             # A navigator step can be shorter than the trajectory spacing.
             # Still integrate its full length using the nearest kernel sample.
             itr_ra = np.array([indx])
-        #print(s1, s2, Ns, Ndw, itr_ra)
         K1 = 0
         for it in itr_ra:
             K1 += self.CSR_K1(it, self.csr_traj, Ndw, gamma=gamma)
-            #plt.plot(np.linspace(s1, s2, num=int(Ns)), K1*st)
-            #plt.show()
-
-
-        #x = np.arange(Ndw[0] + 1) * Ndw[1]
-        #xp = np.arange(self.kernel_Ndw[0] + 1) * self.kernel_Ndw[1]
-        #for it in itr_ra:
-        #    fp = self.kernels[it]
-        #    #print(len(fp), len(xp), self.kernel_Ndw)
-        #    K1 = np.interp(x, xp, fp)
-        #    K1 += K1 #self.CSR_K1(it, self.csr_traj, Ndw, gamma=gamma)
         K1 /= len(itr_ra)
 
         lam_K1 = csr_convolution(lam_ds, K1[::-1]) / st * path_length
 
-        dE = np.interp(z_sort*(1./st)+(0. - sa/st), np.arange(len(lam_K1)), lam_K1)
-
-        pc_ref = np.sqrt(p_array.E ** 2 / m_e_GeV ** 2 - 1) * m_e_GeV
-        delta_p = dE * 1e-9 / pc_ref
+        # All three deposition shapes sample at s1 + j*st. The zero-lag
+        # kernel coefficient is K1[-1], so the convolution has the same origin.
+        dE = np.interp((z_sort - s1) / st, np.arange(len(lam_K1)), lam_K1)
+        delta_p = dE * 1e-9 / p_array.p0c
         p_array.rparticles[5][ind_z_sort] += delta_p
 
         if self.pict_debug:
@@ -1269,7 +1238,7 @@ class CSR(PhysProc):
         # plt.ylabel("dE, keV/m")
 
         # CSR wake in keV - amplitude changes with step
-        ax2.plot(np.linspace(s1, s1 + st * len(lam_K1), len(lam_K1)) * 1000, lam_K1 *1e-3)
+        ax2.plot((s1 + st * np.arange(len(lam_K1))) * 1000, lam_K1 *1e-3)
         self.plt.setp(ax2.get_xticklabels(), visible=False)
         self.plt.ylim((-50, 50))
         self.plt.ylabel("Wake [keV]")
@@ -1286,7 +1255,8 @@ class CSR(PhysProc):
 
         ax3 = self.plt.subplot(313, sharex=ax2)
         self.B = s_to_cur(p_array.tau(), sigma=np.std(p_array.tau())*0.05, q0=np.sum(p_array.q_array), v=speed_of_light)
-        ax3.plot(-self.B[:, 0]*1000, self.B[:, 1], lw=2)
+        beta = p_array.p0c / p_array.E
+        ax3.plot(-beta * self.B[:, 0] * 1000, self.B[:, 1], lw=2)
         ax3.set_ylabel("I [A]")
         ax3.set_xlabel("s [mm]")
         self.plt.subplots_adjust(hspace=0.2)
@@ -1403,7 +1373,9 @@ class SaferCSR(CSR):
     def apply(self, parray, ds):
         if parray.n == 0:
             return
-        bunch_length = parray.tau().std()
+        if not np.isfinite(parray.E) or parray.E <= m_e_GeV:
+            raise CSRConfigurationError("CSR requires a beam energy above the electron rest energy")
+        bunch_length = (parray.p0c / parray.E) * parray.tau().std()
         bunch_x = parray.x().std()
         bunch_y = parray.y().std()
 

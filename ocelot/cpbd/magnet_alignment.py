@@ -13,10 +13,18 @@ time. The kick and Runge–Kutta trackers apply these changes of coordinates
 to particles. Magnet transfer maps use their first- or second-order expansions.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import numpy as np
 
 from ocelot.common.geometry import get_tilt_matrix
 from ocelot.common.globals import m_e_GeV
+
+
+if TYPE_CHECKING:
+    from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
 
 
 class FaceTransform:
@@ -28,14 +36,14 @@ class FaceTransform:
     coordinates. At the entrance, tracking uses its inverse to enter the magnet.
     """
 
-    def __init__(self, shift, axes):
+    def __init__(self, shift: np.ndarray, axes: np.ndarray) -> None:
         self.shift = shift
         self.axes = axes
 
-    def inverse(self):
+    def inverse(self) -> FaceTransform:
         return FaceTransform(-self.axes.T @ self.shift, self.axes.T)
 
-    def _crossing(self, X, energy):
+    def _crossing(self, X: np.ndarray, energy: float):
         # Straight flight from the source face to z=0 of the destination.
         if energy and (not np.isfinite(energy) or energy <= m_e_GeV):
             raise ValueError("Magnet alignment requires energy above the electron rest energy or zero for beta=1")
@@ -57,15 +65,17 @@ class FaceTransform:
         out[4] += relative_energy * flight
         return out, ps, p, relative_energy, flight
 
-    def apply(self, X, energy):
+    def apply(self, X: np.ndarray, energy: float) -> None:
         """Move each column of a (6, N) particle array to the destination plane in place.
 
         ``energy`` is the reference total energy [GeV]. Zero selects beta = 1.
         """
         X[:] = self._crossing(X, energy)[0]
 
-    def taylor(self, orbit, energy, second_order):
-        """Value, Jacobian and quadratic coefficients about one incoming orbit."""
+    def taylor(
+        self, orbit: np.ndarray, energy: float, second_order: bool
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
+        """Expand about one (6, 1) orbit. T[u,u] is the quadratic term in a small perturbation u."""
         value, ps, p, e, flight = self._crossing(orbit, energy)
         ps, e, flight = ps[0], e[0], flight[0]
         p = p[:, 0]
@@ -95,7 +105,9 @@ class FaceTransform:
         return value, R, (T + T.swapaxes(1, 2)) / 2.
 
 
-def rolled_face(position, frame, dx, dy, dtilt, *, local_offsets=False):
+def rolled_face(
+    position: np.ndarray, frame: np.ndarray, dx: float, dy: float, dtilt: float, *, local_offsets: bool = False
+) -> FaceTransform:
     """Return the physical-to-survey transform at a given longitudinal position.
 
     ``position`` [m] and ``frame`` give the nominal face origin and axes in the
@@ -115,7 +127,7 @@ def rolled_face(position, frame, dx, dy, dtilt, *, local_offsets=False):
     return FaceTransform(shift, axes)
 
 
-def roll_map(params, entrance, exit_face, energy):
+def roll_map(params: FirstOrderParams, entrance: FaceTransform, exit_face: FaceTransform, energy: float) -> FirstOrderParams:
     """Express a native magnet map and its two boundary crossings in survey axes."""
     from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
     from ocelot.cpbd.tm_params.second_order_params import SecondOrderParams

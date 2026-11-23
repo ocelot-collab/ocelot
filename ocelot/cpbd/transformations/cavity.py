@@ -6,12 +6,11 @@ from ocelot.cpbd.rf_maps import rf_longitudinal_kick
 
 
 class CavityTM(TransferMap):
-    """[summary]
-    Implementation of the Cavity Transformation.
-    The concrete element atom have to implement: 
-    create_cavity_tm_main_params(self, energy: float, delta_length: float) -> CavityParams
-    create_cavity_tm_entrance_params(self, energy: float, delta_length: float) -> CavityParams
-    create_cavity_tm_exit_params(self, energy: float, delta_length: float) -> CavityParams
+    """Track through RF edge lenses and a cavity body.
+
+    The element atom supplies the linear transverse and time-of-flight maps.
+    Inside the body both cavity families use the particle's entrance phase
+    for its energy gain and a second-order correction to arrival time.
     """
 
     def __init__(self, create_tm_param_func, delta_e_func, tm_type: TMTypes, length: float,
@@ -26,30 +25,13 @@ class CavityTM(TransferMap):
                           exit_tm_params_func=element.create_cavity_tm_exit_params,
                           tm_type=tm_type, length=element.l, delta_length=delta_l)
 
-    def map4cav(self, X, E, delta_length, length):
+    def map4cav(self, X: np.ndarray, E: float, delta_length: float | None, length: float) -> np.ndarray:
         params = self.get_params(E)
-
-        # Effective cavity voltage and length slice
-        if delta_length is not None:
-            V = params.v * delta_length / length if length != 0 else params.v
-            z = delta_length
-        else:
-            V = params.v
-            z = length
-
-        phi = params.phi * np.pi / 180.0
-
-        # Save initial longitudinal coordinates
-        X4 = np.copy(X[4])  # sigma
-        X5 = np.copy(X[5])  # delta
-
-        # Apply transverse/linear RF focusing (R, T already implemented elsewhere)
+        z = length if delta_length is None else delta_length
+        voltage = params.v * z / length if length else params.v
+        tau, delta = X[4].copy(), X[5].copy()
         X = self.mul_p_array(X, energy=E)
-
-        # Longitudinal RF map, shared with the travelling-wave cavity
-        X = rf_longitudinal_kick(X, X4, X5, E=E, V=V, z=z, freq=params.freq, phi=phi)
-
-        return X
+        return rf_longitudinal_kick(X, tau, delta, E, voltage, z, params.freq, np.deg2rad(params.phi))
 
     def map_function(self, X, energy: float):
         if self.tm_type == TMTypes.MAIN:

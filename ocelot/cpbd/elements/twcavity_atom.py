@@ -1,17 +1,11 @@
-import logging
-
 import numpy as np
 
-from ocelot.cpbd.transformations.tw_cavity import TWCavityTM
 from ocelot.common.globals import m_e_GeV
 from ocelot.cpbd.rf_maps import rf_long_r_terms
 from ocelot.cpbd.r_matrix import uni_matrix
 from ocelot.cpbd.elements.element import Element
 from ocelot.cpbd.tm_params.first_order_params import FirstOrderParams
 from ocelot.cpbd.tm_params.cavity_params import CavityParams
-
-logger = logging.getLogger(__name__)
-
 
 class TWCavityAtom(Element):
     """
@@ -44,109 +38,53 @@ class TWCavityAtom(Element):
         s += 'eid="' + str(self.id) + '")' if self.id is not None else ")"
         return s
 
-    def _R_main_matrix(self, energy: float, length: float):
-
-        def tw_cavity_R_z(z, V, E, freq, phi=0.):
-            """
-            Body matrix of a travelling-wave structure.
-
-            The body has no ponderomotive focusing: R11 = 1 and R21 = 0, the
-            angle only damps adiabatically and all the radial focusing comes
-            from the edge lenses. R12 is p0 * Integral(dz / p(z)) over the
-            linear energy ramp, which evaluates to
-            p0 z [asinh(p1) - asinh(p0)] / dgamma, and R22 is the momentum
-            ratio p0 / p1. Both are written in momentum rather than energy:
-            using gamma in their place is the beta -> 1 approximation, which
-            overestimates them by 40% at 0.7 MeV and 3% at 2 MeV although the
-            two agree to better than 1e-4 above 50 MeV. This matches the
-            default (travelling-wave) RF matrix of elegant.
-
-            :param z: length of the (slice of the) structure [m]
-            :param V: voltage of the (slice of the) structure [GV]
-            :param E: initial energy [GeV]
-            :param freq: frequency [Hz]
-            :param phi: phase [deg]
-            :return: matrix
-            """
-            phi = phi * np.pi / 180.
-            de = V * np.cos(phi)
-            g0 = E / m_e_GeV
-            g1 = (E + de) / m_e_GeV
-            if g0 <= 1. or g1 <= 1.:
-                logger.error("TWCAVITY: energy at or below the rest energy (gamma_initial = %s, "
-                             "gamma_final = %s), check ParticleArray.E or Twiss.E OR cavity.v/cavity.phi", g0, g1)
-            p0 = np.sqrt(g0 * g0 - 1.)
-            p1 = np.sqrt(g1 * g1 - 1.)
-            dgamma = g1 - g0
-            if dgamma != 0:
-                # asinh(p1) - asinh(p0) == log1p((dgamma + p1 - p0) / (g0 + p0)).
-                # p1 - p0 is written as dgamma (g1 + g0) / (p1 + p0) so that no
-                # step subtracts two nearly equal numbers as the gradient vanishes.
-                dp = dgamma * (g1 + g0) / (p1 + p0)
-                r12 = z * p0 * np.log1p((dgamma + dp) / (g0 + p0)) / dgamma
-            else:
-                r12 = z
-            r22 = p0 / p1
-            r55_cor, r56, r65, r66 = rf_long_r_terms(z=z, V=V, E=E, freq=freq, phi=phi)
-            cav_matrix = np.array([[1, r12, 0., 0., 0., 0.],
-                                   [0, r22, 0., 0., 0., 0.],
-                                   [0., 0., 1, r12, 0., 0.],
-                                   [0., 0., 0, r22, 0., 0.],
-                                   [0., 0., 0., 0., 1. + r55_cor, r56],
-                                   [0., 0., 0., 0., r65, r66]]).real
-            return cav_matrix
-
+    def _R_main_matrix(self, energy: float, length: float) -> np.ndarray:
+        """Transport with constant transverse momentum through a linear energy ramp."""
         if self.v == 0.:
-            R = uni_matrix(length, 0., hx=0., sum_tilts=self.tilt, energy=energy)
+            return uni_matrix(length, 0., hx=0., sum_tilts=self.tilt, energy=energy)
+        if self.l == 0:
+            raise ValueError("A powered travelling-wave cavity requires nonzero length")
+        phi = np.deg2rad(self.phi)
+        voltage = self.v * length / self.l
+        r55_cor, r56, r65, r66 = rf_long_r_terms(length, voltage, energy, self.freq, phi)
+
+        g0 = energy / m_e_GeV
+        dgamma = voltage * np.cos(phi) / m_e_GeV
+        g1 = g0 + dgamma
+        p0 = np.sqrt((g0 - 1.) * (g0 + 1.))
+        p1 = np.sqrt((g1 - 1.) * (g1 + 1.))
+        # R12 = p0 integral(ds/p). The integral is a difference of rapidities
+        # divided by dgamma. Rationalize p1-p0 for very small energy gains.
+        if dgamma:
+            dp = dgamma * (g1 + g0) / (p1 + p0)
+            r12 = length * p0 * np.log1p((dgamma + dp) / (g0 + p0)) / dgamma
         else:
-            R = tw_cavity_R_z(length, V=self.v * length / self.l, E=energy, freq=self.freq,
-                           phi=self.phi)
-        return R
+            r12 = length
+        matrix = np.eye(6)
+        matrix[0, 1] = matrix[2, 3] = r12
+        matrix[1, 1] = matrix[3, 3] = p0 / p1
+        matrix[4:, 4:] = [[1. + r55_cor, r56], [r65, r66]]
+        return matrix
 
-    def _R_entrance(self, z, V, E, phi=0.):
-        """
-        Entrance edge lens, -gamma'/(2 gamma0).
+    def _edge_params(self, energy: float, sign: float) -> FirstOrderParams:
+        """Thin edge lens at the physical face, using the energy at that face."""
+        matrix = np.eye(6)
+        if self.v:
+            if self.l == 0 or energy <= m_e_GeV:
+                raise ValueError("A powered travelling-wave cavity requires nonzero length and energy above rest energy")
+            gradient = self.v * np.cos(np.deg2rad(self.phi)) / self.l
+            matrix[1, 0] = matrix[3, 2] = sign * gradient / (2. * energy)
+        return FirstOrderParams(matrix, self._default_B(matrix), self.tilt)
 
-        `E` is the reference energy in front of the structure.
-        """
-        phi = phi * np.pi / 180.
-        de = V * np.cos(phi)
-        r = np.eye(6)
-        r[1, 0] = -de / z / 2. / E
-        r[3, 2] = r[1, 0]
-        return r
+    def create_first_order_main_params(self, energy: float, delta_length: float | None) -> FirstOrderParams:
+        matrix = self._R_main_matrix(energy, self.l if delta_length is None else delta_length)
+        return FirstOrderParams(matrix, self._default_B(matrix), self.tilt)
 
-    def _R_exit(self, z, V, E, phi=0.):
-        """
-        Exit edge lens, +gamma'/(2 gamma1).
+    def create_first_order_entrance_params(self, energy: float, delta_length: float | None) -> FirstOrderParams:
+        return self._edge_params(energy, -1.)
 
-        `E` is the reference energy *behind* the structure: the transfer-map
-        chain has already added the energy gain of the body before this edge
-        map is built, so it must not be added a second time here.
-        """
-        phi = phi * np.pi / 180.
-        de = V * np.cos(phi)
-        r = np.eye(6)
-        r[1, 0] = +de / z / 2. / E
-        r[3, 2] = r[1, 0]
-        return r
-
-    def create_first_order_main_params(self, energy: float, delta_length: float) -> FirstOrderParams:
-        R = self._R_main_matrix(energy=energy, length=delta_length if delta_length is not None else self.l)
-        B = self._default_B(R)
-        return FirstOrderParams(R, B, self.tilt)
-
-    def create_first_order_entrance_params(self, energy: float, delta_length: float) -> FirstOrderParams:
-        length = delta_length if delta_length is not None else self.l
-        R = self._R_entrance(z=length, V=self.v * length / self.l, E=energy, phi=self.phi)
-        B = self._default_B(R)
-        return FirstOrderParams(R, B, self.tilt)
-
-    def create_first_order_exit_params(self, energy: float, delta_length: float) -> FirstOrderParams:
-        length = delta_length if delta_length is not None else self.l
-        R = self._R_exit(z=length, V=self.v * length / self.l, E=energy, phi=self.phi)
-        B = self._default_B(R)
-        return FirstOrderParams(R, B, self.tilt)
+    def create_first_order_exit_params(self, energy: float, delta_length: float | None) -> FirstOrderParams:
+        return self._edge_params(energy, +1.)
 
     def create_cavity_tm_main_params(self, energy: float, delta_length: float) -> CavityParams:
         fo_params = self.create_first_order_main_params(energy, delta_length)

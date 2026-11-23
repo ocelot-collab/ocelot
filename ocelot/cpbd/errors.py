@@ -5,10 +5,10 @@ Save its records to repeat the same alignment in another copy of the beamline
 with :func:`apply_alignment_errors`.
 """
 import copy
+from collections.abc import Iterable, Mapping, Sequence
 from numbers import Integral
 
 from numpy.random import normal
-import scipy.stats as stats
 import numpy as np
 from ocelot.cpbd.elements import Sextupole
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
@@ -25,7 +25,8 @@ def tgauss(mu=0, sigma=1, trunc=2, num=1):
         return mu if num == 1 else np.full(num, mu)
     lower = -sigma*trunc
     upper = sigma*trunc
-    X = stats.truncnorm((lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
+    from scipy.stats import truncnorm
+    X = truncnorm((lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
     if num == 1:
         x = X.rvs(1)[0]
     else:
@@ -94,7 +95,9 @@ def _sample_alignment_errors(lattice, er_list, shared_groups):
     return records
 
 
-def apply_alignment_errors(lattice, records):
+def apply_alignment_errors(
+    lattice: MagneticLattice, records: Sequence[Mapping[str, float] | None]
+) -> MagneticLattice:
     """Apply absolute alignment values by sequence index and return the same lattice.
 
     Supply one entry per lattice occurrence in sequence order. A dictionary
@@ -116,6 +119,10 @@ def apply_alignment_errors(lattice, records):
             values = tuple(float(record[key]) for key in ("dx", "dy", "dtilt"))
             if not np.isfinite(values).all():
                 raise ValueError(f"Nonfinite alignment at index {i}")
+            if values == (elem.dx, elem.dy, elem.dtilt):
+                # An explicit record that leaves the alignment intact can keep
+                # sharing this magnet and its strength with untouched occurrences.
+                values = None
         occurrences.setdefault(elem, {}).setdefault(values, []).append(i)
 
     assignments = []
@@ -137,7 +144,12 @@ def apply_alignment_errors(lattice, records):
     return lattice
 
 
-def errors_seed(lattice, er_list, *, shared_groups=()):
+def errors_seed(
+    lattice: MagneticLattice,
+    er_list: Mapping[type, Mapping[str, float]],
+    *,
+    shared_groups: Iterable[Iterable[int]] = (),
+) -> tuple[MagneticLattice, list[dict[str, float] | None]]:
     """Draw magnet offsets and rolls, apply them, and return ``(lattice, records)``.
 
     ``er_list`` maps exact element classes to errors. For each occurrence,

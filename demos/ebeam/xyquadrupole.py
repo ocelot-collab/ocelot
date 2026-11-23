@@ -3,6 +3,7 @@
 Run from the repository root: python demos/ebeam/xyquadrupole.py
 The weak-curvature model requires small reference offsets and angles.
 """
+import matplotlib.pyplot as plt
 import numpy as np
 import ocelot as ocl
 
@@ -35,3 +36,16 @@ midpoints, endpoints = lat.survey()
 for element, endpoint in zip(lat.sequence, endpoints[1:]):
     print(element.id, "reference exit [m]:", endpoint["r_end"])
     print("  Exit unit tangent:", endpoint["W"][:, 2])
+
+
+# The displaced reference sees a dipole field. An energy error therefore
+# shifts the orbit in both planes, even with zero entrance dispersion.
+fig, ax = plt.subplots(layout="constrained")
+s = [t.s for t in optics]
+ax.plot(s, [1e3 * t.Dx for t in optics], label="Horizontal")
+ax.plot(s, [1e3 * t.Dy for t in optics], label="Vertical")
+ax.axvspan(0., quad.l, color="0.9", zorder=0, label="Quadrupole")
+ax.set(xlabel="Reference arc length [m]", ylabel="Dispersion [mm]",
+       title="Dispersion from an off-axis quadrupole reference")
+ax.legend()
+plt.show()

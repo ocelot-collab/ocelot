@@ -42,3 +42,8 @@ def test_transform_preserves_twiss_matrix_and_area():
     assert np.isrealobj(inverse) and np.isrealobj(forward)
     np.testing.assert_allclose(inverse.T @ g1 @ inverse, g2, atol=1e-12)
     assert np.linalg.det(inverse) == pytest.approx(1.)
+
+    # The Courant-Snyder covariance of actual particles has <x x'> = -alpha.
+    covariance = np.array([[20., -.4], [-.4, (1 + .4**2) / 20.]])
+    target = np.array([[12., .7], [.7, (1 + .7**2) / 12.]])
+    np.testing.assert_allclose(forward @ covariance @ forward.T, target, atol=1e-12)

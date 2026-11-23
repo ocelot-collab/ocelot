@@ -3,11 +3,14 @@ from __future__ import annotations
 import logging
 import numpy as np
 import warnings
-from typing import Iterable
+from typing import TYPE_CHECKING, Iterable
 import ocelot.common.globals as glb
 from ocelot.common.math_op import find_nearest_idx
 from ocelot.common.ocelog import ind_str
 import copy
+
+if TYPE_CHECKING:
+    from ocelot.cpbd.transformations.transfer_map import TransferMap
 
 _logger = logging.getLogger(__name__)
 
@@ -338,7 +341,7 @@ class Twiss:
             self._unit_moments = None
 
     @staticmethod
-    def _transport_plane(block, beta, alpha, gamma):
+    def _transport_plane(block: np.ndarray, beta: float, alpha: float, gamma: float) -> tuple[float, float, float]:
         (a, b), (c, d) = block
         scale = abs(a * d - b * c)
         if scale == 0:
@@ -398,17 +401,21 @@ class Twiss:
 
         return tws
 
-    def map_x_twiss(self, tm):
+    @staticmethod
+    def _design_dispersion_block(matrix: np.ndarray, delta_e: float) -> np.ndarray:
+        """Historical design-optics normalization of incoming dispersion across RF."""
+        block = matrix[:4, :4]
+        return block * np.linalg.det(block)**(-0.25) if delta_e else block
+
+    def map_x_twiss(self, tm: TransferMap) -> Twiss:
         M = tm.get_params(energy=self.E).get_rotated_R()
         tws = self.track(M, self)
         delta_e = tm.get_delta_e()
-        if abs(delta_e) > 1.e-10:
+        if delta_e:
             tws.E = self.E + delta_e
-            # Preserve the optics normalization of incoming dispersion across RF.
             if self.Dx or self.Dxp or self.Dy or self.Dyp:
-                scale = np.linalg.det(M[:4, :4]) ** (-0.25)
-                incoming = M[:4, :4] @ [self.Dx, self.Dxp, self.Dy, self.Dyp]
-                tws.Dx, tws.Dxp, tws.Dy, tws.Dyp = scale * incoming + M[:4, 5]
+                block = self._design_dispersion_block(M, delta_e)
+                tws.Dx, tws.Dxp, tws.Dy, tws.Dyp = block @ [self.Dx, self.Dxp, self.Dy, self.Dyp] + M[:4, 5]
         return tws
 
     def __str__(self):

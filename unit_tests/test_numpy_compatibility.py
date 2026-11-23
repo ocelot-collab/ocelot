@@ -170,3 +170,17 @@ def test_cut_lattice_accepts_fractional_cell_count():
     trimmed = cut_lattice(lattice, 1.2, elem_in_cell=1)
 
     assert [element.id for element in trimmed.sequence] == ["d2", "d3"]
+
+
+def test_padded_signal_preserves_arrival_times_and_photon_energy(tmp_path):
+    from ocelot.optics.bragg import hbar
+    from ocelot.optics.utils import read_signal
+
+    times = 20.0 + np.arange(16) * 0.5  # fs
+    frequency = 1. / (8.e-15)
+    field = np.exp(-2j * np.pi * frequency * times * 1e-15)
+    file = tmp_path / "signal.txt"
+    np.savetxt(file, np.column_stack((times, np.zeros_like(times), field)))
+    signal = read_signal(file, E_ref=1000., npad=2)
+    np.testing.assert_allclose(signal.t[32:48], times)
+    assert signal.freq_ev[np.argmax(abs(signal.sp))] == pytest.approx(1000. + 2*np.pi*hbar*frequency)

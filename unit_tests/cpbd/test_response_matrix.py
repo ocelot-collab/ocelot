@@ -13,7 +13,7 @@ from ocelot.cpbd.response_matrix import (
     LinacCavityScanRM, LinacDisperseSimRM, LinacDisperseTmatrixRM, LinacOpticalRM, LinacRmatrixRM,
     LinacSimRM, ResponseMatrix, RingRM,
 )
-from ocelot.cpbd.transformations import ExactDriftTM, SecondTM, TransferMap
+from ocelot.cpbd.transformations import ExactDriftTM, KickTM, SecondTM, TransferMap
 
 
 @pytest.fixture
@@ -353,3 +353,32 @@ def test_clean_matrix_preserves_ring_response_and_updates_array(calculator):
     np.testing.assert_array_equal(matrix.get_matrix()[:, 0], expected)
     matrix.clean_rm(coupling=False)
     np.testing.assert_array_equal(matrix.get_matrix()[:, 0], [*expected[:2], 0., 0.])
+
+
+def test_bpm_readings_follow_current_lattice_and_thin_element_order():
+    h = Hcor(angle=1e-3)
+    drift = Drift(l=1.)
+    first, second, probe = Monitor(), Monitor(), Monitor()
+    jump = Matrix()
+    jump.r = np.eye(6)
+    jump.b[0, 0] = 0.004
+    lat = MagneticLattice((h, drift, first, jump, second))
+    first.s = 0.7  # a position previously attached by an Orbit for another line
+    probe.s = 0.25
+    method = LinacSimRM(lat, [h], [], [second, probe, first])
+    X, Y = method.read_virtual_orbit(Particle(E=1.))
+    np.testing.assert_allclose(X, [0.005, 0.00025, 0.001], atol=1e-15)
+    np.testing.assert_array_equal(Y, 0.)
+
+
+def test_probe_inside_kick_map_leaves_downstream_bpm_unchanged():
+    q = Quadrupole(l=1., k1=1., tm=KickTM, nkick=1)
+    end, probe = Monitor(), Monitor()
+    probe.s = .5
+    line = MagneticLattice([q, end], method={})
+    launch = Particle(E=1., x=.01)
+    x_full, _ = LinacSimRM(line, [], [], [end]).read_virtual_orbit(launch)
+    x_both, _ = LinacSimRM(line, [], [], [end, probe]).read_virtual_orbit(launch)
+    # A single drift-kick-drift step gives x(s) = x0 (1 - k1*s**2/2).
+    np.testing.assert_allclose(x_full, [.005])
+    np.testing.assert_allclose(x_both, [.005, .00875])

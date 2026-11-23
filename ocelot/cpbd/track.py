@@ -15,7 +15,7 @@ import pandas as pd
 import numpy as np
 
 from ocelot.cpbd.transformations.transformation import TMTypes
-from ocelot.cpbd.optics import periodic_twiss, twiss
+from ocelot.cpbd.optics import _CoupledDesignOpticsError, periodic_twiss, twiss
 from ocelot.cpbd.beam import Particle, ParticleArray, Twiss, get_envelope, twiss_iterable_to_df
 from ocelot.cpbd.errors import _sample_alignment_errors, apply_alignment_errors, create_copy
 from ocelot.cpbd.magnetic_lattice import MagneticLattice
@@ -48,8 +48,17 @@ if is_an_mpi_process():
         N_CORES = COMM.Get_size()
         RANK = COMM.Get_rank()
 
+
+def _ring_optics_for_tracking(lat: MagneticLattice, npoints: int | None = None) -> list[Twiss]:
+    """Use normal modes for tracking diagnostics when the one-turn map couples x and y."""
+    try:
+        return periodic_twiss(lat, nPoints=npoints)
+    except _CoupledDesignOpticsError:
+        return periodic_twiss(lat, nPoints=npoints, reference_orbit="closed")
+
+
 def aperture_limit(lat, xlim = 1, ylim = 1):
-    tws = periodic_twiss(lat, nPoints=1000)
+    tws = _ring_optics_for_tracking(lat, npoints=1000)
     bxmax = max([tw.beta_x for tw in tws])
     bymax = max([tw.beta_y for tw in tws])
     bx0 = tws[0].beta_x
@@ -157,7 +166,7 @@ def freq_analysis(track_list, lat, nturns, harm=True, diap=0.10, nearest=False, 
 
     def beta_freq(lat):
 
-        tws = periodic_twiss(lat)
+        tws = _ring_optics_for_tracking(lat)
         nux = tws[-1].mux/2./np.pi*nsuperperiods
         nuy = tws[-1].muy/2./np.pi*nsuperperiods
         print ("freq. analysis: Qx = ", nux, " Qy = ", nuy)
@@ -289,6 +298,8 @@ def ellipse_track_list(beam, n_t_sigma = 3, num = 1000, type = "contour"):
 
 
 def track_nturns(lat, nturns, track_list, nsuperperiods=1, save_track=True, print_progress=True):
+    if len(track_list) == 0:
+        return np.asarray(track_list, dtype=object)
     xlim, ylim, px_lim, py_lim = aperture_limit(lat, xlim = 1, ylim = 1)
     navi = Navigator(lat)
 
@@ -389,10 +400,9 @@ def fma(lat, nturns, x_array, y_array, nsuperperiods = 1):
         nx = len(x_array)
         ny = len(y_array)
         ctr_da = contour_da(track_list, nturns)
-        #ctr_da = tra.countour_da()
-        track_list = freq_analysis(track_list, lat, nturns, harm = True)
-        da_mux = np.array(map(lambda pxy: pxy.mux, track_list))
-        da_muy = np.array(map(lambda pxy: pxy.muy, track_list))
+        track_list = freq_analysis(track_list, lat, nturns, harm=True, nsuperperiods=nsuperperiods)
+        da_mux = np.array([track.mux for track in track_list])
+        da_muy = np.array([track.muy for track in track_list])
         return ctr_da.reshape(ny,nx), da_mux.reshape(ny,nx), da_muy.reshape(ny,nx)
 
 
@@ -406,7 +416,7 @@ def da_mpi(lat, nturns, x_array, y_array, errors=None, nsuperperiods=1, *, share
                                   nsuperperiods=nsuperperiods, save_track=False, shared_groups=shared_groups)
 
     if rank == 0:
-        da = np.array(map(lambda track: track.turn, track_list))#.reshape((len(y_array), len(x_array)))
+        da = np.array([track.turn for track in track_list])
         nx = len(x_array)
         ny = len(y_array)
         return da.reshape(ny, nx)

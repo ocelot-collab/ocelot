@@ -1,11 +1,28 @@
 """Spontaneous radiation moments and recoil in undulators and uniform bends."""
 
+from inspect import Parameter, signature
+
 import numpy as np
 import pytest
 
 from ocelot.common.globals import lambda_C_r, m_e_GeV, ro_e
 from ocelot.cpbd.beam import ParticleArray
 from ocelot.cpbd.physics_proc import SpontanRadEffects
+
+
+def test_constructor_accepts_named_options_and_rejects_typos():
+    options = signature(SpontanRadEffects).parameters
+    defaults = dict(energy_loss=True, quant_diff=True, filling_coeff=1.0, radius=np.inf, step=1)
+    for name, value in defaults.items():
+        assert options[name].kind == Parameter.KEYWORD_ONLY
+        assert options[name].default == value
+    assert SpontanRadEffects().step == 1
+    process = SpontanRadEffects(3.7, 0.04, "helical", energy_loss=False, quant_diff=True,
+                                filling_coeff=0.8, step=2)
+    assert (process.K, process.lperiod, process.type) == (3.7, 0.04, "helical")
+    assert (process.energy_loss, process.quant_diff, process.filling_coeff, process.step) == (False, True, 0.8, 2)
+    with pytest.raises(TypeError, match="quant_dif"):
+        SpontanRadEffects(quant_dif=False)
 
 
 @pytest.fixture

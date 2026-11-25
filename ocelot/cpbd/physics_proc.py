@@ -489,39 +489,49 @@ class SlottedFoil(PhysProc):
 class SpontanRadEffects(PhysProc):
     """Spontaneous radiation loss and energy diffusion of ultrarelativistic electrons.
 
-    For an ideal planar or helical undulator, `K` is the peak deflection
-    parameter of one field component and `lperiod` is the period in metres.
-    For a uniform dipole, `radius` is the signed bend radius in metres at
-    the reference momentum. An infinite radius represents zero field.
+    For an undulator, supply the peak deflection parameter and period. For
+    a dipole, supply the bend radius. Both radiation effects are on by default.
+    Each kick uses the particle's entrance energy and preserves its direction.
 
-    `filling_coeff` is the magnetic fraction of each step. `energy_loss`
-    and `quant_diff` independently enable the mean loss and Gaussian energy
-    fluctuations. Kicks use each particle's entrance energy and preserve its
-    direction at fixed reference momentum.
+    Parameters
+    ----------
+    K : float, default 0
+        Dimensionless peak deflection parameter. For a circular helical
+        undulator use the peak of either transverse component. Either sign
+        gives the same radiation. Zero switches off undulator radiation.
+    lperiod : float, default 0
+        Undulator period in metres. Supply a positive value for nonzero K.
+    type : {"planar", "helical", "dipole"}, default "planar"
+        Magnetic geometry used to calculate radiation.
+    energy_loss : bool, default True
+        Subtract the mean radiated energy from each particle.
+    quant_diff : bool, default True
+        Add an independent, zero-mean Gaussian energy kick to each particle
+        to model energy spread from fluctuations in photon emission.
+        Set to False to track deterministic loss alone.
+    filling_coeff : float, default 1.0
+        Magnetic fraction of the tracked length, from 0 to 1. Use 1 inside
+        a magnet. For a process spanning a 5 m magnet and 1 m of drift,
+        use 5/6 to distribute the radiation over the whole interval.
+    radius : float, default np.inf
+        Dipole bend radius in metres at the reference momentum. For a bend
+        with nonzero angle, use ``bend.l / bend.angle``. Either sign gives
+        the same radiation. Infinite radius represents zero field. Dipole
+        mode ignores K and lperiod, so both may stay at zero.
+    step : int, default 1
+        Number of Navigator unit steps between radiation kicks.
     """
 
-    def __init__(self, K=0.0, lperiod=0.0, type="planar", **kwargs):
-        """
-        Initialize spontaneous radiation effects.
-
-        :param K: Undulator deflection parameter
-        :param lperiod: Undulator period in meters
-        :param type: "planar"/"helical" undulator or "dipole"
-        :param kwargs: Additional keyword arguments for customization
-        """
-        step = kwargs.pop("step", 1)
+    def __init__(self, K=0.0, lperiod=0.0, type="planar", *, energy_loss=True,
+                 quant_diff=True, filling_coeff=1.0, radius=np.inf, step=1):
         super().__init__(step=step)
-
-        # Explicitly defined parameters
         self.K = K
         self.lperiod = lperiod
         self.type = type
-
-        # Optional parameters with default values, can be overridden by kwargs
-        self.energy_loss = kwargs.get("energy_loss", True)
-        self.quant_diff = kwargs.get("quant_diff", True)
-        self.filling_coeff = kwargs.get("filling_coeff", 1.0)
-        self.radius = kwargs.get("radius", np.inf)
+        self.energy_loss = energy_loss
+        self.quant_diff = quant_diff
+        self.filling_coeff = filling_coeff
+        self.radius = radius
 
     def apply(self, p_array, dz):
         _logger.debug("SpontanRadEffects: apply")

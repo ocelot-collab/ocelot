@@ -22,6 +22,9 @@ Versioning is date based: `YY.MM.patch`.
 
 ### Changed
 
+- Exposed `energy_loss`, `quant_diff`, `filling_coeff`, `radius`, and `step`
+  as named keyword parameters of `SpontanRadEffects`. Misspelled constructor
+  options now raise a `TypeError`.
 - `errors_seed` now returns one alignment record per lattice occurrence.
   Use `records[i]` for sequence index `i`. This replaces the dictionary
   keyed by element ID and supports repeated elements and duplicate IDs.

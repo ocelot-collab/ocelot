@@ -1,6 +1,6 @@
 import logging
 from ocelot.cpbd.io import save_particle_array
-from ocelot.common.globals import h_eV_s, m_e_eV, m_e_GeV, ro_e, speed_of_light, q_e
+from ocelot.common.globals import lambda_C_r, m_e_GeV, ro_e, speed_of_light, q_e
 from ocelot.cpbd.beam import Twiss, global_slice_analysis, s_to_cur, get_envelope
 from ocelot.utils.acc_utils import slice_bunching
 from ocelot.cpbd.beam import ParticleArray
@@ -487,9 +487,17 @@ class SlottedFoil(PhysProc):
 
 
 class SpontanRadEffects(PhysProc):
-    """
-    Effects of the spontaneous radiation:
-    energy loss and quantum diffusion
+    """Spontaneous radiation loss and energy diffusion of ultrarelativistic electrons.
+
+    For an ideal planar or helical undulator, `K` is the peak deflection
+    parameter of one field component and `lperiod` is the period in metres.
+    For a uniform dipole, `radius` is the signed bend radius in metres at
+    the reference momentum. An infinite radius represents zero field.
+
+    `filling_coeff` is the magnetic fraction of each step. `energy_loss`
+    and `quant_diff` independently enable the mean loss and Gaussian energy
+    fluctuations. Kicks use each particle's entrance energy and preserve its
+    direction at fixed reference momentum.
     """
 
     def __init__(self, K=0.0, lperiod=0.0, type="planar", **kwargs):
@@ -517,52 +525,88 @@ class SpontanRadEffects(PhysProc):
 
     def apply(self, p_array, dz):
         _logger.debug("SpontanRadEffects: apply")
-        mean_p = np.mean(p_array.p())
-        energy = p_array.E * (1 + mean_p)
-        gamma = energy / m_e_GeV
+        if not np.isfinite(dz) or dz < 0:
+            raise ValueError("Radiation step length must be finite and nonnegative.")
+        filling = np.asarray(self.filling_coeff)
+        if not np.all((0 <= filling) & (filling <= 1)):
+            raise ValueError("Magnetic filling fraction must be between zero and one.")
+        length = dz * filling
+        if np.all(length == 0) or p_array.n == 0 or not (self.energy_loss or self.quant_diff):
+            return
 
         if self.type == "dipole":
-            self.K = 100.0  # awake the asymptotic for K>>1
-            self.lperiod = 2.0 * np.pi * np.abs(self.radius) / gamma * self.K
+            radius = np.abs(self.radius)
+            if np.any(np.isnan(radius) | (radius == 0)):
+                raise ValueError("Dipole radius must be nonzero.")
+            if np.all(np.isinf(radius)):
+                return
+        elif self.type in ("planar", "helical") and np.all(np.equal(self.K, 0)):
+            return
+
+        if not np.isfinite(p_array.E) or p_array.E <= m_e_GeV:
+            raise ValueError("Radiation requires a reference energy above the electron rest energy.")
+        p0c = p_array.p0c
+        energy = p_array.energies
+        if not np.all(np.isfinite(energy) & (energy > m_e_GeV)):
+            raise ValueError("Radiation requires particle energies above the electron rest energy.")
+        momentum = np.sqrt(energy**2 - m_e_GeV**2)
+        delta_energy = 0.
+        if self.type == "dipole":
+            # Fixed transverse field. Yampolsky & Carlsten, Eqs. (17)-(20).
+            curvature = (p0c / momentum) / radius
+            gamma = energy / m_e_GeV
+            if self.energy_loss:
+                delta_energy = -(2 / 3) * m_e_GeV * ro_e * gamma**4 * curvature**2 * length
+            if self.quant_diff:
+                variance_gamma = (55 / (24 * np.sqrt(3)) * ro_e * lambda_C_r
+                                  * gamma**7 * curvature**3 * length)
+                sigma_energy = m_e_GeV * np.sqrt(variance_gamma)
+        else:
+            if self.energy_loss:
+                delta_energy = -self.energy_loss_und(energy, length)
+            if self.quant_diff:
+                sigma_energy = energy * self.sigma_gamma_quant(energy, length, self.K, self.lperiod, self.type)
 
         if self.quant_diff:
-            sigma_Eq = self.sigma_gamma_quant(energy, dz, self.K, self.lperiod, self.type)
-            p_array.p()[:] += sigma_Eq * np.random.randn(p_array.n) * self.filling_coeff
+            delta_energy += sigma_energy * np.random.randn(p_array.n)
 
-        if self.energy_loss:
-            dE = self.energy_loss_und(energy, dz)
-            p_array.p()[:] -= dE / energy * self.filling_coeff
+        energy_after = energy + delta_energy
+        if not np.all(np.isfinite(energy_after) & (energy_after > m_e_GeV)):
+            raise ValueError("Radiation kick leaves a particle with invalid energy. Reduce the step length.")
+        momentum_ratio = np.sqrt(energy_after**2 - m_e_GeV**2) / momentum
+        p_array.px()[:] *= momentum_ratio
+        p_array.py()[:] *= momentum_ratio
+        p_array.p()[:] += delta_energy / p0c
 
     def energy_loss_und(self, energy, dz):
-        k = 4. * np.pi * np.pi / 3. * ro_e / m_e_GeV
-        U = k * energy ** 2 * self.K ** 2 * dz / self.lperiod ** 2
-        return U
+        """Mean energy radiated in GeV over magnetic length `dz` in metres."""
+        k_u = self._undulator_wavenumber(self.K, self.lperiod, self.type)
+        mean_k_squared = np.square(self.K) * (1.0 if self.type == "helical" else 0.5)
+        return (2 / 3) * ro_e / m_e_GeV * energy**2 * k_u**2 * mean_k_squared * dz
 
     @staticmethod
     def sigma_gamma_quant(energy, dz, K, lperiod, type="planar"):
-        """
-        rate of energy diffusion
-
-        :param energy: electron beam energy [GeV]
-        :param dz: length of the undulator [m]
-        :param Kx: undulator parameter
-        :param lperiod: undulator period [m]
-        :param type: str, undulator type "planar" or "helical"
-        :return: sigma_gamma/gamma
-        """
-        gamma = energy / m_e_GeV
-        k = 2 * np.pi / lperiod
-
-        lambda_compt = h_eV_s / m_e_eV * speed_of_light  # m
-        lambda_compt_r = lambda_compt / 2. / np.pi
+        """Induced rms sigma_E/E for energy [GeV] and undulator magnetic length dz [m]."""
+        k_u = SpontanRadEffects._undulator_wavenumber(K, lperiod, type)
+        K = np.abs(K)
+        # Saldin, Schneidmiller & Yurkov, NIM A 381 (1996), 545-547 (peak K).
         if type == "helical":
-            f = lambda K: 1.42 * K + 1. / (1 + 1.5 * K + 0.95 * K * K)
+            fit = 1.42 * K + 1 / (1 + 1.50 * K + 0.95 * K**2)
+            coefficient = 14 / 15
         else:
-            f = lambda K: 0.6 * K + 1. / (2 + 2.66 * K + 0.8 * K ** 2)
+            fit = 1.20 * K + 1 / (1 + 1.33 * K + 0.40 * K**2)
+            coefficient = 7 / 15
+        return (energy / m_e_GeV) * np.sqrt(coefficient * lambda_C_r * ro_e * k_u**3 * K**2 * fit * dz)
 
-        delta_Eq2 = 14 / 15. * lambda_compt_r * ro_e * gamma ** 4 * k ** 3 * K ** 2 * f(K) * dz
-        sigma_Eq = np.sqrt(delta_Eq2 / (gamma * gamma))
-        return sigma_Eq
+    @staticmethod
+    def _undulator_wavenumber(K, lperiod, type):
+        if type not in ("planar", "helical"):
+            raise ValueError(f"Unknown undulator type {type!r}. Expected 'planar' or 'helical'.")
+        if np.all(np.equal(K, 0)):
+            return np.zeros_like(lperiod, dtype=float)
+        if not np.all(np.isfinite(K)) or not np.all(np.isfinite(lperiod) & (lperiod > 0)):
+            raise ValueError("An active undulator requires finite K and a positive finite period.")
+        return 2 * np.pi / lperiod
 
 
 class BeamAnalysis(PhysProc):

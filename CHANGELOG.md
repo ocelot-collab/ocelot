@@ -60,6 +60,9 @@ Versioning is date based: `YY.MM.patch`.
 
 ### Fixed
 
+- Corrected `SpontanRadEffects` mean loss in helical undulators and both
+  radiation moments in dipoles. Quantum variance scales with magnetic length.
+  Per-particle energy kicks preserve the direction of the electron momentum.
 - Corrected open-beamline Twiss propagation and matching through transverse
   coupling. Rolled quadrupoles and solenoids now transport cross-plane
   correlations and dispersion. Projected emittances and rms betatron sizes

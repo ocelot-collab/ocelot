@@ -384,12 +384,7 @@ def test_track_lsc(lattice, p_array, parameter=None, update_ref_values=False):
 
 
 def test_track_spontan_rad_effects(lattice, p_array, parameter=None, update_ref_values=False):
-    """
-    test PhysicsProc LaserModulator
-
-    0 - tracking of the electron beam with positive energy chirp trough undulator
-    1 - tracking of the electron beam with negative energy chirp trough undulator
-    """
+    """Track a chirped beam through a finite region with planar radiation kicks."""
     p_array_track = copy.deepcopy(p_array)
 
     navi = Navigator(lattice)

@@ -1519,6 +1519,885 @@ class Wake3(Wake):
         return x, Wz * self.factor
 
 
+class WakeTable4(WakeTable3):
+    """
+    WakeTable4(wake_file) - load and prepare wake table with 4th order coefficents, to be used by Wake4()
+    wake_file - path to the wake table
+    """
+
+    def __init__(self, wake_file=None):
+        if wake_file is not None:
+            self.TH = self.load_table(wake_file)
+
+    def process_wake_table(self, wake_table):
+        """
+        :param wake_file: file name
+        :return: (T, H): T- table of wakes coefs, H - matrix of the coefs place in T
+        """
+        W = wake_table
+        # head format %Nt 0 %N0 N1 %R L %C nmkq
+        H = np.zeros([5, 5, 5, 5])
+        Nt = int(W[0, 0])
+        T = []
+        ind = 0
+        for i in range(Nt):
+            ind = ind + 1
+            N0 = int(W[ind, 0])
+            N1 = int(W[ind, 1])
+            R = W[ind + 1, 0]
+            L = W[ind + 1, 1]
+            Cinv = W[ind + 2, 0]
+            nmkq = int(W[ind + 2, 1])
+            n = int(np.floor(nmkq / 1000))
+            nmkq = nmkq - 1000 * n
+            m = int(np.floor(nmkq / 100))
+            nmkq = nmkq - 100 * m
+            k = int(np.floor(nmkq / 10))
+            q = int(nmkq - 10 * k)
+            H[n, m, k, q] = i
+            ind = ind + 2
+            if N0 > 0:
+                W0 = np.zeros([N0, 2])
+                W0[0:N0, :] = W[ind + 1:ind + N0 + 1, :]
+                ind = ind + N0
+            else:
+                W0 = 0
+            if N1 > 0:
+                W1 = np.zeros([N1, 2])
+                W1[0:N1, :] = W[ind + 1:ind + N1 + 1, :]
+                ind = ind + N1
+            else:
+                W1 = 0
+            T = T + [(R, L, Cinv, nmkq, W0, N0, W1, N1)]
+        return (T, H)
+
+
+class WakeTableParallelPlate4_origin(WakeTable4):
+    """
+    WakeTableParallelPlate() - create 4th order wake tables for parallel plate corrugated
+    strcutres based on 0th order analytical results. Here 0th order assumes contant longitudinal
+    wake and constant slope for transverse wakes. This class should be used with Wake4().
+    """
+
+    def __init__(self, b=500e-6, a=500e-6, t=250e-6, p=500e-6, length=1, sigma=30e-6, orient="horz"):
+        WakeTable4.__init__(self)
+        wake_horz, wake_vert = self.calculate_wake_table(b, a, t, p, length, sigma)
+        if orient == "horz":
+            self.TH = self.process_wake_table(wake_horz)
+        else:
+            self.TH = self.process_wake_table(wake_vert)
+
+    def calculate_wake_table(self, b, a, t, p, length, sigma):
+        offset = a - b
+        if np.abs(offset) >= a:
+            raise ValueError("distance to +y/+x plate must be smaller than 2a")
+        c = glb.speed_of_light
+        Z0 = 3.767303134695850e+02
+        s = np.arange(0, 50 + 0.01, 0.01) * sigma
+        ns = len(s)
+        t2p = t / p
+        alpha = 1 - 0.465 * np.sqrt(t2p) - 0.07 * t2p
+        s0r = a * a * t / (2 * np.pi * alpha * alpha * p * p)
+        mks = Z0 * c / (4 * np.pi) * length
+
+        zeros = np.zeros(ns)
+        h000 = zeros.copy()
+        h002 = zeros.copy()
+        h004 = zeros.copy()
+        h011 = zeros.copy()
+        h013 = zeros.copy()
+        h024 = zeros.copy()
+        h033 = zeros.copy()
+        h112 = zeros.copy()
+        h114 = zeros.copy()
+        h233 = zeros.copy()
+        h334 = zeros.copy()
+        h123 = zeros.copy()
+        h134 = zeros.copy()
+        h222 = zeros.copy()
+        h224 = zeros.copy()
+        h244 = zeros.copy()
+        h444 = zeros.copy()
+
+        # fourth order
+        h1111 = zeros.copy()
+        h1113 = zeros.copy()
+        h1122 = zeros.copy()
+        h1124 = zeros.copy()
+        h1133 = zeros.copy()
+        h1144 = zeros.copy()
+        h1223 = zeros.copy()
+        h1234 = zeros.copy()
+        h1333 = zeros.copy()
+        h1344 = zeros.copy()
+        h2222 = zeros.copy()
+        h2224 = zeros.copy()
+        h2233 = zeros.copy()
+        h2244 = zeros.copy()
+        h2334 = zeros.copy()
+        h2444 = zeros.copy()
+        h3333 = zeros.copy()
+        h3344 = zeros.copy()
+        h4444 = zeros.copy()
+
+        csc = lambda x: 1 / np.sin(x)
+        sec = lambda x: 1 / np.cos(x)
+        cot = lambda x: 1 / np.tan(x)
+        Y = pi * offset / (2 * a)
+        ones = np.ones(s.shape)
+
+        if Y == 0:
+            h000 = mks * np.pi ** 2 / (4 * a ** 2) * ones
+            h011 = mks * (-1) * np.pi ** 4 / (64 * a ** 4) * ones
+            h013 = -h011
+            h024 = mks * np.pi ** 4 / (64 * a ** 4) * ones
+            h033 = h011
+            amp4 = mks * np.pi ** 6 / (3072 * a ** 6) * sec(Y) ** 2 * (15 * np.tan(Y) ** 4 + 15 * np.tan(Y) ** 2 + 2) * ones
+            h1111 = amp4
+            h1133 = amp4
+            h1223 = amp4
+            h1234 = amp4
+            h1344 = amp4
+            h2222 = amp4
+            h2224 = amp4
+            h2244 = amp4
+            h2444 = amp4
+            h3333 = amp4
+            h4444 = amp4
+            h1113 = -amp4
+            h1122 = -amp4
+            h1124 = -amp4
+            h1144 = -amp4
+            h1333 = -amp4
+            h2233 = -amp4
+            h2334 = -amp4
+            h3344 = -amp4
+        else:
+            h000 = mks * np.pi ** 2 / (4 * a ** 2) * sec(Y) ** 2 * ones
+            h002 = mks * np.pi ** 3 / (16 * a ** 3) * np.sin(2 * Y) * sec(Y) ** 4 * ones
+            h004 = h002
+            h011 = mks * np.pi ** 4 / (64 * a ** 4) * (np.cos(2 * Y) - 2) * sec(Y) ** 4 * ones
+            h013 = -h011
+            h024 = mks * np.pi ** 4 / (64 * a ** 4) * (2 - np.cos(2 * Y)) * sec(Y) ** 4 * ones
+            h033 = h011
+            h112 = mks * np.pi ** 5 / (768 * a ** 5) * sec(Y) ** 5 * (np.sin(3 * Y) - 11 * np.sin(Y)) * ones
+            h114 = h112
+            h233 = h112
+            h334 = h112
+            h123 = -h112
+            h134 = -h112
+            h222 = -h112
+            h224 = -h112
+            h244 = -h112
+            h444 = -h112
+            amp4 = mks * np.pi ** 6 / (3072 * a ** 6) * sec(Y) ** 2 * (15 * np.tan(Y) ** 4 + 15 * np.tan(Y) ** 2 + 2) * ones
+            h1111 = amp4
+            h1133 = amp4
+            h1223 = amp4
+            h1234 = amp4
+            h1344 = amp4
+            h2222 = amp4
+            h2224 = amp4
+            h2244 = amp4
+            h2444 = amp4
+            h3333 = amp4
+            h4444 = amp4
+            h1113 = -amp4
+            h1122 = -amp4
+            h1124 = -amp4
+            h1144 = -amp4
+            h1333 = -amp4
+            h2233 = -amp4
+            h2334 = -amp4
+            h3344 = -amp4
+
+        N = len(s)
+        # full coefficients, horizontal, kick is in y 
+        out000 = np.append([[N, 0], [0, 0], [0, 0]], np.vstack((s, h000)).T, axis=0)
+        out002 = np.append([[N, 0], [0, 0], [0, 2]], np.vstack((s, h002)).T, axis=0)
+        out004 = np.append([[N, 0], [0, 0], [0, 4]], np.vstack((s, h004)).T, axis=0)
+        out011 = np.append([[N, 0], [0, 0], [0, 11]], np.vstack((s, h011)).T, axis=0)
+        out013 = np.append([[N, 0], [0, 0], [0, 13]], np.vstack((s, h013)).T, axis=0)
+        out024 = np.append([[N, 0], [0, 0], [0, 24]], np.vstack((s, h024)).T, axis=0)
+        out033 = np.append([[N, 0], [0, 0], [0, 33]], np.vstack((s, h033)).T, axis=0)
+        out112 = np.append([[N, 0], [0, 0], [0, 112]], np.vstack((s, h112)).T, axis=0)
+        out114 = np.append([[N, 0], [0, 0], [0, 114]], np.vstack((s, h114)).T, axis=0)
+        out233 = np.append([[N, 0], [0, 0], [0, 233]], np.vstack((s, h233)).T, axis=0)
+        out334 = np.append([[N, 0], [0, 0], [0, 334]], np.vstack((s, h334)).T, axis=0)
+        out123 = np.append([[N, 0], [0, 0], [0, 123]], np.vstack((s, h123)).T, axis=0)
+        out134 = np.append([[N, 0], [0, 0], [0, 134]], np.vstack((s, h134)).T, axis=0)
+        out222 = np.append([[N, 0], [0, 0], [0, 222]], np.vstack((s, h222)).T, axis=0)
+        out224 = np.append([[N, 0], [0, 0], [0, 224]], np.vstack((s, h224)).T, axis=0)
+        out244 = np.append([[N, 0], [0, 0], [0, 244]], np.vstack((s, h244)).T, axis=0)
+        out444 = np.append([[N, 0], [0, 0], [0, 444]], np.vstack((s, h444)).T, axis=0)
+        out1111 = np.append([[N, 0], [0, 0], [0, 1111]], np.vstack((s, h1111)).T, axis=0)
+        out1113 = np.append([[N, 0], [0, 0], [0, 1113]], np.vstack((s, h1113)).T, axis=0)
+        out1122 = np.append([[N, 0], [0, 0], [0, 1122]], np.vstack((s, h1122)).T, axis=0)
+        out1124 = np.append([[N, 0], [0, 0], [0, 1124]], np.vstack((s, h1124)).T, axis=0)
+        out1133 = np.append([[N, 0], [0, 0], [0, 1133]], np.vstack((s, h1133)).T, axis=0)
+        out1144 = np.append([[N, 0], [0, 0], [0, 1144]], np.vstack((s, h1144)).T, axis=0)
+        out1223 = np.append([[N, 0], [0, 0], [0, 1223]], np.vstack((s, h1223)).T, axis=0)
+        out1234 = np.append([[N, 0], [0, 0], [0, 1234]], np.vstack((s, h1234)).T, axis=0)
+        out1333 = np.append([[N, 0], [0, 0], [0, 1333]], np.vstack((s, h1333)).T, axis=0)
+        out1344 = np.append([[N, 0], [0, 0], [0, 1344]], np.vstack((s, h1344)).T, axis=0)
+        out2222 = np.append([[N, 0], [0, 0], [0, 2222]], np.vstack((s, h2222)).T, axis=0)
+        out2224 = np.append([[N, 0], [0, 0], [0, 2224]], np.vstack((s, h2224)).T, axis=0)
+        out2233 = np.append([[N, 0], [0, 0], [0, 2233]], np.vstack((s, h2233)).T, axis=0)
+        out2244 = np.append([[N, 0], [0, 0], [0, 2244]], np.vstack((s, h2244)).T, axis=0)
+        out2334 = np.append([[N, 0], [0, 0], [0, 2334]], np.vstack((s, h2334)).T, axis=0)
+        out2444 = np.append([[N, 0], [0, 0], [0, 2444]], np.vstack((s, h2444)).T, axis=0)
+        out3333 = np.append([[N, 0], [0, 0], [0, 3333]], np.vstack((s, h3333)).T, axis=0)
+        out3344 = np.append([[N, 0], [0, 0], [0, 3344]], np.vstack((s, h3344)).T, axis=0)
+        out4444 = np.append([[N, 0], [0, 0], [0, 4444]], np.vstack((s, h4444)).T, axis=0)
+
+        wake_horz = np.vstack(([[36, 0]], out000, out002, out004, out011, out013, out024, out033,
+                               out112, out114, out233, out334, out123, out134, out222, out224, out244, out444,
+                               out1111, out1113, out1122, out1124, out1133, out1144, out1223, out1234, out1333, out1344,
+                               out2222, out2224, out2233, out2244, out2334, out2444, out3333, out3344, out4444
+                               ))
+        # full coefficients, vertical, swap x -> y, x0 -> y0, i.e., 1 -> 2, 3 -> 4, keep 0
+        # note h22 = -h11, h44 = -h33
+        out000 = np.append([[N, 0], [0, 0], [0, 0]], np.vstack((s, h000)).T, axis=0)
+        out001 = np.append([[N, 0], [0, 0], [0, 1]], np.vstack((s, h002)).T, axis=0)
+        out003 = np.append([[N, 0], [0, 0], [0, 3]], np.vstack((s, h004)).T, axis=0)
+        out011 = np.append([[N, 0], [0, 0], [0, 11]], np.vstack((s, -h011)).T, axis=0)
+        out013 = np.append([[N, 0], [0, 0], [0, 13]], np.vstack((s, h024)).T, axis=0)
+        out024 = np.append([[N, 0], [0, 0], [0, 24]], np.vstack((s, h013)).T, axis=0)
+        out033 = np.append([[N, 0], [0, 0], [0, 33]], np.vstack((s, -h033)).T, axis=0)
+        out122 = np.append([[N, 0], [0, 0], [0, 122]], np.vstack((s, h112)).T, axis=0)
+        out223 = np.append([[N, 0], [0, 0], [0, 223]], np.vstack((s, h114)).T, axis=0)
+        out144 = np.append([[N, 0], [0, 0], [0, 144]], np.vstack((s, h233)).T, axis=0)
+        out344 = np.append([[N, 0], [0, 0], [0, 344]], np.vstack((s, h334)).T, axis=0)
+        out124 = np.append([[N, 0], [0, 0], [0, 124]], np.vstack((s, h123)).T, axis=0)
+        out234 = np.append([[N, 0], [0, 0], [0, 234]], np.vstack((s, h134)).T, axis=0)
+        out111 = np.append([[N, 0], [0, 0], [0, 111]], np.vstack((s, h222)).T, axis=0)
+        out113 = np.append([[N, 0], [0, 0], [0, 113]], np.vstack((s, h224)).T, axis=0)
+        out133 = np.append([[N, 0], [0, 0], [0, 133]], np.vstack((s, h244)).T, axis=0)
+        out333 = np.append([[N, 0], [0, 0], [0, 333]], np.vstack((s, h444)).T, axis=0)
+        out2222 = np.append([[N, 0], [0, 0], [0, 2222]], np.vstack((s, h1111)).T, axis=0)
+        out2224 = np.append([[N, 0], [0, 0], [0, 2224]], np.vstack((s, h1113)).T, axis=0)
+        out1122 = np.append([[N, 0], [0, 0], [0, 1122]], np.vstack((s, h1122)).T, axis=0)
+        out1223 = np.append([[N, 0], [0, 0], [0, 1223]], np.vstack((s, h1124)).T, axis=0)
+        out2244 = np.append([[N, 0], [0, 0], [0, 2244]], np.vstack((s, h1133)).T, axis=0)
+        out2233 = np.append([[N, 0], [0, 0], [0, 2233]], np.vstack((s, h1144)).T, axis=0)
+        out1124 = np.append([[N, 0], [0, 0], [0, 1124]], np.vstack((s, h1223)).T, axis=0)
+        out1234 = np.append([[N, 0], [0, 0], [0, 1234]], np.vstack((s, h1234)).T, axis=0)
+        out2444 = np.append([[N, 0], [0, 0], [0, 2444]], np.vstack((s, h1333)).T, axis=0)
+        out2334 = np.append([[N, 0], [0, 0], [0, 2334]], np.vstack((s, h1344)).T, axis=0)
+        out1111 = np.append([[N, 0], [0, 0], [0, 1111]], np.vstack((s, h2222)).T, axis=0)
+        out1113 = np.append([[N, 0], [0, 0], [0, 1113]], np.vstack((s, h2224)).T, axis=0)
+        out1144 = np.append([[N, 0], [0, 0], [0, 1144]], np.vstack((s, h2233)).T, axis=0)
+        out1133 = np.append([[N, 0], [0, 0], [0, 1133]], np.vstack((s, h2244)).T, axis=0)
+        out1344 = np.append([[N, 0], [0, 0], [0, 1344]], np.vstack((s, h2334)).T, axis=0)
+        out1333 = np.append([[N, 0], [0, 0], [0, 1333]], np.vstack((s, h2444)).T, axis=0)
+        out4444 = np.append([[N, 0], [0, 0], [0, 4444]], np.vstack((s, h3333)).T, axis=0)
+        out3344 = np.append([[N, 0], [0, 0], [0, 3344]], np.vstack((s, h3344)).T, axis=0)
+        out3333 = np.append([[N, 0], [0, 0], [0, 3333]], np.vstack((s, h4444)).T, axis=0)
+
+        wake_vert = np.vstack(([[36, 0]], out000, out001, out003, out011, out013, out024, out033,
+                               out122, out223, out144, out344, out124, out234, out111, out113, out133, out333,
+                               out2222, out2224, out1122, out1223, out2244, out2233, out1124, out1234, out2444, out2334,
+                               out1111, out1113, out1144, out1133, out1344, out1333, out4444, out3344, out3333
+                               ))
+        return wake_horz, wake_vert
+
+
+class WakeTableParallelPlate4(WakeTable4):
+    """
+    WakeTableParallelPlate() - create 4th order wake tables for parallel plate corrugated
+    strcutres based on 1st order analytical results. Here 1st order adds an exponential decay term
+    to the 0th order results. This calss should be used with Wake4().
+    """
+
+    def __init__(self, b=500e-6, a=500e-6, t=250e-6, p=500e-6, length=1, sigma=30e-6, orient="horz"):
+        WakeTable4.__init__(self)
+        wake_horz, wake_vert = self.calculate_wake_table(b, a, t, p, length, sigma)
+        if orient == "horz":
+            self.TH = self.process_wake_table(wake_horz)
+        else:
+            self.TH = self.process_wake_table(wake_vert)
+
+    def calculate_wake_table(self, b, a, t, p, length, sigma):
+        offset = a - b
+        if np.abs(offset) >= a:
+            raise ValueError("distance to +y/+x plate must be smaller than 2a")
+        c = glb.speed_of_light
+        Z0 = 3.767303134695850e+02
+        s = np.arange(0, 50 + 0.01, 0.01) * sigma
+        ns = len(s)
+        t2p = t / p
+        alpha = 1 - 0.465 * np.sqrt(t2p) - 0.07 * t2p
+        s0r = a * a * t / (2 * np.pi * alpha * alpha * p * p)
+        mks = Z0 * c / (4 * np.pi) * length
+
+        zeros = np.zeros(ns)
+        h000 = zeros.copy()
+        h002 = zeros.copy()
+        h004 = zeros.copy()
+        h011 = zeros.copy()
+        h013 = zeros.copy()
+        h024 = zeros.copy()
+        h033 = zeros.copy()
+        h112 = zeros.copy()
+        h114 = zeros.copy()
+        h233 = zeros.copy()
+        h334 = zeros.copy()
+        h123 = zeros.copy()
+        h134 = zeros.copy()
+        h222 = zeros.copy()
+        h224 = zeros.copy()
+        h244 = zeros.copy()
+        h444 = zeros.copy()
+
+        h1111 = zeros.copy()
+        h1113 = zeros.copy()
+        h1122 = zeros.copy()
+        h1124 = zeros.copy()
+        h1133 = zeros.copy()
+        h1144 = zeros.copy()
+        h1223 = zeros.copy()
+        h1234 = zeros.copy()
+        h1333 = zeros.copy()
+        h1344 = zeros.copy()
+        h2222 = zeros.copy()
+        h2224 = zeros.copy()
+        h2233 = zeros.copy()
+        h2244 = zeros.copy()
+        h2334 = zeros.copy()
+        h2444 = zeros.copy()
+        h3333 = zeros.copy()
+        h3344 = zeros.copy()
+        h4444 = zeros.copy()
+
+        csc = lambda x: 1 / np.sin(x)
+        sec = lambda x: 1 / np.cos(x)
+        cot = lambda x: 1 / np.tan(x)
+        Y = pi * offset / (2 * a)
+
+        if Y == 0:
+            sl = 9 / 4 * s0r
+            sd = (15 / 14) ** 2 * s0r
+            sq = (15 / 16) ** 2 * s0r
+            u = np.cos(2 * Y)
+            den = u ** 2 - 13 * u + 16
+            common = 3 + Y * np.tan(Y) * (u ** 2 - 28 * u + 61) / den
+            delta = (1 + u) ** 3 / (42 * den)
+            so_p = 4 * s0r * (common + delta) ** (-2)
+            so_m = 4 * s0r * (common - delta) ** (-2)
+            ep = np.exp(-np.sqrt(s / so_p))
+            em = np.exp(-np.sqrt(s / so_m))
+            h000 = mks * np.pi ** 2 / (4 * a ** 2) * np.exp(-np.sqrt(s / sl))
+            h011 = mks * (-1) * np.pi ** 4 / (64 * a ** 4) * np.exp(-np.sqrt(s / sq))
+            h013 = -h011
+            h024 = mks * np.pi ** 4 / (64 * a ** 4) * np.exp(-np.sqrt(s / sd))
+            h033 = h011
+            amp4 = mks * np.pi ** 6 / (3072 * a ** 6) * sec(Y) ** 2 * (15 * np.tan(Y) ** 4 + 15 * np.tan(Y) ** 2 + 2)
+            # so+ family
+            h1111 = amp4 * ep
+            h1133 = amp4 * ep
+            h1223 = amp4 * ep
+            h1344 = amp4 * ep
+            h2222 = amp4 * ep
+            h2244 = amp4 * ep
+            h3333 = amp4 * ep
+            h4444 = amp4 * ep
+            h1113 = -amp4 * ep
+            h1122 = -amp4 * ep
+            h1144 = -amp4 * ep
+            h1333 = -amp4 * ep
+            h2233 = -amp4 * ep
+            h3344 = -amp4 * ep
+            # so- family
+            h1234 = amp4 * em
+            h2224 = amp4 * em
+            h2444 = amp4 * em
+            h1124 = -amp4 * em
+            h2334 = -amp4 * em
+        else:
+            sl = 4 * s0r * (1 + np.cos(Y) ** 2 / 3 + Y * np.tan(Y)) ** (-2)
+            sm = 4 * s0r * (1.5 - Y * cot(2 * Y) + Y * csc(Y) * sec(Y)) ** (-2)
+            sd = 4 * s0r * ((64 + np.cos(2 * Y)) / 30 + 2 * Y * np.tan(Y) + (0.3 - Y * np.sin(2 * Y)) / (np.cos(2 * Y) - 2)) ** (-2)
+            sq = 4 * s0r * ((56 - np.cos(2 * Y)) / 30 + 2 * Y * np.tan(Y) - (0.3 + Y * np.sin(2 * Y)) / (np.cos(2 * Y) - 2)) ** (-2)
+            st = 16 * s0r * (5 * Y * np.tan(Y) + Y * cot(Y) + (2 * Y * np.sin(2 * Y)) / (5 - np.cos(2 * Y)) + 5) ** (-2)
+            u = np.cos(2 * Y)
+            den = u ** 2 - 13 * u + 16
+            common = 3 + Y * np.tan(Y) * (u ** 2 - 28 * u + 61) / den
+            delta = (1 + u) ** 3 / (42 * den)
+            so_p = 4 * s0r * (common + delta) ** (-2)
+            so_m = 4 * s0r * (common - delta) ** (-2)
+            ep = np.exp(-np.sqrt(s / so_p))
+            em = np.exp(-np.sqrt(s / so_m))
+            h000 = mks * np.pi ** 2 / (4 * a ** 2) * sec(Y) ** 2 * np.exp(-np.sqrt(s / sl))
+            h002 = mks * np.pi ** 3 / (16 * a ** 3) * np.sin(2 * Y) * sec(Y) ** 4 * np.exp(-np.sqrt(s / sm))
+            h004 = h002
+            h011 = mks * np.pi ** 4 / (64 * a ** 4) * (np.cos(2 * Y) - 2) * sec(Y) ** 4 * np.exp(-np.sqrt(s / sq))
+            h013 = -h011
+            h024 = mks * np.pi ** 4 / (64 * a ** 4) * (2 - np.cos(2 * Y)) * sec(Y) ** 4 * np.exp(-np.sqrt(s / sd))
+            h033 = h011
+            h112 = mks * np.pi ** 5 / (768 * a ** 5) * sec(Y) ** 5 * (np.sin(3 * Y) - 11 * np.sin(Y)) * np.exp(-np.sqrt(s / st))
+            h114 = h112
+            h233 = h112
+            h334 = h112
+            h123 = -h112
+            h134 = -h112
+            h222 = -h112
+            h224 = -h112
+            h244 = -h112
+            h444 = -h112
+            amp4 = mks * np.pi ** 6 / (3072 * a ** 6) * sec(Y) ** 2 * (15 * np.tan(Y) ** 4 + 15 * np.tan(Y) ** 2 + 2)
+            h1111 = amp4 * ep
+            h1133 = amp4 * ep
+            h1223 = amp4 * ep
+            h1344 = amp4 * ep
+            h2222 = amp4 * ep
+            h2244 = amp4 * ep
+            h3333 = amp4 * ep
+            h4444 = amp4 * ep
+            h1113 = -amp4 * ep
+            h1122 = -amp4 * ep
+            h1144 = -amp4 * ep
+            h1333 = -amp4 * ep
+            h2233 = -amp4 * ep
+            h3344 = -amp4 * ep
+            h1234 = amp4 * em
+            h2224 = amp4 * em
+            h2444 = amp4 * em
+            h1124 = -amp4 * em
+            h2334 = -amp4 * em
+
+        N = len(s)
+        # full coefficients, horizontal, kick is in y 
+        out000 = np.append([[N, 0], [0, 0], [0, 0]], np.vstack((s, h000)).T, axis=0)
+        out002 = np.append([[N, 0], [0, 0], [0, 2]], np.vstack((s, h002)).T, axis=0)
+        out004 = np.append([[N, 0], [0, 0], [0, 4]], np.vstack((s, h004)).T, axis=0)
+        out011 = np.append([[N, 0], [0, 0], [0, 11]], np.vstack((s, h011)).T, axis=0)
+        out013 = np.append([[N, 0], [0, 0], [0, 13]], np.vstack((s, h013)).T, axis=0)
+        out024 = np.append([[N, 0], [0, 0], [0, 24]], np.vstack((s, h024)).T, axis=0)
+        out033 = np.append([[N, 0], [0, 0], [0, 33]], np.vstack((s, h033)).T, axis=0)
+        out112 = np.append([[N, 0], [0, 0], [0, 112]], np.vstack((s, h112)).T, axis=0)
+        out114 = np.append([[N, 0], [0, 0], [0, 114]], np.vstack((s, h114)).T, axis=0)
+        out233 = np.append([[N, 0], [0, 0], [0, 233]], np.vstack((s, h233)).T, axis=0)
+        out334 = np.append([[N, 0], [0, 0], [0, 334]], np.vstack((s, h334)).T, axis=0)
+        out123 = np.append([[N, 0], [0, 0], [0, 123]], np.vstack((s, h123)).T, axis=0)
+        out134 = np.append([[N, 0], [0, 0], [0, 134]], np.vstack((s, h134)).T, axis=0)
+        out222 = np.append([[N, 0], [0, 0], [0, 222]], np.vstack((s, h222)).T, axis=0)
+        out224 = np.append([[N, 0], [0, 0], [0, 224]], np.vstack((s, h224)).T, axis=0)
+        out244 = np.append([[N, 0], [0, 0], [0, 244]], np.vstack((s, h244)).T, axis=0)
+        out444 = np.append([[N, 0], [0, 0], [0, 444]], np.vstack((s, h444)).T, axis=0)
+        out1111 = np.append([[N, 0], [0, 0], [0, 1111]], np.vstack((s, h1111)).T, axis=0)
+        out1113 = np.append([[N, 0], [0, 0], [0, 1113]], np.vstack((s, h1113)).T, axis=0)
+        out1122 = np.append([[N, 0], [0, 0], [0, 1122]], np.vstack((s, h1122)).T, axis=0)
+        out1124 = np.append([[N, 0], [0, 0], [0, 1124]], np.vstack((s, h1124)).T, axis=0)
+        out1133 = np.append([[N, 0], [0, 0], [0, 1133]], np.vstack((s, h1133)).T, axis=0)
+        out1144 = np.append([[N, 0], [0, 0], [0, 1144]], np.vstack((s, h1144)).T, axis=0)
+        out1223 = np.append([[N, 0], [0, 0], [0, 1223]], np.vstack((s, h1223)).T, axis=0)
+        out1234 = np.append([[N, 0], [0, 0], [0, 1234]], np.vstack((s, h1234)).T, axis=0)
+        out1333 = np.append([[N, 0], [0, 0], [0, 1333]], np.vstack((s, h1333)).T, axis=0)
+        out1344 = np.append([[N, 0], [0, 0], [0, 1344]], np.vstack((s, h1344)).T, axis=0)
+        out2222 = np.append([[N, 0], [0, 0], [0, 2222]], np.vstack((s, h2222)).T, axis=0)
+        out2224 = np.append([[N, 0], [0, 0], [0, 2224]], np.vstack((s, h2224)).T, axis=0)
+        out2233 = np.append([[N, 0], [0, 0], [0, 2233]], np.vstack((s, h2233)).T, axis=0)
+        out2244 = np.append([[N, 0], [0, 0], [0, 2244]], np.vstack((s, h2244)).T, axis=0)
+        out2334 = np.append([[N, 0], [0, 0], [0, 2334]], np.vstack((s, h2334)).T, axis=0)
+        out2444 = np.append([[N, 0], [0, 0], [0, 2444]], np.vstack((s, h2444)).T, axis=0)
+        out3333 = np.append([[N, 0], [0, 0], [0, 3333]], np.vstack((s, h3333)).T, axis=0)
+        out3344 = np.append([[N, 0], [0, 0], [0, 3344]], np.vstack((s, h3344)).T, axis=0)
+        out4444 = np.append([[N, 0], [0, 0], [0, 4444]], np.vstack((s, h4444)).T, axis=0)
+
+        wake_horz = np.vstack(([[36, 0]], out000, out002, out004, out011, out013, out024, out033,
+                               out112, out114, out233, out334, out123, out134, out222, out224, out244, out444,
+                               out1111, out1113, out1122, out1124, out1133, out1144, out1223, out1234, out1333, out1344,
+                               out2222, out2224, out2233, out2244, out2334, out2444, out3333, out3344, out4444
+                               ))
+        # full coefficients, vertical, swap x -> y, x0 -> y0, i.e., 1 -> 2, 3 -> 4, keep 0
+        # note h22 = -h11, h44 = -h33
+        out000 = np.append([[N, 0], [0, 0], [0, 0]], np.vstack((s, h000)).T, axis=0)
+        out001 = np.append([[N, 0], [0, 0], [0, 1]], np.vstack((s, h002)).T, axis=0)
+        out003 = np.append([[N, 0], [0, 0], [0, 3]], np.vstack((s, h004)).T, axis=0)
+        out011 = np.append([[N, 0], [0, 0], [0, 11]], np.vstack((s, -h011)).T, axis=0)
+        out013 = np.append([[N, 0], [0, 0], [0, 13]], np.vstack((s, h024)).T, axis=0)
+        out024 = np.append([[N, 0], [0, 0], [0, 24]], np.vstack((s, h013)).T, axis=0)
+        out033 = np.append([[N, 0], [0, 0], [0, 33]], np.vstack((s, -h033)).T, axis=0)
+        out122 = np.append([[N, 0], [0, 0], [0, 122]], np.vstack((s, h112)).T, axis=0)
+        out223 = np.append([[N, 0], [0, 0], [0, 223]], np.vstack((s, h114)).T, axis=0)
+        out144 = np.append([[N, 0], [0, 0], [0, 144]], np.vstack((s, h233)).T, axis=0)
+        out344 = np.append([[N, 0], [0, 0], [0, 344]], np.vstack((s, h334)).T, axis=0)
+        out124 = np.append([[N, 0], [0, 0], [0, 124]], np.vstack((s, h123)).T, axis=0)
+        out234 = np.append([[N, 0], [0, 0], [0, 234]], np.vstack((s, h134)).T, axis=0)
+        out111 = np.append([[N, 0], [0, 0], [0, 111]], np.vstack((s, h222)).T, axis=0)
+        out113 = np.append([[N, 0], [0, 0], [0, 113]], np.vstack((s, h224)).T, axis=0)
+        out133 = np.append([[N, 0], [0, 0], [0, 133]], np.vstack((s, h244)).T, axis=0)
+        out333 = np.append([[N, 0], [0, 0], [0, 333]], np.vstack((s, h444)).T, axis=0)
+        out2222 = np.append([[N, 0], [0, 0], [0, 2222]], np.vstack((s, h1111)).T, axis=0)
+        out2224 = np.append([[N, 0], [0, 0], [0, 2224]], np.vstack((s, h1113)).T, axis=0)
+        out1122 = np.append([[N, 0], [0, 0], [0, 1122]], np.vstack((s, h1122)).T, axis=0)
+        out1223 = np.append([[N, 0], [0, 0], [0, 1223]], np.vstack((s, h1124)).T, axis=0)
+        out2244 = np.append([[N, 0], [0, 0], [0, 2244]], np.vstack((s, h1133)).T, axis=0)
+        out2233 = np.append([[N, 0], [0, 0], [0, 2233]], np.vstack((s, h1144)).T, axis=0)
+        out1124 = np.append([[N, 0], [0, 0], [0, 1124]], np.vstack((s, h1223)).T, axis=0)
+        out1234 = np.append([[N, 0], [0, 0], [0, 1234]], np.vstack((s, h1234)).T, axis=0)
+        out2444 = np.append([[N, 0], [0, 0], [0, 2444]], np.vstack((s, h1333)).T, axis=0)
+        out2334 = np.append([[N, 0], [0, 0], [0, 2334]], np.vstack((s, h1344)).T, axis=0)
+        out1111 = np.append([[N, 0], [0, 0], [0, 1111]], np.vstack((s, h2222)).T, axis=0)
+        out1113 = np.append([[N, 0], [0, 0], [0, 1113]], np.vstack((s, h2224)).T, axis=0)
+        out1144 = np.append([[N, 0], [0, 0], [0, 1144]], np.vstack((s, h2233)).T, axis=0)
+        out1133 = np.append([[N, 0], [0, 0], [0, 1133]], np.vstack((s, h2244)).T, axis=0)
+        out1344 = np.append([[N, 0], [0, 0], [0, 1344]], np.vstack((s, h2334)).T, axis=0)
+        out1333 = np.append([[N, 0], [0, 0], [0, 1333]], np.vstack((s, h2444)).T, axis=0)
+        out4444 = np.append([[N, 0], [0, 0], [0, 4444]], np.vstack((s, h3333)).T, axis=0)
+        out3344 = np.append([[N, 0], [0, 0], [0, 3344]], np.vstack((s, h3344)).T, axis=0)
+        out3333 = np.append([[N, 0], [0, 0], [0, 3333]], np.vstack((s, h4444)).T, axis=0)
+
+        wake_vert = np.vstack(([[36, 0]], out000, out001, out003, out011, out013, out024, out033,
+                               out122, out223, out144, out344, out124, out234, out111, out113, out133, out333,
+                               out2222, out2224, out1122, out1223, out2244, out2233, out1124, out1234, out2444, out2334,
+                               out1111, out1113, out1144, out1133, out1344, out1333, out4444, out3344, out3333
+                               ))
+        return wake_horz, wake_vert
+
+
+class Wake4(Wake3):
+    """
+    The wake field impact on the beam is included as series of kicks.
+    In order to take into account the impact of the wake field on the beam the longitudinal wake function
+    of point charge through the fourth order Taylor expansion is used.
+    In general case it uses 13 + 20 + 35 one-dimensional functions to represent the  longitudinal component of the wake
+    function for arbitrary sets of the source and the wittness particles near to the reference axis.
+
+    parameters:
+    -----------
+    w_sampling = 500 -  defines the number of the equidistant sampling points for the one-dimensional
+                        wake coefficients in the Taylor expansion of the 3D wake function.
+    filter_order = 20 - smoothing filter order
+    wake_table = None - wake table [WakeTable4()]
+    factor = 1. - scaling coefficient
+    TH - list from WakeTable, (T, H): T- table of wakes coefs, H - matrix of the coefs place in T
+    """
+
+    def __init__(self, step=1):
+        PhysProc.__init__(self)
+        self.w_sampling = 500  # wake sampling
+        self.filter_order = 20  # smoothing filter order
+        # self.wake_file = ""
+        self.wake_table = None
+        self.factor = 1.
+        self.step = step
+        self.TH = None
+
+    def add_total_wake(self, X, Y, Z, q, TH, Ns, NF):
+        T, H = TH
+        # orders 0-3 use the Wake3 layout stored in H[0]
+        Px, Py, Pz, I00 = Wake3.add_total_wake(self, X, Y, Z, q, (T, H[0]), Ns, NF)
+        c = glb.speed_of_light
+
+        X2 = X ** 2
+        Y2 = Y ** 2
+        X3 = X ** 3
+        Y3 = Y ** 3
+        X4 = X ** 4
+        Y4 = Y ** 4
+        XY = X * Y
+        X2Y = X2 * Y
+        XY2 = X * Y2
+        X2Y2 = X2 * Y2
+        X3Y = X3 * Y
+        XY3 = X * Y3
+
+
+        I00 = s2current(Z, q, Ns, NF, c)
+        if H[1, 3, 3, 3] > 0 or H[1, 3, 4, 4] > 0 or H[1, 3, 3, 4] > 0 or H[1, 4, 4, 4] > 0:
+            I10 = s2current(Z, q * X, Ns, NF, c)
+        if H[2, 3, 3, 4] > 0 or H[2, 4, 4, 4] > 0 or H[2, 3, 3, 3] > 0 or H[2, 3, 4, 4] > 0:
+            I01 = s2current(Z, q * Y, Ns, NF, c)
+        if H[1, 1, 3, 3] > 0 or H[1, 1, 4, 4] > 0 or H[1, 1, 3, 4] > 0:
+            I20 = s2current(Z, q * X2, Ns, NF, c)
+        if H[2, 2, 3, 3] > 0 or H[2, 2, 4, 4] > 0 or H[2, 2, 3, 4] > 0:
+            I02 = s2current(Z, q * Y2, Ns, NF, c)
+        if H[1, 2, 3, 4] > 0 or H[1, 2, 3, 3] > 0 or H[1, 2, 4, 4] > 0:
+            I11 = s2current(Z, q * XY, Ns, NF, c)
+        if H[1, 1, 1, 3] > 0 or H[1, 1, 1, 4] > 0:
+            I30 = s2current(Z, q * X3, Ns, NF, c)
+        if H[2, 2, 2, 4] > 0 or H[2, 2, 2, 3] > 0:
+            I03 = s2current(Z, q * Y3, Ns, NF, c)
+        if H[1, 1, 2, 4] > 0 or H[1, 1, 2, 3] > 0:
+            I21 = s2current(Z, q * X2Y, Ns, NF, c)
+        if H[1, 2, 2, 3] > 0 or H[1, 2, 2, 4] > 0:
+            I12 = s2current(Z, q * XY2, Ns, NF, c)
+        if H[1, 1, 1, 2] > 0:
+            I31 = s2current(Z, q * X3Y, Ns, NF, c)
+        if H[1, 2, 2, 2] > 0:
+            I13 = s2current(Z, q * XY3, Ns, NF, c)
+        if H[1, 1, 1, 1] > 0:
+            I40 = s2current(Z, q * X4, Ns, NF, c)
+        if H[2, 2, 2, 2] > 0:
+            I04 = s2current(Z, q * Y4, Ns, NF, c)
+        if H[1, 1, 2, 2] > 0:
+            I22 = s2current(Z, q * X2Y2, Ns, NF, c)
+
+
+        # h1111: X'^4
+        if H[1, 1, 1, 1] > 0:
+            x, w = self.add_wake(I40, T[int(H[1, 1, 1, 1])])
+            Pz = Pz + np.interp(Z, x, w, 0, 0)
+        # h2222: Y'^4
+        if H[2, 2, 2, 2] > 0:
+            x, w = self.add_wake(I04, T[int(H[2, 2, 2, 2])])
+            Pz = Pz + np.interp(Z, x, w, 0, 0)
+        # h1112: 4 X'^3 Y'
+        if H[1, 1, 1, 2] > 0:
+            x, w = self.add_wake(I31, T[int(H[1, 1, 1, 2])])
+            Pz = Pz + np.interp(Z, x, 4 * w, 0, 0)
+        # h1222: 4 X' Y'^3
+        if H[1, 2, 2, 2] > 0:
+            x, w = self.add_wake(I13, T[int(H[1, 2, 2, 2])])
+            Pz = Pz + np.interp(Z, x, 4 * w, 0, 0)
+        # h1122: 6 X'^2 Y'^2
+        if H[1, 1, 2, 2] > 0:
+            x, w = self.add_wake(I22, T[int(H[1, 1, 2, 2])])
+            Pz = Pz + np.interp(Z, x, 6 * w, 0, 0)
+
+        # h1113: 4 X'^3 x
+        if H[1, 1, 1, 3] > 0:
+            x, w = self.add_wake(I30, T[int(H[1, 1, 1, 3])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 4 * w, 0, 0) * X
+            Wx = -Int1h(h, 4 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0)
+        # h1114: 4 X'^3 y
+        if H[1, 1, 1, 4] > 0:
+            x, w = self.add_wake(I30, T[int(H[1, 1, 1, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 4 * w, 0, 0) * Y
+            Wy = -Int1h(h, 4 * w)
+            Py = Py + np.interp(Z, x, Wy, 0, 0)
+        # h2223: 4 Y'^3 x
+        if H[2, 2, 2, 3] > 0:
+            x, w = self.add_wake(I03, T[int(H[2, 2, 2, 3])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 4 * w, 0, 0) * X
+            Wx = -Int1h(h, 4 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0)
+        # h2224: 4 Y'^3 y
+        if H[2, 2, 2, 4] > 0:
+            x, w = self.add_wake(I03, T[int(H[2, 2, 2, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 4 * w, 0, 0) * Y
+            Wy = -Int1h(h, 4 * w)
+            Py = Py + np.interp(Z, x, Wy, 0, 0)
+        # h1123: 12 X'^2 Y' x
+        if H[1, 1, 2, 3] > 0:
+            x, w = self.add_wake(I21, T[int(H[1, 1, 2, 3])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 12 * w, 0, 0) * X
+            Wx = -Int1h(h, 12 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0)
+        # h1124: 12 X'^2 Y' y
+        if H[1, 1, 2, 4] > 0:
+            x, w = self.add_wake(I21, T[int(H[1, 1, 2, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 12 * w, 0, 0) * Y
+            Wy = -Int1h(h, 12 * w)
+            Py = Py + np.interp(Z, x, Wy, 0, 0)
+        # h1223: 12 X' Y'^2 x
+        if H[1, 2, 2, 3] > 0:
+            x, w = self.add_wake(I12, T[int(H[1, 2, 2, 3])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 12 * w, 0, 0) * X
+            Wx = -Int1h(h, 12 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0)
+        # h1224: 12 X' Y'^2 y
+        if H[1, 2, 2, 4] > 0:
+            x, w = self.add_wake(I12, T[int(H[1, 2, 2, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 12 * w, 0, 0) * Y
+            Wy = -Int1h(h, 12 * w)
+            Py = Py + np.interp(Z, x, Wy, 0, 0)
+
+        # h1133: 6 X'^2 x^2
+        if H[1, 1, 3, 3] > 0:
+            x, w = self.add_wake(I20, T[int(H[1, 1, 3, 3])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 6 * w, 0, 0) * X2
+            Wx = -Int1h(h, 12 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * X
+        # h1134: 12 X'^2 x y
+        if H[1, 1, 3, 4] > 0:
+            x, w = self.add_wake(I20, T[int(H[1, 1, 3, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 12 * w, 0, 0) * XY
+            Wx = -Int1h(h, 12 * w)
+            Wy = -Int1h(h, 12 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * Y
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * X
+        # h1144: 6 X'^2 y^2
+        if H[1, 1, 4, 4] > 0:
+            x, w = self.add_wake(I20, T[int(H[1, 1, 4, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 6 * w, 0, 0) * Y2
+            Wy = -Int1h(h, 12 * w)
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * Y
+        # h2233: 6 Y'^2 x^2
+        if H[2, 2, 3, 3] > 0:
+            x, w = self.add_wake(I02, T[int(H[2, 2, 3, 3])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 6 * w, 0, 0) * X2
+            Wx = -Int1h(h, 12 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * X
+        # h2234: 12 Y'^2 x y
+        if H[2, 2, 3, 4] > 0:
+            x, w = self.add_wake(I02, T[int(H[2, 2, 3, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 12 * w, 0, 0) * XY
+            Wx = -Int1h(h, 12 * w)
+            Wy = -Int1h(h, 12 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * Y
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * X
+        # h2244: 6 Y'^2 y^2
+        if H[2, 2, 4, 4] > 0:
+            x, w = self.add_wake(I02, T[int(H[2, 2, 4, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 6 * w, 0, 0) * Y2
+            Wy = -Int1h(h, 12 * w)
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * Y
+
+        # h1233: 12 X' Y' x^2
+        if H[1, 2, 3, 3] > 0:
+            x, w = self.add_wake(I11, T[int(H[1, 2, 3, 3])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 12 * w, 0, 0) * X2
+            Wx = -Int1h(h, 24 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * X
+        # h1234: 24 X' Y' x y
+        if H[1, 2, 3, 4] > 0:
+            x, w = self.add_wake(I11, T[int(H[1, 2, 3, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 24 * w, 0, 0) * XY
+            Wx = -Int1h(h, 24 * w)
+            Wy = -Int1h(h, 24 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * Y
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * X
+        # h1244: 12 X' Y' y^2
+        if H[1, 2, 4, 4] > 0:
+            x, w = self.add_wake(I11, T[int(H[1, 2, 4, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 12 * w, 0, 0) * Y2
+            Wy = -Int1h(h, 24 * w)
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * Y
+
+        # h1333: 4 X' x^3
+        if H[1, 3, 3, 3] > 0:
+            x, w = self.add_wake(I10, T[int(H[1, 3, 3, 3])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 4 * w, 0, 0) * X3
+            Wx = -Int1h(h, 12 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * X2
+        # h1334: 12 X' x^2 y
+        if H[1, 3, 3, 4] > 0:
+            x, w = self.add_wake(I10, T[int(H[1, 3, 3, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 12 * w, 0, 0) * (X2 * Y)
+            Wx = -Int1h(h, 24 * w)
+            Wy = -Int1h(h, 12 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * XY
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * X2
+        # h1344: 12 X' x y^2
+        if H[1, 3, 4, 4] > 0:
+            x, w = self.add_wake(I10, T[int(H[1, 3, 4, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 12 * w, 0, 0) * (X * Y2)
+            Wx = -Int1h(h, 12 * w)
+            Wy = -Int1h(h, 24 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * Y2
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * XY
+        # h1444: 4 X' y^3
+        if H[1, 4, 4, 4] > 0:
+            x, w = self.add_wake(I10, T[int(H[1, 4, 4, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 4 * w, 0, 0) * Y3
+            Wy = -Int1h(h, 12 * w)
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * Y2
+        # h2333: 4 Y' x^3
+        if H[2, 3, 3, 3] > 0:
+            x, w = self.add_wake(I01, T[int(H[2, 3, 3, 3])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 4 * w, 0, 0) * X3
+            Wx = -Int1h(h, 12 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * X2
+        # h2334: 12 Y' x^2 y
+        if H[2, 3, 3, 4] > 0:
+            x, w = self.add_wake(I01, T[int(H[2, 3, 3, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 12 * w, 0, 0) * (X2 * Y)
+            Wx = -Int1h(h, 24 * w)
+            Wy = -Int1h(h, 12 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * XY
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * X2
+        # h2344: 12 Y' x y^2
+        if H[2, 3, 4, 4] > 0:
+            x, w = self.add_wake(I01, T[int(H[2, 3, 4, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 12 * w, 0, 0) * (X * Y2)
+            Wx = -Int1h(h, 12 * w)
+            Wy = -Int1h(h, 24 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * Y2
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * XY
+        # h2444: 4 Y' y^3
+        if H[2, 4, 4, 4] > 0:
+            x, w = self.add_wake(I01, T[int(H[2, 4, 4, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 4 * w, 0, 0) * Y3
+            Wy = -Int1h(h, 12 * w)
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * Y2
+
+        # h3333: x^4
+        if H[3, 3, 3, 3] > 0:
+            x, w = self.add_wake(I00, T[int(H[3, 3, 3, 3])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, w, 0, 0) * X4
+            Wx = -Int1h(h, 4 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * X3
+        # h3334: 4 x^3 y
+        if H[3, 3, 3, 4] > 0:
+            x, w = self.add_wake(I00, T[int(H[3, 3, 3, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 4 * w, 0, 0) * X3Y
+            Wx = -Int1h(h, 12 * w)
+            Wy = -Int1h(h, 4 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * (X2 * Y)
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * X3
+        # h4444: y^4
+        if H[4, 4, 4, 4] > 0:
+            x, w = self.add_wake(I00, T[int(H[4, 4, 4, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, w, 0, 0) * Y4
+            Wy = -Int1h(h, 4 * w)
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * Y3
+        # h3444: 4 x y^3
+        if H[3, 4, 4, 4] > 0:
+            x, w = self.add_wake(I00, T[int(H[3, 4, 4, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 4 * w, 0, 0) * XY3
+            Wx = -Int1h(h, 4 * w)
+            Wy = -Int1h(h, 12 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * Y3
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * (X * Y2)
+        # h3344: 6 x^2 y^2
+        if H[3, 3, 4, 4] > 0:
+            x, w = self.add_wake(I00, T[int(H[3, 3, 4, 4])])
+            h = x[1] - x[0]
+            Pz = Pz + np.interp(Z, x, 6 * w, 0, 0) * X2Y2
+            Wx = -Int1h(h, 12 * w)
+            Wy = -Int1h(h, 12 * w)
+            Px = Px + np.interp(Z, x, Wx, 0, 0) * (X * Y2)
+            Py = Py + np.interp(Z, x, Wy, 0, 0) * (X2 * Y)
+
+        return Px, Py, Pz, I00
+
+    def get_long_wake(self, current_profile):
+        T, H = self.TH
+        x, Wz = self.add_wake(current_profile, T[int(H[0, 0, 0, 0])])
+        return x, Wz * self.factor
+
 class WakeKick(Wake):
     def __init__(self, factor=1):
         print("WakeKick physics process is obsolete. Use Wake.")
